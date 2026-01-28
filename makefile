@@ -15,14 +15,15 @@ TEST_DIR = test
 BUILD_DIR = build
 
 # 3. Source Files
-# Lưu ý: Vì các file trong src/utils hiện tại là Template (.h only)
-# nên ta chưa cần compile file .cpp nào từ src cả.
-# Chỉ compile file test.
-TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp
+SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp
+TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
+            $(TEST_DIR)/testBuffer.cpp
 
 # 4. Object Files
 # Tự động đổi đuôi .cpp thành .o và đặt vào thư mục build
+SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 TEST_OBJS = $(TEST_SRCS:%.cpp=$(BUILD_DIR)/%.o)
+ALL_OBJS = $(SRC_OBJS) $(TEST_OBJS)
 
 # 5. Executable Name
 TEST_TARGET = $(BUILD_DIR)/unit_tests
@@ -35,10 +36,10 @@ TEST_TARGET = $(BUILD_DIR)/unit_tests
 all: $(TEST_TARGET)
 
 # Link: Tạo file chạy từ các file .o
-$(TEST_TARGET): $(TEST_OBJS)
+$(TEST_TARGET): $(ALL_OBJS)
 	@mkdir -p $(dir $@)
 	@echo "Linking $@"
-	$(CXX) $(TEST_OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(ALL_OBJS) -o $@ $(LDFLAGS)
 
 # Compile: Tạo file .o từ file .cpp
 $(BUILD_DIR)/%.o: %.cpp
