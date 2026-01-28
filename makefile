@@ -15,7 +15,8 @@ TEST_DIR = test
 BUILD_DIR = build
 
 # 3. Source Files
-SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp
+SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
+           $(SRC_DIR)/utils/Logger.cpp
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testBuffer.cpp
 
