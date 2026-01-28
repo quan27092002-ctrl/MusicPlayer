@@ -2,38 +2,27 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/utils/Logger.h
  * AUTHOR: Architecture Team
- * DESCRIPTION: Thread-safe logging utility with log levels - Header file.
+ * DESCRIPTION: Concrete implementation of ILogger - Thread-safe singleton.
  */
 
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <string>
+#include "ILogger.h"
 #include <mutex>
 #include <sstream>
 
 namespace Utils {
 
 /**
- * @brief Log levels for filtering messages.
- */
-enum class LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARNING = 2,
-    ERROR = 3,
-    NONE = 4  // Disable all logging
-};
-
-/**
- * @brief Thread-safe singleton logger.
+ * @brief Thread-safe singleton logger implementing ILogger interface.
  * 
  * Usage:
  *   Logger::getInstance().setLevel(LogLevel::DEBUG);
  *   LOG_INFO("Player started");
  *   LOG_ERROR("Failed to open file: " << filename);
  */
-class Logger {
+class Logger : public ILogger {
 private:
     LogLevel mLevel;
     mutable std::mutex mMutex;
@@ -60,17 +49,17 @@ public:
     /**
      * @brief Set minimum log level to display.
      */
-    void setLevel(LogLevel level);
+    void setLevel(LogLevel level) override;
 
     /**
      * @brief Get current log level.
      */
-    LogLevel getLevel() const;
+    LogLevel getLevel() const override;
 
     /**
      * @brief Log a message with specified level.
      */
-    void log(LogLevel level, const std::string& message);
+    void log(LogLevel level, const std::string& message) override;
 };
 
 // ============================================================================
