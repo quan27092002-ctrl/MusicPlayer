@@ -17,6 +17,10 @@ namespace Utils {
 
 template <typename T>
 class ThreadSafeQueue : public IThreadSafeQueue<T> {
+private:
+    std::queue<T> mQueue;             // Standard STL queue
+    mutable std::mutex mMutex;        // Mutex for protection
+    std::condition_variable mCondVar; // Condition variable for signaling
 public:
     ThreadSafeQueue() = default;
     ~ThreadSafeQueue() override = default;
@@ -59,7 +63,7 @@ public:
         
         // Wait Loop to handle Spurious Wakeup
         // The thread unlocks mutex and sleeps until mQueue is not empty
-        mCondVar.wait(lock, [this] { return !mQueue.empty(); });
+        mCondVar.wait(lock, [this] { return !mQueue.empty(); });//return 1 -> unlock -> sleep
 
         value = std::move(mQueue.front());
         mQueue.pop();
@@ -72,11 +76,6 @@ public:
         std::lock_guard<std::mutex> lock(mMutex);
         return mQueue.empty();
     }
-
-private:
-    std::queue<T> mQueue;             // Standard STL queue
-    mutable std::mutex mMutex;        // Mutex for protection
-    std::condition_variable mCondVar; // Condition variable for signaling
 };
 
 } // namespace Utils
