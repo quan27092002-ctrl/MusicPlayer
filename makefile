@@ -6,7 +6,7 @@
 
 # 1. Compiler Settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model
 LDFLAGS  = -lgtest -lgtest_main -pthread
 
 # 2. Project Directories
@@ -16,9 +16,11 @@ BUILD_DIR = build
 
 # 3. Source Files
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
-           $(SRC_DIR)/utils/Logger.cpp
+           $(SRC_DIR)/utils/Logger.cpp \
+           $(SRC_DIR)/model/MediaFile.cpp
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
-            $(TEST_DIR)/testBuffer.cpp
+            $(TEST_DIR)/testBuffer.cpp \
+            $(TEST_DIR)/testLogger.cpp
 
 # 4. Object Files
 # Tự động đổi đuôi .cpp thành .o và đặt vào thư mục build
