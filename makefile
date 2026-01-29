@@ -14,13 +14,15 @@ SRC_DIR = src
 TEST_DIR = test
 BUILD_DIR = build
 
-# 3. Source Files
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
            $(SRC_DIR)/utils/Logger.cpp \
-           $(SRC_DIR)/model/MediaFile.cpp
+           $(SRC_DIR)/model/MediaFile.cpp \
+           $(SRC_DIR)/model/PlayerState.cpp
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testBuffer.cpp \
-            $(TEST_DIR)/testLogger.cpp
+            $(TEST_DIR)/testLogger.cpp \
+            $(TEST_DIR)/testMediaFile.cpp \
+            $(TEST_DIR)/testPlayerState.cpp
 
 # 4. Object Files
 # Tự động đổi đuôi .cpp thành .o và đặt vào thư mục build
