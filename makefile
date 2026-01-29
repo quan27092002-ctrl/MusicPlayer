@@ -6,18 +6,22 @@
 
 # 1. Compiler Settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/controller
+CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer)
 LDFLAGS  = -lgtest -lgtest_main -pthread
+LDFLAGS += $(shell pkg-config --libs sdl2 SDL2_mixer)
 
 # 2. Project Directories
 SRC_DIR = src
 TEST_DIR = test
 BUILD_DIR = build
 
+# 3. Source Files
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
            $(SRC_DIR)/utils/Logger.cpp \
            $(SRC_DIR)/model/MediaFile.cpp \
-           $(SRC_DIR)/model/PlayerState.cpp
+           $(SRC_DIR)/model/PlayerState.cpp \
+           $(SRC_DIR)/controller/AudioPlayer.cpp
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testBuffer.cpp \
             $(TEST_DIR)/testLogger.cpp \
@@ -25,7 +29,6 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testPlayerState.cpp
 
 # 4. Object Files
-# Tự động đổi đuôi .cpp thành .o và đặt vào thư mục build
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 TEST_OBJS = $(TEST_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 ALL_OBJS = $(SRC_OBJS) $(TEST_OBJS)
