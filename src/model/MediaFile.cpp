@@ -16,13 +16,18 @@ namespace Model {
 MediaFile::MediaFile()
     : mFilename("")
     , mPath("")
-    , mDuration(0) {
+    , mDuration(0)
+    , mArtist("")
+    , mAlbum("") {
 }
 
-MediaFile::MediaFile(const std::string& filename, const std::string& path, uint32_t duration)
+MediaFile::MediaFile(const std::string& filename, const std::string& path, 
+                     uint32_t duration, const std::string& artist, const std::string& album)
     : mFilename(filename)
     , mPath(path)
-    , mDuration(duration) {
+    , mDuration(duration)
+    , mArtist(artist)
+    , mAlbum(album) {
 }
 
 // ============================================================================
@@ -39,6 +44,14 @@ std::string MediaFile::getPath() const {
 
 uint32_t MediaFile::getDuration() const {
     return mDuration;
+}
+
+std::string MediaFile::getArtist() const {
+    return mArtist;
+}
+
+std::string MediaFile::getAlbum() const {
+    return mAlbum;
 }
 
 bool MediaFile::isValid() const {
@@ -59,6 +72,14 @@ void MediaFile::setPath(const std::string& path) {
 
 void MediaFile::setDuration(uint32_t duration) {
     mDuration = duration;
+}
+
+void MediaFile::setArtist(const std::string& artist) {
+    mArtist = artist;
+}
+
+void MediaFile::setAlbum(const std::string& album) {
+    mAlbum = album;
 }
 
 // ============================================================================

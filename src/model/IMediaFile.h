@@ -42,6 +42,18 @@ public:
     virtual uint32_t getDuration() const = 0;
 
     /**
+     * @brief Get the artist name.
+     * @return Artist name string, empty if unknown
+     */
+    virtual std::string getArtist() const = 0;
+
+    /**
+     * @brief Get the album name.
+     * @return Album name string, empty if unknown
+     */
+    virtual std::string getAlbum() const = 0;
+
+    /**
      * @brief Check if this media file is valid.
      * @return true if filename and path are not empty
      */

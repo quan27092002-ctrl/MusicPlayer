@@ -24,6 +24,8 @@ private:
     std::string mFilename;      ///< File name without path (e.g., "song.mp3")
     std::string mPath;          ///< Full absolute path to the file
     uint32_t mDuration;         ///< Duration in seconds (0 if unknown)
+    std::string mArtist;        ///< Artist name
+    std::string mAlbum;         ///< Album name
 
 public:
     /**
@@ -36,8 +38,13 @@ public:
      * @param filename File name (without path)
      * @param path Full path to file
      * @param duration Duration in seconds (default: 0)
+     * @param artist Artist name (default: empty)
+     * @param album Album name (default: empty)
      */
-    MediaFile(const std::string& filename, const std::string& path, uint32_t duration = 0);
+    MediaFile(const std::string& filename, const std::string& path, 
+              uint32_t duration = 0, 
+              const std::string& artist = "", 
+              const std::string& album = "");
 
     /**
      * @brief Copy constructor.
@@ -71,6 +78,8 @@ public:
     std::string getFilename() const override;
     std::string getPath() const override;
     uint32_t getDuration() const override;
+    std::string getArtist() const override;
+    std::string getAlbum() const override;
     bool isValid() const override;
 
     // ========================================================================
@@ -94,6 +103,18 @@ public:
      * @param duration Duration in seconds
      */
     void setDuration(uint32_t duration);
+
+    /**
+     * @brief Set the artist name.
+     * @param artist Artist name
+     */
+    void setArtist(const std::string& artist);
+
+    /**
+     * @brief Set the album name.
+     * @param album Album name
+     */
+    void setAlbum(const std::string& album);
 
     /**
      * @brief Equality operator - compares by path.
