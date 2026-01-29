@@ -21,13 +21,17 @@ SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
            $(SRC_DIR)/utils/Logger.cpp \
            $(SRC_DIR)/model/MediaFile.cpp \
            $(SRC_DIR)/model/PlayerState.cpp \
-           $(SRC_DIR)/controller/AudioPlayer.cpp
+           $(SRC_DIR)/controller/AudioPlayer.cpp \
+           $(SRC_DIR)/controller/SerialManager.cpp \
+           $(SRC_DIR)/controller/AppController.cpp
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testBuffer.cpp \
             $(TEST_DIR)/testLogger.cpp \
             $(TEST_DIR)/testMediaFile.cpp \
             $(TEST_DIR)/testPlayerState.cpp \
-            $(TEST_DIR)/testAudioPlayer.cpp
+            $(TEST_DIR)/testAudioPlayer.cpp \
+            $(TEST_DIR)/testSerialManager.cpp \
+            $(TEST_DIR)/testAppController.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
