@@ -8,6 +8,7 @@
 #include "AppController.h"
 #include <algorithm>
 #include <sstream>
+#include <filesystem>
 
 namespace Controller {
 
@@ -432,6 +433,48 @@ void AppController::clearPlaylist() {
 size_t AppController::getPlaylistSize() const {
     std::lock_guard<std::mutex> lock(mPlaylistMutex);
     return mPlaylist.size();
+}
+
+size_t AppController::loadDirectory(const std::string& directoryPath) {
+    // Use filesystem to scan directory for audio files
+    size_t count = 0;
+    
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+            if (entry.is_regular_file()) {
+                std::string ext = entry.path().extension().string();
+                // Convert to lowercase for comparison
+                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                
+                // Check for audio file extensions
+                if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
+                    addToPlaylist(entry.path().string());
+                    count++;
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        // Directory not found or permission denied
+        (void)e;
+    }
+    
+    return count;
+}
+
+std::string AppController::getTrackName(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getFilename();
+    }
+    return "";
+}
+
+std::string AppController::getTrackPath(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getPath();
+    }
+    return "";
 }
 
 // ============================================================================

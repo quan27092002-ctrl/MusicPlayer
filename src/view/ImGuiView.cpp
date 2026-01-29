@@ -2,7 +2,7 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/view/ImGuiView.cpp
  * AUTHOR: Architecture Team
- * DESCRIPTION: Implementation of Dear ImGui View using SDL2 + SDL_Renderer.
+ * DESCRIPTION: Spotify-style Dear ImGui View using SDL2 + SDL_Renderer.
  */
 
 #include "ImGuiView.h"
@@ -13,8 +13,25 @@
 #include "imgui/backends/imgui_impl_sdlrenderer2.h"
 
 #include <cstdio>
+#include <cmath>
 
 namespace View {
+
+// Spotify-like colors
+namespace SpotifyColors {
+    const ImVec4 Background      = ImVec4(0.07f, 0.07f, 0.07f, 1.0f);  // #121212
+    const ImVec4 Sidebar         = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);     // #000000
+    const ImVec4 PlayerBar       = ImVec4(0.11f, 0.11f, 0.11f, 1.0f);  // #1C1C1C
+    const ImVec4 CardBg          = ImVec4(0.11f, 0.11f, 0.11f, 1.0f);  // #1C1C1C
+    const ImVec4 CardHover       = ImVec4(0.16f, 0.16f, 0.16f, 1.0f);  // #282828
+    const ImVec4 Green           = ImVec4(0.12f, 0.84f, 0.38f, 1.0f);  // #1DB954
+    const ImVec4 GreenHover      = ImVec4(0.14f, 0.90f, 0.42f, 1.0f);  // #1ED760
+    const ImVec4 TextPrimary     = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);     // White
+    const ImVec4 TextSecondary   = ImVec4(0.70f, 0.70f, 0.70f, 1.0f);  // #B3B3B3
+    const ImVec4 TextMuted       = ImVec4(0.40f, 0.40f, 0.40f, 1.0f);  // #666666
+    const ImVec4 SliderBg        = ImVec4(0.30f, 0.30f, 0.30f, 1.0f);
+    const ImVec4 SliderActive    = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+}
 
 // ============================================================================
 // Constructor / Destructor
@@ -29,8 +46,8 @@ ImGuiView::ImGuiView(
     , mWindow(nullptr)
     , mRenderer(nullptr)
     , mRunning(false)
-    , mWindowWidth(800)
-    , mWindowHeight(600) {
+    , mWindowWidth(1200)
+    , mWindowHeight(800) {
 }
 
 ImGuiView::~ImGuiView() {
@@ -38,19 +55,76 @@ ImGuiView::~ImGuiView() {
 }
 
 // ============================================================================
+// Spotify Theme Setup
+// ============================================================================
+
+void setupSpotifyTheme() {
+    ImGuiStyle& style = ImGui::GetStyle();
+    
+    // Rounding
+    style.WindowRounding = 0.0f;
+    style.ChildRounding = 8.0f;
+    style.FrameRounding = 20.0f;
+    style.PopupRounding = 8.0f;
+    style.ScrollbarRounding = 8.0f;
+    style.GrabRounding = 20.0f;
+    style.TabRounding = 4.0f;
+    
+    // Padding
+    style.WindowPadding = ImVec2(0, 0);
+    style.FramePadding = ImVec2(12, 8);
+    style.ItemSpacing = ImVec2(8, 8);
+    style.ItemInnerSpacing = ImVec2(8, 8);
+    style.ScrollbarSize = 8.0f;
+    
+    // Colors
+    ImVec4* colors = style.Colors;
+    colors[ImGuiCol_WindowBg] = SpotifyColors::Background;
+    colors[ImGuiCol_ChildBg] = ImVec4(0, 0, 0, 0);
+    colors[ImGuiCol_PopupBg] = SpotifyColors::CardBg;
+    colors[ImGuiCol_Border] = ImVec4(0.1f, 0.1f, 0.1f, 0.5f);
+    
+    colors[ImGuiCol_FrameBg] = SpotifyColors::SliderBg;
+    colors[ImGuiCol_FrameBgHovered] = SpotifyColors::CardHover;
+    colors[ImGuiCol_FrameBgActive] = SpotifyColors::Green;
+    
+    colors[ImGuiCol_TitleBg] = SpotifyColors::Sidebar;
+    colors[ImGuiCol_TitleBgActive] = SpotifyColors::Sidebar;
+    
+    colors[ImGuiCol_MenuBarBg] = SpotifyColors::Sidebar;
+    
+    colors[ImGuiCol_ScrollbarBg] = ImVec4(0, 0, 0, 0);
+    colors[ImGuiCol_ScrollbarGrab] = SpotifyColors::SliderBg;
+    colors[ImGuiCol_ScrollbarGrabHovered] = SpotifyColors::TextSecondary;
+    colors[ImGuiCol_ScrollbarGrabActive] = SpotifyColors::TextPrimary;
+    
+    colors[ImGuiCol_SliderGrab] = SpotifyColors::TextPrimary;
+    colors[ImGuiCol_SliderGrabActive] = SpotifyColors::Green;
+    
+    colors[ImGuiCol_Button] = SpotifyColors::CardBg;
+    colors[ImGuiCol_ButtonHovered] = SpotifyColors::CardHover;
+    colors[ImGuiCol_ButtonActive] = SpotifyColors::Green;
+    
+    colors[ImGuiCol_Header] = SpotifyColors::CardBg;
+    colors[ImGuiCol_HeaderHovered] = SpotifyColors::CardHover;
+    colors[ImGuiCol_HeaderActive] = SpotifyColors::Green;
+    
+    colors[ImGuiCol_Text] = SpotifyColors::TextPrimary;
+    colors[ImGuiCol_TextDisabled] = SpotifyColors::TextMuted;
+}
+
+// ============================================================================
 // IView Interface
 // ============================================================================
 
 bool ImGuiView::initialize() {
-    // Initialize SDL video (audio already initialized by AudioPlayer)
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return false;
     }
 
-    // Create window
     mWindow = SDL_CreateWindow(
-        "S32K Media Player",
+        "S32K Media Player - Spotify Style",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         mWindowWidth, mWindowHeight,
@@ -62,7 +136,6 @@ bool ImGuiView::initialize() {
         return false;
     }
 
-    // Create renderer
     mRenderer = SDL_CreateRenderer(
         mWindow,
         -1,
@@ -76,22 +149,19 @@ bool ImGuiView::initialize() {
         return false;
     }
 
-    // Setup ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    
+    // Load a larger font for better look
+    io.Fonts->AddFontDefault();
 
-    // Setup style
-    ImGui::StyleColorsDark();
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 5.0f;
-    style.FrameRounding = 3.0f;
-    style.FramePadding = ImVec2(8, 4);
-
-    // Initialize backends
     ImGui_ImplSDL2_InitForSDLRenderer(mWindow, mRenderer);
     ImGui_ImplSDLRenderer2_Init(mRenderer);
+
+    // Apply Spotify theme
+    setupSpotifyTheme();
 
     mRunning = true;
     return true;
@@ -139,258 +209,307 @@ void ImGuiView::processEvents() {
 }
 
 void ImGuiView::render() {
-    // Start new frame
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // Get window size for layout
     SDL_GetWindowSize(mWindow, &mWindowWidth, &mWindowHeight);
 
-    // Main window (fullscreen docked)
+    // Layout constants
+    const float sidebarWidth = 240.0f;
+    const float playerBarHeight = 90.0f;
+    const float mainContentWidth = mWindowWidth - sidebarWidth;
+    const float mainContentHeight = mWindowHeight - playerBarHeight;
+
+    // ========================================================================
+    // LEFT SIDEBAR (Playlist)
+    // ========================================================================
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((float)mWindowWidth, (float)mWindowHeight));
+    ImGui::SetNextWindowSize(ImVec2(sidebarWidth, mainContentHeight));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, SpotifyColors::Sidebar);
     
-    ImGuiWindowFlags windowFlags = 
+    ImGuiWindowFlags sidebarFlags = 
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_MenuBar;
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-    ImGui::Begin("MainWindow", nullptr, windowFlags);
-
-    renderMenuBar();
+    ImGui::Begin("Sidebar", nullptr, sidebarFlags);
     
-    // Layout: Left panel (controls), Right panel (playlist)
-    ImGui::BeginChild("ControlPanel", ImVec2(mWindowWidth * 0.6f, -50), true);
+    // Logo / Title
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextPrimary);
+    ImGui::SetCursorPos(ImVec2(20, 20));
+    ImGui::Text("S32K Player");
+    ImGui::PopStyleColor();
     
-    renderTransportControls();
-    ImGui::Separator();
-    renderVolumeControl();
-    ImGui::Separator();
-    renderProgressBar();
-    ImGui::Separator();
-    renderSerialPanel();
+    // Playlist header
+    ImGui::SetCursorPos(ImVec2(20, 60));
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+    ImGui::Text("YOUR LIBRARY");
+    ImGui::PopStyleColor();
+    
+    // Playlist items
+    ImGui::SetCursorPos(ImVec2(8, 90));
+    ImGui::BeginChild("PlaylistScroll", ImVec2(sidebarWidth - 16, mainContentHeight - 100), false);
+    
+    int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
+    
+    for (size_t i = 0; i < mPlaylistDisplay.size(); ++i) {
+        bool isSelected = (static_cast<int>(i) == currentTrack);
+        
+        // Highlight current track
+        if (isSelected) {
+            ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::Green);
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+        }
+        
+        // Selectable track
+        char label[256];
+        snprintf(label, sizeof(label), "  %zu. %s", i + 1, mPlaylistDisplay[i].c_str());
+        
+        if (ImGui::Selectable(label, isSelected, ImGuiSelectableFlags_None, ImVec2(sidebarWidth - 24, 28))) {
+            if (mController) {
+                std::string path = mController->getTrackPath(i);
+                mController->loadTrack(path);
+                mController->play();
+                if (mPlayerState) {
+                    mPlayerState->setCurrentTrackIndex(static_cast<int>(i));
+                }
+            }
+        }
+        
+        ImGui::PopStyleColor();
+    }
+    
+    if (mPlaylistDisplay.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextMuted);
+        ImGui::Text("  No tracks loaded");
+        ImGui::PopStyleColor();
+    }
     
     ImGui::EndChild();
-
-    ImGui::SameLine();
-
-    ImGui::BeginChild("PlaylistPanel", ImVec2(0, -50), true);
-    renderPlaylist();
-    ImGui::EndChild();
-
-    // Status bar at bottom
-    renderStatusBar();
-
     ImGui::End();
+    ImGui::PopStyleColor();
+
+    // ========================================================================
+    // MAIN CONTENT AREA (Now Playing)
+    // ========================================================================
+    ImGui::SetNextWindowPos(ImVec2(sidebarWidth, 0));
+    ImGui::SetNextWindowSize(ImVec2(mainContentWidth, mainContentHeight));
+    
+    ImGuiWindowFlags mainFlags = 
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    ImGui::Begin("MainContent", nullptr, mainFlags);
+    
+    // Center content
+    float centerX = mainContentWidth / 2;
+    float centerY = mainContentHeight / 2 - 50;
+    
+    // Now Playing title
+    ImGui::SetCursorPos(ImVec2(centerX - 100, centerY - 100));
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+    ImGui::Text("NOW PLAYING");
+    ImGui::PopStyleColor();
+    
+    // Track name
+    std::string trackName = "No Track Selected";
+    if (currentTrack >= 0 && currentTrack < (int)mPlaylistDisplay.size()) {
+        trackName = mPlaylistDisplay[currentTrack];
+    }
+    
+    // Calculate text position for centering
+    ImVec2 textSize = ImGui::CalcTextSize(trackName.c_str());
+    ImGui::SetCursorPos(ImVec2(centerX - textSize.x / 2, centerY - 40));
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextPrimary);
+    ImGui::Text("%s", trackName.c_str());
+    ImGui::PopStyleColor();
+    
+    // Playback state
+    Model::PlaybackState state = mPlayerState ? 
+        mPlayerState->getPlaybackState() : Model::PlaybackState::STOPPED;
+    
+    const char* stateText = "Stopped";
+    ImVec4 stateColor = SpotifyColors::TextMuted;
+    
+    switch (state) {
+        case Model::PlaybackState::PLAYING:
+            stateText = "Playing";
+            stateColor = SpotifyColors::Green;
+            break;
+        case Model::PlaybackState::PAUSED:
+            stateText = "Paused";
+            stateColor = SpotifyColors::TextSecondary;
+            break;
+        case Model::PlaybackState::STOPPED:
+            stateText = "Stopped";
+            stateColor = SpotifyColors::TextMuted;
+            break;
+    }
+    
+    ImVec2 stateSize = ImGui::CalcTextSize(stateText);
+    ImGui::SetCursorPos(ImVec2(centerX - stateSize.x / 2, centerY));
+    ImGui::TextColored(stateColor, "%s", stateText);
+    
+    // Track count info
+    char infoText[64];
+    snprintf(infoText, sizeof(infoText), "Track %d of %zu", 
+             currentTrack + 1, mPlaylistDisplay.size());
+    ImVec2 infoSize = ImGui::CalcTextSize(infoText);
+    ImGui::SetCursorPos(ImVec2(centerX - infoSize.x / 2, centerY + 40));
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextMuted);
+    ImGui::Text("%s", infoText);
+    ImGui::PopStyleColor();
+    
+    ImGui::End();
+
+    // ========================================================================
+    // BOTTOM PLAYER BAR
+    // ========================================================================
+    ImGui::SetNextWindowPos(ImVec2(0, mainContentHeight));
+    ImGui::SetNextWindowSize(ImVec2((float)mWindowWidth, playerBarHeight));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, SpotifyColors::PlayerBar);
+    
+    ImGuiWindowFlags playerFlags = 
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    ImGui::Begin("PlayerBar", nullptr, playerFlags);
+    
+    // Left section: Current track info
+    ImGui::SetCursorPos(ImVec2(20, 25));
+    ImGui::BeginGroup();
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextPrimary);
+    
+    std::string shortName = trackName;
+    if (shortName.length() > 30) {
+        shortName = shortName.substr(0, 27) + "...";
+    }
+    ImGui::Text("%s", shortName.c_str());
+    ImGui::PopStyleColor();
+    
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+    ImGui::Text("Unknown Artist");
+    ImGui::PopStyleColor();
+    ImGui::EndGroup();
+    
+    // Center section: Playback controls
+    float controlsX = mWindowWidth / 2.0f - 100;
+    ImGui::SetCursorPos(ImVec2(controlsX, 20));
+    
+    bool isPlaying = mPlayerState ? mPlayerState->isPlaying() : false;
+    
+    // Previous button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SpotifyColors::CardHover);
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+    
+    if (ImGui::Button("<<", ImVec2(40, 40))) {
+        if (mController) mController->previous();
+    }
+    ImGui::PopStyleColor(3);
+    
+    ImGui::SameLine();
+    
+    // Play/Pause button (Green circle)
+    ImGui::PushStyleColor(ImGuiCol_Button, SpotifyColors::Green);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SpotifyColors::GreenHover);
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::Sidebar);
+    
+    const char* playPauseLabel = isPlaying ? "||" : ">";
+    if (ImGui::Button(playPauseLabel, ImVec2(50, 50))) {
+        if (mController) {
+            if (isPlaying) mController->pause();
+            else mController->play();
+        }
+    }
+    ImGui::PopStyleColor(3);
+    
+    ImGui::SameLine();
+    
+    // Next button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SpotifyColors::CardHover);
+    ImGui::PushStyleColor(ImGuiCol_Text, SpotifyColors::TextSecondary);
+    
+    if (ImGui::Button(">>", ImVec2(40, 40))) {
+        if (mController) mController->next();
+    }
+    ImGui::PopStyleColor(3);
+    
+    // Progress bar
+    ImGui::SetCursorPos(ImVec2(controlsX - 100, 65));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, SpotifyColors::SliderBg);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, SpotifyColors::TextPrimary);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, SpotifyColors::Green);
+    
+    static float progress = 0.0f;
+    ImGui::SetNextItemWidth(400);
+    ImGui::SliderFloat("##Progress", &progress, 0.0f, 1.0f, "");
+    ImGui::PopStyleColor(3);
+    
+    // Right section: Volume control
+    float volumeX = mWindowWidth - 180;
+    ImGui::SetCursorPos(ImVec2(volumeX, 35));
+    
+    int volume = mPlayerState ? mPlayerState->getVolume() : 50;
+    bool isMuted = mPlayerState ? mPlayerState->isMuted() : false;
+    
+    // Mute button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SpotifyColors::CardHover);
+    ImGui::PushStyleColor(ImGuiCol_Text, isMuted ? SpotifyColors::Green : SpotifyColors::TextSecondary);
+    
+    if (ImGui::Button(isMuted ? "X" : "V", ImVec2(30, 30))) {
+        if (mController) mController->toggleMute();
+    }
+    ImGui::PopStyleColor(3);
+    
+    ImGui::SameLine();
+    
+    // Volume slider
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, SpotifyColors::SliderBg);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, SpotifyColors::TextPrimary);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, SpotifyColors::Green);
+    
+    ImGui::SetNextItemWidth(100);
+    if (ImGui::SliderInt("##Volume", &volume, 0, 100, "")) {
+        if (mController) mController->setVolume(volume);
+    }
+    ImGui::PopStyleColor(3);
+    
+    ImGui::End();
+    ImGui::PopStyleColor();
 
     // Render
     ImGui::Render();
-    SDL_SetRenderDrawColor(mRenderer, 30, 30, 30, 255);
+    SDL_SetRenderDrawColor(mRenderer, 18, 18, 18, 255);
     SDL_RenderClear(mRenderer);
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mRenderer);
     SDL_RenderPresent(mRenderer);
 }
 
 // ============================================================================
-// UI Components
+// UI Components (Kept for compatibility, replaced by render())
 // ============================================================================
 
-void ImGuiView::renderMenuBar() {
-    if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Add Track...")) {
-                // TODO: File dialog
-            }
-            if (ImGui::MenuItem("Clear Playlist")) {
-                if (mController) mController->clearPlaylist();
-                clearPlaylistDisplay();
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Exit")) {
-                mRunning = false;
-            }
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
-}
-
-void ImGuiView::renderTransportControls() {
-    ImGui::Text("Transport Controls");
-    ImGui::Spacing();
-
-    // Get current state
-    bool isPlaying = mPlayerState ? mPlayerState->isPlaying() : false;
-    Model::PlaybackState state = mPlayerState ? 
-        mPlayerState->getPlaybackState() : Model::PlaybackState::STOPPED;
-
-    // Button size
-    ImVec2 btnSize(60, 40);
-
-    // Previous button
-    if (ImGui::Button("<<", btnSize)) {
-        if (mController) mController->previous();
-    }
-    ImGui::SameLine();
-
-    // Play/Pause button
-    const char* playPauseLabel = isPlaying ? "||" : ">";
-    if (ImGui::Button(playPauseLabel, btnSize)) {
-        if (mController) {
-            if (isPlaying) mController->pause();
-            else mController->play();
-        }
-    }
-    ImGui::SameLine();
-
-    // Stop button
-    if (ImGui::Button("[]", btnSize)) {
-        if (mController) mController->stop();
-    }
-    ImGui::SameLine();
-
-    // Next button
-    if (ImGui::Button(">>", btnSize)) {
-        if (mController) mController->next();
-    }
-
-    // Show current state
-    ImGui::SameLine();
-    ImGui::Spacing();
-    ImGui::SameLine();
-    
-    const char* stateText = "Unknown";
-    ImVec4 stateColor = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
-    
-    switch (state) {
-        case Model::PlaybackState::STOPPED:
-            stateText = "STOPPED";
-            stateColor = ImVec4(0.8f, 0.2f, 0.2f, 1.0f);
-            break;
-        case Model::PlaybackState::PLAYING:
-            stateText = "PLAYING";
-            stateColor = ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
-            break;
-        case Model::PlaybackState::PAUSED:
-            stateText = "PAUSED";
-            stateColor = ImVec4(0.8f, 0.8f, 0.2f, 1.0f);
-            break;
-    }
-    
-    ImGui::TextColored(stateColor, "%s", stateText);
-}
-
-void ImGuiView::renderVolumeControl() {
-    ImGui::Text("Volume");
-    ImGui::Spacing();
-
-    int volume = mPlayerState ? mPlayerState->getVolume() : 50;
-    bool isMuted = mPlayerState ? mPlayerState->isMuted() : false;
-
-    // Mute button
-    const char* muteLabel = isMuted ? "Unmute" : "Mute";
-    if (ImGui::Button(muteLabel, ImVec2(80, 30))) {
-        if (mController) mController->toggleMute();
-    }
-    ImGui::SameLine();
-
-    // Volume slider
-    ImGui::SetNextItemWidth(-1);
-    if (ImGui::SliderInt("##Volume", &volume, 0, 100, "%d%%")) {
-        if (mController) mController->setVolume(volume);
-    }
-
-    // Visual indicator if muted
-    if (isMuted) {
-        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "(MUTED)");
-    }
-}
-
-void ImGuiView::renderProgressBar() {
-    ImGui::Text("Progress");
-    ImGui::Spacing();
-
-    // Get position/duration from player state
-    uint32_t position = mPlayerState ? mPlayerState->getCurrentPosition() : 0;
-    // Duration would come from AudioPlayer, using placeholder for now
-    uint32_t duration = 180000;  // 3 minutes placeholder
-
-    float progress = duration > 0 ? (float)position / (float)duration : 0.0f;
-
-    // Format time
-    int posMin = (position / 1000) / 60;
-    int posSec = (position / 1000) % 60;
-    int durMin = (duration / 1000) / 60;
-    int durSec = (duration / 1000) % 60;
-
-    char timeText[32];
-    snprintf(timeText, sizeof(timeText), "%02d:%02d / %02d:%02d", 
-             posMin, posSec, durMin, durSec);
-
-    ImGui::ProgressBar(progress, ImVec2(-1, 20), timeText);
-}
-
-void ImGuiView::renderPlaylist() {
-    ImGui::Text("Playlist");
-    ImGui::Separator();
-
-    int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
-
-    for (size_t i = 0; i < mPlaylistDisplay.size(); ++i) {
-        bool isSelected = (static_cast<int>(i) == currentTrack);
-        
-        if (ImGui::Selectable(mPlaylistDisplay[i].c_str(), isSelected)) {
-            // TODO: Load and play this track
-        }
-    }
-
-    if (mPlaylistDisplay.empty()) {
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), 
-                          "(No tracks in playlist)");
-    }
-}
-
-void ImGuiView::renderSerialPanel() {
-    ImGui::Text("S32K Connection");
-    ImGui::Spacing();
-
-    bool isConnected = mController ? mController->isConnectedToBoard() : false;
-    
-    if (isConnected) {
-        ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "Connected");
-        ImGui::SameLine();
-        if (ImGui::Button("Disconnect")) {
-            if (mController) mController->disconnectFromBoard();
-        }
-    } else {
-        ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1.0f), "Disconnected");
-        
-        static char portName[64] = "/dev/ttyUSB0";
-        ImGui::SetNextItemWidth(150);
-        ImGui::InputText("Port", portName, sizeof(portName));
-        
-        ImGui::SameLine();
-        if (ImGui::Button("Connect")) {
-            if (mController) mController->connectToBoard(portName, 115200);
-        }
-    }
-}
-
-void ImGuiView::renderStatusBar() {
-    ImGui::Separator();
-    
-    int trackIndex = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
-    int volume = mPlayerState ? mPlayerState->getVolume() : 0;
-    bool isConnected = mController ? mController->isConnectedToBoard() : false;
-    
-    ImGui::Text("Track: %d | Volume: %d%% | Board: %s",
-                trackIndex,
-                volume,
-                isConnected ? "Connected" : "Disconnected");
-}
+void ImGuiView::renderMenuBar() {}
+void ImGuiView::renderTransportControls() {}
+void ImGuiView::renderVolumeControl() {}
+void ImGuiView::renderProgressBar() {}
+void ImGuiView::renderPlaylist() {}
+void ImGuiView::renderSerialPanel() {}
+void ImGuiView::renderStatusBar() {}
 
 // ============================================================================
 // Additional Methods

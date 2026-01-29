@@ -160,6 +160,27 @@ public:
      */
     virtual size_t getPlaylistSize() const = 0;
 
+    /**
+     * @brief Load all audio files from a directory into playlist.
+     * @param directoryPath Path to directory containing audio files
+     * @return Number of files loaded
+     */
+    virtual size_t loadDirectory(const std::string& directoryPath) = 0;
+
+    /**
+     * @brief Get track name at index.
+     * @param index Track index
+     * @return Track name or empty string if invalid index
+     */
+    virtual std::string getTrackName(size_t index) const = 0;
+
+    /**
+     * @brief Get track path at index.
+     * @param index Track index
+     * @return Track path or empty string if invalid index
+     */
+    virtual std::string getTrackPath(size_t index) const = 0;
+
     // ========================================================================
     // Callbacks
     // ========================================================================

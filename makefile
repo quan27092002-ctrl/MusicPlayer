@@ -4,6 +4,9 @@
 # AUTHOR: Architecture Team
 # ==========================================
 
+# Enable parallel compilation (auto-detect CPU cores)
+MAKEFLAGS += -j$(shell nproc)
+
 # 1. Compiler Settings
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/controller -Isrc/view -Isrc/view/imgui

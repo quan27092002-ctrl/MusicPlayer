@@ -41,6 +41,23 @@ int main(int /*argc*/, char** /*argv*/) {
         return 1;
     }
 
+    // Auto-load music directory
+    std::cout << "Loading music from ./mMusic/ ..." << std::endl;
+    size_t loadedCount = appController->loadDirectory("./mMusic");
+    std::cout << "Loaded " << loadedCount << " tracks." << std::endl;
+
+    // Sync playlist to view
+    for (size_t i = 0; i < loadedCount; ++i) {
+        view->addPlaylistItem(appController->getTrackName(i));
+    }
+
+    // Load first track if available
+    if (loadedCount > 0) {
+        std::string firstPath = appController->getTrackPath(0);
+        appController->loadTrack(firstPath);
+        std::cout << "First track loaded: " << appController->getTrackName(0) << std::endl;
+    }
+
     std::cout << "Initialization complete. Running..." << std::endl;
 
     // Main loop
