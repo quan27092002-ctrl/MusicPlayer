@@ -26,7 +26,8 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testBuffer.cpp \
             $(TEST_DIR)/testLogger.cpp \
             $(TEST_DIR)/testMediaFile.cpp \
-            $(TEST_DIR)/testPlayerState.cpp
+            $(TEST_DIR)/testPlayerState.cpp \
+            $(TEST_DIR)/testAudioPlayer.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)

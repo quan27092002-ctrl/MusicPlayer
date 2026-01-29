@@ -33,9 +33,14 @@ AudioPlayer::~AudioPlayer() {
 // ============================================================================
 
 void AudioPlayer::notifyCallback(AudioState state, uint32_t positionMs) {
-    std::lock_guard<std::mutex> lock(mMutex);
-    if (mCallback) {
-        mCallback(state, positionMs);
+    // NOTE: Caller must NOT hold mMutex when calling this
+    AudioCallback cb;
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        cb = mCallback;
+    }
+    if (cb) {
+        cb(state, positionMs);
     }
 }
 
@@ -98,21 +103,21 @@ bool AudioPlayer::load(const std::string& filePath) {
     // Unload previous music
     unload();
 
-    std::lock_guard<std::mutex> lock(mMutex);
-    
-    mMusic = Mix_LoadMUS(filePath.c_str());
-    if (!mMusic) {
-        mState.store(AudioState::ERROR);
-        return false;
-    }
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        
+        mMusic = Mix_LoadMUS(filePath.c_str());
+        if (!mMusic) {
+            mState.store(AudioState::ERROR);
+            return false;
+        }
 
-    mCurrentFilePath = filePath;
-    mState.store(AudioState::LOADED);
-    
-    // Note: Duration detection requires SDL_mixer 2.6.0+
-    // For older versions, duration will be 0 (unknown)
-    // User can set duration manually via metadata if needed
-    mDuration.store(0);
+        mCurrentFilePath = filePath;
+        mState.store(AudioState::LOADED);
+        
+        // Note: Duration detection requires SDL_mixer 2.6.0+
+        mDuration.store(0);
+    }
 
     notifyCallback(AudioState::LOADED, 0);
     return true;
@@ -138,49 +143,57 @@ void AudioPlayer::unload() {
 // ============================================================================
 
 void AudioPlayer::play() {
-    std::lock_guard<std::mutex> lock(mMutex);
-    
-    if (!mMusic) {
-        return;
-    }
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        
+        if (!mMusic) {
+            return;
+        }
 
-    AudioState currentState = mState.load();
-    
-    if (currentState == AudioState::PAUSED) {
-        // Resume from pause
-        Mix_ResumeMusic();
-    } else if (currentState == AudioState::LOADED || currentState == AudioState::PLAYING) {
-        // Start playing (or restart)
-        Mix_PlayMusic(mMusic, 0);  // 0 = no loop, -1 = infinite loop
-    }
+        AudioState currentState = mState.load();
+        
+        if (currentState == AudioState::PAUSED) {
+            Mix_ResumeMusic();
+        } else if (currentState == AudioState::LOADED || currentState == AudioState::PLAYING) {
+            Mix_PlayMusic(mMusic, 0);
+        }
 
-    mState.store(AudioState::PLAYING);
+        mState.store(AudioState::PLAYING);
+    }
     notifyCallback(AudioState::PLAYING, getPosition());
 }
 
 void AudioPlayer::pause() {
-    std::lock_guard<std::mutex> lock(mMutex);
-    
-    if (!mMusic || mState.load() != AudioState::PLAYING) {
-        return;
-    }
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        
+        if (!mMusic || mState.load() != AudioState::PLAYING) {
+            return;
+        }
 
-    Mix_PauseMusic();
-    mState.store(AudioState::PAUSED);
+        Mix_PauseMusic();
+        mState.store(AudioState::PAUSED);
+    }
     notifyCallback(AudioState::PAUSED, getPosition());
 }
 
 void AudioPlayer::stop() {
-    std::lock_guard<std::mutex> lock(mMutex);
-    
-    if (!mMusic) {
-        return;
-    }
+    bool shouldNotify = false;
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        
+        if (!mMusic) {
+            return;
+        }
 
-    Mix_HaltMusic();
-    
-    if (mState.load() != AudioState::IDLE) {
-        mState.store(AudioState::LOADED);
+        Mix_HaltMusic();
+        
+        if (mState.load() != AudioState::IDLE) {
+            mState.store(AudioState::LOADED);
+            shouldNotify = true;
+        }
+    }
+    if (shouldNotify) {
         notifyCallback(AudioState::LOADED, 0);
     }
 }
