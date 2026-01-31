@@ -33,9 +33,16 @@ private:
     std::atomic<uint32_t> mDuration;      ///< Duration in ms
     
     AudioCallback mCallback;              ///< State change callback
+    std::function<void()> mFinishedCallback; ///< Called when song ends
     mutable std::mutex mMutex;            ///< Protects callback and music handle
     
     bool mInitialized;                    ///< SDL initialized flag
+
+public:
+    static AudioPlayer* sInstance;        ///< Static instance for SDL callback (public for callback)
+
+    // Callback from SDL thread
+    void handleMusicFinished();
 
     // Helper to notify callback
     void notifyCallback(AudioState state, uint32_t positionMs);
@@ -89,6 +96,12 @@ public:
 
     // Callbacks
     void setCallback(AudioCallback callback) override;
+    
+    /**
+     * @brief Set callback for when playback finishes.
+     * @param callback Function to call when song ends
+     */
+    void setFinishedCallback(std::function<void()> callback);
 };
 
 } // namespace Controller

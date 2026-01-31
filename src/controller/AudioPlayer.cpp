@@ -10,6 +10,16 @@
 
 namespace Controller {
 
+// Static instance for SDL callback
+AudioPlayer* AudioPlayer::sInstance = nullptr;
+
+// SDL callback when music finishes
+static void onMusicFinished() {
+    if (AudioPlayer::sInstance) {
+        AudioPlayer::sInstance->handleMusicFinished();
+    }
+}
+
 // ============================================================================
 // Constructor / Destructor
 // ============================================================================
@@ -21,7 +31,9 @@ AudioPlayer::AudioPlayer()
     , mVolume(50)
     , mDuration(0)
     , mCallback(nullptr)
+    , mFinishedCallback(nullptr)
     , mInitialized(false) {
+    sInstance = this;
 }
 
 AudioPlayer::~AudioPlayer() {
@@ -49,6 +61,15 @@ int AudioPlayer::volumeToSDL(int volume) const {
     return static_cast<int>((volume / 100.0) * MIX_MAX_VOLUME);
 }
 
+void AudioPlayer::handleMusicFinished() {
+    // Notify completion
+    // We can't lock mMutex here if we call notifyCallback which also locks
+    // But notifyCallback handles its own locking locally for mCallback copy
+    
+    mState.store(AudioState::FINISHED);
+    notifyCallback(AudioState::FINISHED, 0);
+}
+
 // ============================================================================
 // Lifecycle
 // ============================================================================
@@ -58,8 +79,9 @@ bool AudioPlayer::initialize() {
         return true;  // Already initialized
     }
 
-    // Initialize SDL Audio subsystem
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+    // Initialize just the audio subsystem (not full SDL)
+    // This allows ImGuiView to manage the main SDL lifecycle
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         mState.store(AudioState::ERROR);
         return false;
     }
@@ -67,10 +89,12 @@ bool AudioPlayer::initialize() {
     // Initialize SDL_mixer
     // 44100 Hz, default format, stereo, 2048 byte chunks
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-        SDL_Quit();
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
         mState.store(AudioState::ERROR);
         return false;
     }
+
+    Mix_HookMusicFinished(onMusicFinished);
 
     mInitialized = true;
     mState.store(AudioState::IDLE);
@@ -82,10 +106,19 @@ void AudioPlayer::shutdown() {
         return;
     }
 
+    // Clear callbacks first to prevent access during shutdown
+    Mix_HookMusicFinished(nullptr);
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mFinishedCallback = nullptr;
+        mCallback = nullptr;
+    }
+    sInstance = nullptr;
+
     unload();
     
     Mix_CloseAudio();
-    SDL_Quit();
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
     
     mInitialized = false;
     mState.store(AudioState::IDLE);
@@ -263,6 +296,18 @@ bool AudioPlayer::isPlaying() const {
 void AudioPlayer::setCallback(AudioCallback callback) {
     std::lock_guard<std::mutex> lock(mMutex);
     mCallback = callback;
+}
+
+void AudioPlayer::setFinishedCallback(std::function<void()> callback) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    mFinishedCallback = callback;
+    
+    // Register SDL callback
+    Mix_HookMusicFinished([]() {
+        if (sInstance && sInstance->mFinishedCallback) {
+            sInstance->mFinishedCallback();
+        }
+    });
 }
 
 } // namespace Controller

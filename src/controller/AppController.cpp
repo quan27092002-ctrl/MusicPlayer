@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <sstream>
 #include <filesystem>
+#include <taglib/fileref.h>
+#include <taglib/tag.h>
 
 namespace Controller {
 
@@ -82,6 +84,10 @@ void AppController::onAudioStateChanged(AudioState state, uint32_t position) {
                 break;
             case AudioState::ERROR:
                 mPlayerState->setPlaybackState(Model::PlaybackState::STOPPED);
+                break;
+            case AudioState::FINISHED:
+                mPlayerState->setPlaybackState(Model::PlaybackState::STOPPED);
+                next(); // Auto-advance to next track
                 break;
         }
     }
@@ -352,6 +358,12 @@ void AppController::previous() {
     }
 }
 
+void AppController::seek(uint32_t positionMs) {
+    if (mAudioPlayer) {
+        mAudioPlayer->seek(positionMs);
+    }
+}
+
 // ============================================================================
 // Volume Control
 // ============================================================================
@@ -410,7 +422,32 @@ void AppController::addToPlaylist(const std::string& filePath) {
         filename = filePath.substr(lastSlash + 1);
     }
 
-    Model::MediaFile file(filename, filePath);
+    // Read metadata using TagLib
+    std::string artist = "Unknown Artist";
+    std::string album = "Unknown Album";
+    uint32_t duration = 180; // Default 3 minutes
+    
+    TagLib::FileRef f(filePath.c_str());
+    if (!f.isNull() && f.tag()) {
+        TagLib::Tag* tag = f.tag();
+        
+        // Get artist
+        if (!tag->artist().isEmpty()) {
+            artist = tag->artist().toCString(true);
+        }
+        
+        // Get album  
+        if (!tag->album().isEmpty()) {
+            album = tag->album().toCString(true);
+        }
+        
+        // Get duration
+        if (f.audioProperties()) {
+            duration = f.audioProperties()->lengthInSeconds();
+        }
+    }
+
+    Model::MediaFile file(filename, filePath, duration, artist, album);
     
     std::lock_guard<std::mutex> lock(mPlaylistMutex);
     mPlaylist.push_back(file);
@@ -475,6 +512,30 @@ std::string AppController::getTrackPath(size_t index) const {
         return mPlaylist[index].getPath();
     }
     return "";
+}
+
+std::string AppController::getTrackArtist(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getArtist();
+    }
+    return "Unknown Artist";
+}
+
+std::string AppController::getTrackAlbum(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getAlbum();
+    }
+    return "Unknown Album";
+}
+
+uint32_t AppController::getTrackDuration(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getDuration();
+    }
+    return 0;
 }
 
 // ============================================================================

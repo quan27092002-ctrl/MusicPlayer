@@ -118,6 +118,12 @@ public:
      */
     virtual void previous() = 0;
 
+    /**
+     * @brief Seek to position in current track.
+     * @param positionMs Position in milliseconds
+     */
+    virtual void seek(uint32_t positionMs) = 0;
+
     // ========================================================================
     // Volume Control
     // ========================================================================
@@ -180,6 +186,27 @@ public:
      * @return Track path or empty string if invalid index
      */
     virtual std::string getTrackPath(size_t index) const = 0;
+
+    /**
+     * @brief Get track artist at index.
+     * @param index Track index
+     * @return Track artist or "Unknown Artist" if invalid
+     */
+    virtual std::string getTrackArtist(size_t index) const = 0;
+
+    /**
+     * @brief Get track album at index.
+     * @param index Track index
+     * @return Track album or "Unknown Album" if invalid
+     */
+    virtual std::string getTrackAlbum(size_t index) const = 0;
+
+    /**
+     * @brief Get track duration at index.
+     * @param index Track index
+     * @return Duration in seconds or 0 if invalid
+     */
+    virtual uint32_t getTrackDuration(size_t index) const = 0;
 
     // ========================================================================
     // Callbacks

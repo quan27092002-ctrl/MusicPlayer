@@ -97,6 +97,7 @@ public:
     void stop() override;
     void next() override;
     void previous() override;
+    void seek(uint32_t positionMs) override;
 
     // Volume Control
     void setVolume(int volume) override;
@@ -110,6 +111,9 @@ public:
     size_t loadDirectory(const std::string& directoryPath) override;
     std::string getTrackName(size_t index) const override;
     std::string getTrackPath(size_t index) const override;
+    std::string getTrackArtist(size_t index) const override;
+    std::string getTrackAlbum(size_t index) const override;
+    uint32_t getTrackDuration(size_t index) const override;
 
     // Callbacks
     void setStateCallback(AppStateCallback callback) override;

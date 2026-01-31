@@ -66,10 +66,10 @@ int main(int /*argc*/, char** /*argv*/) {
         view->render();
     }
 
-    // Cleanup
+    // Cleanup - shutdown audio first, then SDL/View
     std::cout << "Shutting down..." << std::endl;
-    view->shutdown();
-    appController->shutdown();
+    appController->shutdown();  // Shutdown audio first
+    view->shutdown();           // Then SDL/ImGui
 
     std::cout << "Goodbye!" << std::endl;
     return 0;

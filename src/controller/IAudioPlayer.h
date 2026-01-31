@@ -22,7 +22,8 @@ enum class AudioState {
     LOADED = 1,     ///< File loaded, ready to play
     PLAYING = 2,    ///< Currently playing
     PAUSED = 3,     ///< Paused
-    ERROR = 4       ///< Error state
+    ERROR = 4,      ///< Error state
+    FINISHED = 5    ///< Playback finished
 };
 
 /**
