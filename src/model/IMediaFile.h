@@ -10,6 +10,7 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace Model {
 
@@ -53,6 +54,30 @@ public:
      */
     virtual std::string getAlbum() const = 0;
 
+    /**
+     * @brief Set the artist name.
+     * @param artist Artist name
+     */
+    virtual void setArtist(const std::string& artist) = 0;
+
+    /**
+     * @brief Set the album name.
+     * @param album Album name
+     */
+    virtual void setAlbum(const std::string& album) = 0;
+    
+    /**
+     * @brief Get the cover art data.
+     * @return Vector containing raw image data
+     */
+    virtual const std::vector<uint8_t>& getCoverArt() const = 0;
+    
+    /**
+     * @brief Set the cover art data.
+     * @param data Raw image data
+     */
+    virtual void setCoverArt(const std::vector<uint8_t>& data) = 0;
+    
     /**
      * @brief Check if this media file is valid.
      * @return true if filename and path are not empty

@@ -32,7 +32,8 @@ AudioPlayer::AudioPlayer()
     , mDuration(0)
     , mCallback(nullptr)
     , mFinishedCallback(nullptr)
-    , mInitialized(false) {
+    , mInitialized(false)
+    , mIsManualStop(false) {
     sInstance = this;
 }
 
@@ -65,6 +66,11 @@ void AudioPlayer::handleMusicFinished() {
     // Notify completion
     // We can't lock mMutex here if we call notifyCallback which also locks
     // But notifyCallback handles its own locking locally for mCallback copy
+    
+    // Ignore callback if we stopped playback manually
+    if (mIsManualStop.load()) {
+        return;
+    }
     
     mState.store(AudioState::FINISHED);
     notifyCallback(AudioState::FINISHED, 0);
@@ -219,7 +225,9 @@ void AudioPlayer::stop() {
             return;
         }
 
+        mIsManualStop.store(true);
         Mix_HaltMusic();
+        mIsManualStop.store(false);
         
         if (mState.load() != AudioState::IDLE) {
             mState.store(AudioState::LOADED);

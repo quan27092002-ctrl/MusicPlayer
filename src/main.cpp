@@ -15,7 +15,8 @@
 #include "view/ImGuiView.h"
 
 int main(int /*argc*/, char** /*argv*/) {
-    std::cout << "=== S32K Media Player ===" << std::endl;
+    // === S32K Media Player Initialization ===
+
 
     // Create shared components
     auto playerState = std::make_shared<Model::PlayerState>();

@@ -31,6 +31,7 @@ private:
     std::atomic<AudioState> mState;       ///< Current state
     std::atomic<int> mVolume;             ///< Volume level (0-100)
     std::atomic<uint32_t> mDuration;      ///< Duration in ms
+    std::atomic<bool> mIsManualStop;      ///< Flag to prevent recursion in callback
     
     AudioCallback mCallback;              ///< State change callback
     std::function<void()> mFinishedCallback; ///< Called when song ends

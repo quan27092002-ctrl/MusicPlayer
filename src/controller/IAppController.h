@@ -9,6 +9,8 @@
 #define IAPPCONTROLLER_H
 
 #include <string>
+#include <vector>
+#include <memory>
 #include <functional>
 
 namespace Controller {
@@ -52,6 +54,8 @@ public:
      * @brief Shutdown all subsystems.
      */
     virtual void shutdown() = 0;
+    
+    virtual std::vector<int> getHistory() const = 0;
 
     /**
      * @brief Get current application state.
@@ -117,6 +121,11 @@ public:
      * @brief Go to previous track.
      */
     virtual void previous() = 0;
+    
+    /**
+     * @brief Play specific track and push old to history.
+     */
+    virtual void playTrack(int index) = 0;
 
     /**
      * @brief Seek to position in current track.
@@ -207,6 +216,13 @@ public:
      * @return Duration in seconds or 0 if invalid
      */
     virtual uint32_t getTrackDuration(size_t index) const = 0;
+
+    /**
+     * @brief Get the track cover art.
+     * @param index Playlist index
+     * @return Raw image data
+     */
+    virtual std::vector<uint8_t> getTrackCoverArt(size_t index) const = 0;
 
     // ========================================================================
     // Callbacks

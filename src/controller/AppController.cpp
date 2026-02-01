@@ -11,6 +11,10 @@
 #include <filesystem>
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
+#include <taglib/mpegfile.h>
+#include <taglib/id3v2tag.h>
+#include <taglib/attachedpictureframe.h>
+#include <cctype> // for std::tolower
 
 namespace Controller {
 
@@ -228,6 +232,12 @@ void AppController::shutdown() {
         mStateCallback = nullptr;
     }
     
+    // Clear playlist to free MediaFiles/CoverArt while we are still alive
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistMutex);
+        mPlaylist.clear();
+    }
+
     mAppState.store(AppState::UNINITIALIZED);
 }
 
@@ -318,6 +328,18 @@ void AppController::next() {
         }
 
         int currentIndex = getCurrentTrackIndex();
+        
+        // Push current to history before moving
+        if (currentIndex >= 0) {
+             // We can't call pushHistory here because we already hold the lock!
+             // Direct manipulation or use recursive mutex. 
+             // Using direct manipulation for now to avoid modifying helper signature
+             if (mHistoryStack.empty() || mHistoryStack.back() != currentIndex) {
+                 mHistoryStack.push_back(currentIndex);
+                 if (mHistoryStack.size() > 50) mHistoryStack.erase(mHistoryStack.begin());
+             }
+        }
+
         int nextIndex = (currentIndex + 1) % static_cast<int>(mPlaylist.size());
         
         if (nextIndex >= 0 && nextIndex < static_cast<int>(mPlaylist.size())) {
@@ -341,15 +363,48 @@ void AppController::previous() {
             return;
         }
 
-        int currentIndex = getCurrentTrackIndex();
-        int prevIndex = currentIndex - 1;
-        if (prevIndex < 0) {
-            prevIndex = static_cast<int>(mPlaylist.size()) - 1;
+        // Try to pop from history 
+        if (!mHistoryStack.empty()) {
+            int historyIndex = mHistoryStack.back();
+            mHistoryStack.pop_back();
+            
+            if (historyIndex >= 0 && historyIndex < static_cast<int>(mPlaylist.size())) {
+                pathToLoad = mPlaylist[historyIndex].getPath();
+            }
+        } else {
+            // Fallback: Standard previous
+            int currentIndex = getCurrentTrackIndex();
+            int prevIndex = currentIndex - 1;
+            if (prevIndex < 0) {
+                prevIndex = static_cast<int>(mPlaylist.size()) - 1;
+            }
+            
+            if (prevIndex >= 0 && prevIndex < static_cast<int>(mPlaylist.size())) {
+                pathToLoad = mPlaylist[prevIndex].getPath();
+            }
         }
-        
-        if (prevIndex >= 0 && prevIndex < static_cast<int>(mPlaylist.size())) {
-            pathToLoad = mPlaylist[prevIndex].getPath();
-        }
+    }
+    
+    if (!pathToLoad.empty()) {
+        loadTrack(pathToLoad);
+        play();
+    }
+}
+
+void AppController::playTrack(int index) {
+    std::string pathToLoad;
+    {
+         std::lock_guard<std::mutex> lock(mPlaylistMutex);
+         if (index >= 0 && index < static_cast<int>(mPlaylist.size())) {
+             int currentIndex = getCurrentTrackIndex();
+             if (currentIndex >= 0 && currentIndex != index) {
+                 // Push old track to history
+                 if (mHistoryStack.empty() || mHistoryStack.back() != currentIndex) {
+                     mHistoryStack.push_back(currentIndex);
+                 }
+             }
+             pathToLoad = mPlaylist[index].getPath();
+         }
     }
     
     if (!pathToLoad.empty()) {
@@ -425,29 +480,59 @@ void AppController::addToPlaylist(const std::string& filePath) {
     // Read metadata using TagLib
     std::string artist = "Unknown Artist";
     std::string album = "Unknown Album";
-    uint32_t duration = 180; // Default 3 minutes
+    uint32_t duration = 0;
+    std::vector<uint8_t> coverArt;
     
+    std::string ext;
+    size_t dotPos = filePath.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        ext = filePath.substr(dotPos);
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
+    }
+
+    // Use FileRef for robust file opening
     TagLib::FileRef f(filePath.c_str());
     if (!f.isNull() && f.tag()) {
-        TagLib::Tag* tag = f.tag();
+        TagLib::Tag *tag = f.tag();
         
-        // Get artist
-        if (!tag->artist().isEmpty()) {
-            artist = tag->artist().toCString(true);
-        }
+        // Basic Metadata
+        if (!tag->artist().isEmpty()) artist = tag->artist().toCString(true);
+        if (!tag->album().isEmpty()) album = tag->album().toCString(true);
         
-        // Get album  
-        if (!tag->album().isEmpty()) {
-            album = tag->album().toCString(true);
-        }
-        
-        // Get duration
+        // Duration
         if (f.audioProperties()) {
             duration = f.audioProperties()->lengthInSeconds();
         }
-    }
 
-    Model::MediaFile file(filename, filePath, duration, artist, album);
+        // Try to extract ID3v2 Cover Art (APIC)
+        // Verify it's an MPEG file specifically for ID3v2 access
+        if (ext == ".mp3") {
+            TagLib::MPEG::File *mpegFile = dynamic_cast<TagLib::MPEG::File*>(f.file());
+            if (mpegFile && mpegFile->ID3v2Tag()) {
+                 TagLib::ID3v2::Tag *id3v2 = mpegFile->ID3v2Tag();
+                 TagLib::ID3v2::FrameList frames = id3v2->frameListMap()["APIC"];
+                 
+                 if (!frames.isEmpty()) {
+                     TagLib::ID3v2::AttachedPictureFrame *frame = 
+                         dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames.front());
+                     if (frame) {
+                         TagLib::ByteVector pic = frame->picture();
+                         if (pic.size() > 0 && pic.size() < 5*1024*1024) { // 5MB Limit
+                             // Safer copy
+                             coverArt.reserve(pic.size());
+                             const char* data = pic.data();
+                             coverArt.assign(data, data + pic.size());
+                         }
+                     }
+                 }
+            }
+        }
+    }
+    
+    // Default duration/metadata fallback not needed as initialized above
+    if (duration == 0) duration = 180;
+
+    Model::MediaFile file(filename, filePath, duration, artist, album, coverArt);
     
     std::lock_guard<std::mutex> lock(mPlaylistMutex);
     mPlaylist.push_back(file);
@@ -481,7 +566,7 @@ size_t AppController::loadDirectory(const std::string& directoryPath) {
             if (entry.is_regular_file()) {
                 std::string ext = entry.path().extension().string();
                 // Convert to lowercase for comparison
-                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
                 
                 // Check for audio file extensions
                 if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
@@ -538,6 +623,14 @@ uint32_t AppController::getTrackDuration(size_t index) const {
     return 0;
 }
 
+std::vector<uint8_t> AppController::getTrackCoverArt(size_t index) const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (index < mPlaylist.size()) {
+        return mPlaylist[index].getCoverArt();
+    }
+    return {};
+}
+
 // ============================================================================
 // Callbacks
 // ============================================================================
@@ -545,6 +638,48 @@ uint32_t AppController::getTrackDuration(size_t index) const {
 void AppController::setStateCallback(AppStateCallback callback) {
     std::lock_guard<std::mutex> lock(mCallbackMutex);
     mStateCallback = callback;
+}
+
+// ============================================================================
+// History Navigation
+// ============================================================================
+
+void AppController::pushHistory(int trackIndex) {
+    if (trackIndex < 0) return;
+    
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    
+    // Avoid checking duplicates against the *very top* if we want strict history trace
+    // But usually we don't want "Song 1 -> Song 1" to add to history.
+    if (!mHistoryStack.empty() && mHistoryStack.back() == trackIndex) {
+        return;
+    }
+    
+    mHistoryStack.push_back(trackIndex);
+    // Limit stack size if needed (e.g., 50)
+    if (mHistoryStack.size() > 50) {
+        mHistoryStack.erase(mHistoryStack.begin());
+    }
+}
+
+int AppController::popHistory() {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    if (mHistoryStack.empty()) {
+        return -1;
+    }
+    
+    int index = mHistoryStack.back();
+    mHistoryStack.pop_back();
+    return index;
+}
+
+std::vector<int> AppController::getHistory() const {
+    std::lock_guard<std::mutex> lock(mPlaylistMutex);
+    // Return copy for thread safety
+    // User wants UI to show history. Usually "Most recent at top".
+    // Vector is [Oldest, ..., Newest].
+    // So UI should iterate in reverse. We just return the raw stack.
+    return mHistoryStack;
 }
 
 } // namespace Controller

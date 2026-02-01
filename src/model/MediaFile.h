@@ -11,6 +11,7 @@
 #include "IMediaFile.h"
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace Model {
 
@@ -26,6 +27,7 @@ private:
     uint32_t mDuration;         ///< Duration in seconds (0 if unknown)
     std::string mArtist;        ///< Artist name
     std::string mAlbum;         ///< Album name
+    std::vector<uint8_t> mCoverArtData; ///< Raw image data from ID3 tag
 
 public:
     /**
@@ -44,7 +46,8 @@ public:
     MediaFile(const std::string& filename, const std::string& path, 
               uint32_t duration = 0, 
               const std::string& artist = "", 
-              const std::string& album = "");
+              const std::string& album = "",
+              const std::vector<uint8_t>& coverArt = {});
 
     /**
      * @brief Copy constructor.
@@ -108,13 +111,25 @@ public:
      * @brief Set the artist name.
      * @param artist Artist name
      */
-    void setArtist(const std::string& artist);
+    void setArtist(const std::string& artist) override;
 
     /**
      * @brief Set the album name.
      * @param album Album name
      */
-    void setAlbum(const std::string& album);
+    void setAlbum(const std::string& album) override;
+    
+    /**
+     * @brief Get the cover art data.
+     * @return Raw image data
+     */
+    const std::vector<uint8_t>& getCoverArt() const override;
+
+    /**
+     * @brief Set the cover art data.
+     * @param data Raw image data
+     */
+    void setCoverArt(const std::vector<uint8_t>& data) override;
 
     /**
      * @brief Equality operator - compares by path.

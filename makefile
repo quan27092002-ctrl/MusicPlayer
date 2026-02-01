@@ -10,11 +10,11 @@ MAKEFLAGS += -j$(shell nproc)
 # 1. Compiler Settings
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/controller -Isrc/view -Isrc/view/imgui
-CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer taglib)
+CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer taglib SDL2_image)
 
 # Linker flags
 LDFLAGS  = -lgtest -lgtest_main -pthread
-LDFLAGS += $(shell pkg-config --libs sdl2 SDL2_mixer taglib)
+LDFLAGS += $(shell pkg-config --libs sdl2 SDL2_mixer taglib SDL2_image)
 
 # 2. Project Directories
 SRC_DIR = src

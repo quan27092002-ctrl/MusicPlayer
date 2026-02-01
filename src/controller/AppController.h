@@ -97,6 +97,12 @@ public:
     void stop() override;
     void next() override;
     void previous() override;
+    void playTrack(int index) override;
+    
+    // History
+    std::vector<int> getHistory() const override;
+
+
     void seek(uint32_t positionMs) override;
 
     // Volume Control
@@ -114,9 +120,15 @@ public:
     std::string getTrackArtist(size_t index) const override;
     std::string getTrackAlbum(size_t index) const override;
     uint32_t getTrackDuration(size_t index) const override;
+    std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
 
     // Callbacks
     void setStateCallback(AppStateCallback callback) override;
+
+private:
+    std::vector<int> mHistoryStack;
+    void pushHistory(int trackIndex);
+    int popHistory();
 };
 
 } // namespace Controller

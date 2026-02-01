@@ -8,10 +8,13 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl2.h"
 #include "imgui/backends/imgui_impl_sdlrenderer2.h"
+#include <SDL2/SDL_image.h>
 #include <cstdio>
+#include <iostream>
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <map>
 
 namespace View {
 
@@ -37,34 +40,10 @@ namespace Colors {
     const ImVec4 TransparentV = ImVec4(0, 0, 0, 0);
 }
 
-// Track info for recently played
-struct RecentTrack {
-    std::string name;
-    std::string artist;
-    std::string album;
-    size_t index;
-    std::chrono::steady_clock::time_point playedAt;
-};
-
-// User playlist
-struct UserPlaylist {
-    std::string name;
-    std::vector<size_t> trackIndices;
-};
-
-// Global state
-static std::vector<RecentTrack> g_recentlyPlayed;
-static std::vector<UserPlaylist> g_userPlaylists;
-static int g_mainTabIndex = 1;  // 0=All, 1=Music, 2=Playlist
-static int g_rightTabIndex = 0; // 0=Queue, 1=Recent
-static char g_searchQuery[256] = "";
-static bool g_loopEnabled = false;
-static bool g_shuffleEnabled = false;
-
-// Playback tracking
-static std::chrono::steady_clock::time_point g_playStartTime;
-static uint32_t g_playStartPos = 0;
-static bool g_wasPlaying = false;
+// Structs moved to header
+// Globals moved to class members
+// Structs moved to header
+// Globals moved to class members in header
 
 // ============================================================================
 // Constructor / Destructor
@@ -79,9 +58,15 @@ ImGuiView::ImGuiView(
     , mWindow(nullptr)
     , mRenderer(nullptr)
     , mRunning(false)
-    , mWindowWidth(1280)
-    , mWindowHeight(850) {
-}
+    , mWindowWidth(1080)
+    , mWindowHeight(720) {
+        // Initialize state
+        mMainTabIndex = 1;
+        mRightTabIndex = 0;
+        mPlayStartPos = 0;
+        mWasPlaying = false;
+        mSearchQuery[0] = '\0';
+    }
 
 ImGuiView::~ImGuiView() {
     shutdown();
@@ -115,14 +100,14 @@ void setupSpotifyTheme() {
     c[ImGuiCol_ChildBg] = Colors::TransparentV;
     c[ImGuiCol_FrameBg] = Colors::SurfaceLightV;
     c[ImGuiCol_FrameBgHovered] = Colors::HoverV;
-    c[ImGuiCol_FrameBgActive] = Colors::GreenV;
+    c[ImGuiCol_FrameBgActive] = Colors::HoverV;
     c[ImGuiCol_ScrollbarBg] = Colors::TransparentV;
     c[ImGuiCol_ScrollbarGrab] = Colors::HoverV;
-    c[ImGuiCol_SliderGrab] = Colors::GreenV;
-    c[ImGuiCol_SliderGrabActive] = ImVec4(0.15f, 0.9f, 0.45f, 1);
+    c[ImGuiCol_SliderGrab] = Colors::WhiteV;
+    c[ImGuiCol_SliderGrabActive] = Colors::WhiteV;
     c[ImGuiCol_Button] = Colors::SurfaceLightV;
     c[ImGuiCol_ButtonHovered] = Colors::HoverV;
-    c[ImGuiCol_ButtonActive] = Colors::GreenV;
+    c[ImGuiCol_ButtonActive] = Colors::HoverV; // Was GreenV
     c[ImGuiCol_Header] = Colors::SurfaceLightV;
     c[ImGuiCol_HeaderHovered] = Colors::HoverV;
     c[ImGuiCol_Text] = Colors::WhiteV;
@@ -140,10 +125,10 @@ bool ImGuiView::initialize() {
     }
 
     mWindow = SDL_CreateWindow(
-        "S32K Media Player",
+        "",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         mWindowWidth, mWindowHeight,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+        SDL_WINDOW_ALLOW_HIGHDPI
     );
     if (!mWindow) return false;
 
@@ -176,13 +161,22 @@ bool ImGuiView::initialize() {
 }
 
 void ImGuiView::shutdown() {
+    std::cerr << "ImGuiView::shutdown() called." << std::endl;
     if (!mWindow) return;
+
+    // Clean up textures before renderer
+    for (auto& pair : mCoverCache) {
+        if (pair.second) SDL_DestroyTexture(pair.second);
+    }
+    mCoverCache.clear();
+
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
     if (mRenderer) { SDL_DestroyRenderer(mRenderer); mRenderer = nullptr; }
     if (mWindow) { SDL_DestroyWindow(mWindow); mWindow = nullptr; }
     mRunning = false;
+    std::cerr << "ImGuiView::shutdown() complete." << std::endl;
 }
 
 bool ImGuiView::isRunning() const { return mRunning; }
@@ -201,23 +195,70 @@ void ImGuiView::processEvents() {
 // Helper: Draw album cover
 // ============================================================================
 
-void DrawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int colorIndex) {
-    ImU32 colors1[] = {
-        IM_COL32(180, 100, 60, 255), IM_COL32(100, 80, 180, 255),
-        IM_COL32(60, 150, 120, 255), IM_COL32(180, 60, 100, 255),
-        IM_COL32(80, 120, 180, 255), IM_COL32(150, 120, 80, 255),
-    };
-    ImU32 colors2[] = {
-        IM_COL32(80, 40, 30, 255), IM_COL32(40, 30, 80, 255),
-        IM_COL32(30, 70, 50, 255), IM_COL32(80, 30, 50, 255),
-        IM_COL32(30, 50, 80, 255), IM_COL32(60, 50, 30, 255),
-    };
+// Helper to create texture from memory
+SDL_Texture* ImGuiView::createTextureFromMemory(const std::vector<uint8_t>& data) {
+    if (data.empty()) return nullptr;
+    SDL_RWops* rw = SDL_RWFromConstMem(data.data(), data.size());
+    if (!rw) return nullptr;
     
-    int idx = abs(colorIndex) % 6;
-    dl->AddRectFilledMultiColor(pos, ImVec2(pos.x + size, pos.y + size),
-        colors1[idx], colors1[idx], colors2[idx], colors2[idx]);
-    dl->AddRect(pos, ImVec2(pos.x + size, pos.y + size), 
-        IM_COL32(255, 255, 255, 20), 4.0f, 0, 1.0f);
+    SDL_Surface* surface = IMG_Load_RW(rw, 1); // 1 = auto-close RWops
+    if (!surface) return nullptr;
+    
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(mRenderer, surface);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
+void ImGuiView::drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int trackIndex) {
+    bool drawn = false;
+    
+    if (mController && trackIndex >= 0) {
+        // Check cache
+        auto it = mCoverCache.find(trackIndex);
+        SDL_Texture* texture = nullptr;
+        
+        if (it != mCoverCache.end()) {
+            texture = it->second;
+        } else {
+            // Load and cache
+            auto data = mController->getTrackCoverArt(trackIndex);
+            if (!data.empty()) {
+                texture = createTextureFromMemory(data);
+                if (texture) {
+                    mCoverCache[trackIndex] = texture;
+                }
+            }
+        }
+        
+        if (texture) {
+            dl->AddImage((ImTextureID)texture, pos, ImVec2(pos.x + size, pos.y + size));
+            drawn = true;
+        }
+    }
+
+    if (!drawn) {
+        // Fallback gradient
+        int colorIndex = trackIndex;
+        ImU32 colors1[] = {
+            IM_COL32(180, 100, 60, 255), IM_COL32(100, 80, 180, 255),
+            IM_COL32(60, 150, 120, 255), IM_COL32(180, 60, 100, 255),
+            IM_COL32(80, 120, 180, 255), IM_COL32(150, 120, 80, 255),
+        };
+        ImU32 colors2[] = {
+            IM_COL32(80, 40, 30, 255), IM_COL32(40, 30, 80, 255),
+            IM_COL32(30, 70, 50, 255), IM_COL32(80, 30, 50, 255),
+            IM_COL32(30, 50, 80, 255), IM_COL32(60, 50, 30, 255),
+        };
+        
+        int idx = abs(colorIndex) % 6;
+        dl->AddRectFilledMultiColor(pos, ImVec2(pos.x + size, pos.y + size),
+            colors1[idx], colors1[idx], colors2[idx], colors2[idx]);
+        dl->AddRect(pos, ImVec2(pos.x + size, pos.y + size), 
+            IM_COL32(255, 255, 255, 20), 4.0f, 0, 1.0f);
+        
+        // Simple circle note
+        dl->AddCircle(ImVec2(pos.x + size/2, pos.y + size/2), size/3, IM_COL32(255,255,255,100), 32, 2.0f);
+    }
 }
 
 // ============================================================================
@@ -249,25 +290,7 @@ bool MatchesSearch(const std::string& text, const char* query) {
 // Helper: Add to Recently Played
 // ============================================================================
 
-void AddToRecentlyPlayed(std::shared_ptr<Controller::IAppController> controller, size_t index, const std::string& name) {
-    // Remove if already exists
-    g_recentlyPlayed.erase(
-        std::remove_if(g_recentlyPlayed.begin(), g_recentlyPlayed.end(),
-            [index](const RecentTrack& t) { return t.index == index; }),
-        g_recentlyPlayed.end());
-    
-    // Add to front
-    RecentTrack rt;
-    rt.name = name;
-    rt.artist = controller ? controller->getTrackArtist(index) : "Unknown Artist";
-    rt.album = "Unknown Album";
-    rt.index = index;
-    rt.playedAt = std::chrono::steady_clock::now();
-    g_recentlyPlayed.insert(g_recentlyPlayed.begin(), rt);
-    
-    // Limit size
-    if (g_recentlyPlayed.size() > 20) g_recentlyPlayed.pop_back();
-}
+
 
 // ============================================================================
 // Main Render
@@ -282,7 +305,7 @@ void ImGuiView::render() {
 
     // Layout
     const float rightSidebarW = 300.0f;
-    const float playerBarH = 60.0f;
+    const float playerBarH = 90.0f; // Increased for larger art
     const float gap = 8.0f;
     const float mainW = mWindowWidth - rightSidebarW - gap * 2;
     const float contentH = mWindowHeight - playerBarH - gap;
@@ -291,11 +314,26 @@ void ImGuiView::render() {
     bool isPlaying = mPlayerState ? mPlayerState->isPlaying() : false;
     
     // Track playback time
-    if (isPlaying && !g_wasPlaying) {
-        g_playStartTime = std::chrono::steady_clock::now();
-        g_playStartPos = 0;
+    static int lastTrack = -1;
+    if (currentTrack != lastTrack) {
+        mPlayStartTime = std::chrono::steady_clock::now();
+        mPlayStartPos = 0;
+        
+        lastTrack = currentTrack;
     }
-    g_wasPlaying = isPlaying;
+
+    if (!isPlaying && mWasPlaying) {
+         auto now = std::chrono::steady_clock::now();
+         mPlayStartPos += (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - mPlayStartTime).count();
+    }
+
+    if (isPlaying && !mWasPlaying) {
+        // Resume from current pos if just paused?
+        // Actually g_playStartPos should be updated on pause
+        // For now just keep existing logic but add resume support
+        mPlayStartTime = std::chrono::steady_clock::now();
+    }
+    mWasPlaying = isPlaying;
 
     // Check if song ended (after ~3 min assume ended for demo)
     // TODO: Implement proper callback from AudioPlayer
@@ -323,7 +361,7 @@ void ImGuiView::render() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
     ImGui::PushStyleColor(ImGuiCol_FrameBg, Colors::HoverV);
     ImGui::SetNextItemWidth(300);
-    ImGui::InputTextWithHint("##search", "Search songs, artists...", g_searchQuery, 256);
+    ImGui::InputTextWithHint("##search", "Search songs, artists...", mSearchQuery, 256);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
     
@@ -331,15 +369,15 @@ void ImGuiView::render() {
     ImGui::SetCursorPos(ImVec2(340, 15));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 16.0f);
     
-    const char* tabs[] = {"All", "Music", "Playlist"};
-    for (int i = 0; i < 3; i++) {
+    const char* tabs[] = {"All", "Music"}; // Removed Playlist for now
+    for (int i = 0; i < 2; i++) {
         if (i > 0) ImGui::SameLine();
         
-        bool selected = (g_mainTabIndex == i);
+        bool selected = (mMainTabIndex == i);
         ImGui::PushStyleColor(ImGuiCol_Button, selected ? Colors::WhiteV : Colors::HoverV);
         ImGui::PushStyleColor(ImGuiCol_Text, selected ? Colors::BlackV : Colors::WhiteV);
         
-        if (ImGui::Button(tabs[i], ImVec2(80, 28))) g_mainTabIndex = i;
+        if (ImGui::Button(tabs[i], ImVec2(80, 28))) mMainTabIndex = i;
         ImGui::PopStyleColor(2);
     }
     ImGui::PopStyleVar();
@@ -351,7 +389,7 @@ void ImGuiView::render() {
     // Use child window's DrawList for proper clipping
     ImDrawList* cdl = ImGui::GetWindowDrawList();
     
-    if (g_mainTabIndex == 0) {
+    if (mMainTabIndex == 0) {
         // === ALL TAB (Recently Played) ===
         ImGui::Indent(10);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
@@ -359,25 +397,34 @@ void ImGuiView::render() {
         ImGui::PopStyleColor();
         ImGui::Spacing();
         
-        if (g_recentlyPlayed.empty()) {
+        std::vector<int> history = mController ? mController->getHistory() : std::vector<int>();
+        
+        if (history.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-            ImGui::Text("No recently played tracks. Play a song to see it here.");
+            ImGui::Text("No recently played tracks.");
             ImGui::PopStyleColor();
         } else {
-            for (size_t i = 0; i < g_recentlyPlayed.size(); i++) {
-                const RecentTrack& rt = g_recentlyPlayed[i];
-                bool isCurrent = (currentTrack == (int)rt.index);
+            for (int i = (int)history.size() - 1; i >= 0; i--) {
+                int trackIdx = history[i];
+                if (trackIdx < 0) continue;
                 
-                if (!MatchesSearch(rt.name, g_searchQuery)) continue;
+                std::string tName = mController->getTrackName(trackIdx);
+                std::string tArtist = mController->getTrackArtist(trackIdx);
+                
+                // const RecentTrack& rt = mRecentTracks[i]; // REMOVED
+                // bool isCurrent = (currentTrack == (int)rt.index); // REMOVED
+                bool isCurrent = (currentTrack == trackIdx);
+                
+                if (!MatchesSearch(tName, mSearchQuery) && !MatchesSearch(tArtist.c_str(), mSearchQuery)) continue;
                 
                 ImGui::PushID((int)(2000 + i));
                 ImVec2 rowPos = ImGui::GetCursorScreenPos();
                 
                 // Album cover
-                DrawAlbumCover(cdl, rowPos, 40, (int)rt.index);
+                drawAlbumCover(cdl, rowPos, 40, trackIdx);
                 
                 // Track info
-                std::string dispName = StripExtension(rt.name);
+                std::string dispName = StripExtension(tName);
                 if (dispName.length() > 35) dispName = dispName.substr(0, 32) + "...";
                 
                 ImGui::SetCursorPosX(60);
@@ -386,22 +433,21 @@ void ImGuiView::render() {
                 ImGui::PopStyleColor();
                 ImGui::SetCursorPosX(60);
                 ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
-                ImGui::Text("%s", rt.artist.c_str());
+                std::string tAlbum = mController->getTrackAlbum(trackIdx);
+                ImGui::Text("%s | %s", tArtist.c_str(), tAlbum.c_str());
                 ImGui::PopStyleColor();
                 
                 // Click to play - overlay
                 ImGui::SetCursorScreenPos(rowPos);
                 if (ImGui::InvisibleButton("##recent", ImVec2(mainW - 80, 45)) && mController) {
-                    mController->loadTrack(mController->getTrackPath(rt.index));
-                    mController->play();
-                    if (mPlayerState) mPlayerState->setCurrentTrackIndex((int)rt.index);
+                     mController->playTrack(trackIdx);
                 }
                 ImGui::PopID();
             }
         }
         ImGui::Unindent(10);
     }
-    else if (g_mainTabIndex == 1) {
+    else if (mMainTabIndex == 1) {
         // === MUSIC TAB (Full Library) ===
         ImGui::Indent(10);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
@@ -411,7 +457,16 @@ void ImGuiView::render() {
         
         for (size_t i = 0; i < mPlaylistDisplay.size(); i++) {
             std::string trackName = mPlaylistDisplay[i];
-            if (!MatchesSearch(trackName, g_searchQuery)) continue;
+            
+            // Search: Check Name, Artist, and Album
+            std::string sArtist = mController ? mController->getTrackArtist(i) : "";
+            std::string sAlbum = mController ? mController->getTrackAlbum(i) : "";
+            
+            bool match = MatchesSearch(trackName, mSearchQuery) || 
+                         MatchesSearch(sArtist.c_str(), mSearchQuery) || 
+                         MatchesSearch(sAlbum.c_str(), mSearchQuery);
+                         
+            if (!match) continue;
             
             bool isCurrent = (currentTrack == (int)i);
             
@@ -428,7 +483,7 @@ void ImGuiView::render() {
             ImGui::SameLine();
             
             // Album cover (offset)
-            DrawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, (int)i);
+            drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, (int)i);
             
             // Track info
             std::string dispName = StripExtension(trackName);
@@ -442,7 +497,8 @@ void ImGuiView::render() {
             ImGui::SetCursorPosX(95);
             ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
             std::string artistStr = mController ? mController->getTrackArtist(i) : "Unknown Artist";
-            ImGui::Text("%s", artistStr.c_str());
+            std::string albumStr = mController ? mController->getTrackAlbum(i) : "Unknown Album";
+            ImGui::Text("%s | %s", artistStr.c_str(), albumStr.c_str());
             ImGui::PopStyleColor();
             
             // Add to playlist button "+"
@@ -457,59 +513,26 @@ void ImGuiView::render() {
             // Full row clickable
             ImGui::SetCursorScreenPos(rowPos);
             if (ImGui::InvisibleButton("##track", ImVec2(mainW - 80, 45)) && mController) {
-                mController->loadTrack(mController->getTrackPath(i));
-                mController->play();
-                if (mPlayerState) mPlayerState->setCurrentTrackIndex((int)i);
-                if (mPlayerState) mPlayerState->setCurrentTrackIndex((int)i);
-                AddToRecentlyPlayed(mController, i, trackName);
-                g_playStartTime = std::chrono::steady_clock::now();
-                g_playStartPos = 0;
+                mController->playTrack((int)i);
+                mPlayStartTime = std::chrono::steady_clock::now();
+                mPlayStartPos = 0;
             }
             
             ImGui::PopID();
         }
         ImGui::Unindent(10);
     }
-    else if (g_mainTabIndex == 2) {
+    else if (mMainTabIndex == 2) {
         // === PLAYLIST TAB ===
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
         ImGui::Text("Your Playlists");
         ImGui::PopStyleColor();
         ImGui::Spacing();
         
-        // Create playlist button
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 16.0f);
-        if (ImGui::Button("+ Create Playlist", ImVec2(150, 30))) {
-            UserPlaylist newPl;
-            newPl.name = "Playlist " + std::to_string(g_userPlaylists.size() + 1);
-            g_userPlaylists.push_back(newPl);
-        }
-        ImGui::PopStyleVar();
-        ImGui::Spacing();
-        
-        if (g_userPlaylists.empty()) {
+        if (true) { // Playlist feature disabled for now
             ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-            ImGui::Text("No playlists yet. Create one to get started!");
+            ImGui::Text("Playlist feature coming soon!");
             ImGui::PopStyleColor();
-        } else {
-            for (size_t p = 0; p < g_userPlaylists.size(); p++) {
-                UserPlaylist& pl = g_userPlaylists[p];
-                
-                ImGui::PushID((int)(3000 + p));
-                ImVec2 plPos = ImGui::GetCursorScreenPos();
-                
-                // Playlist card
-                dl->AddRectFilled(plPos, ImVec2(plPos.x + 200, plPos.y + 60),
-                    Colors::SurfaceLight, 8.0f);
-                dl->AddText(ImVec2(plPos.x + 15, plPos.y + 10), Colors::White, pl.name.c_str());
-                
-                char countStr[32];
-                snprintf(countStr, 32, "%zu tracks", pl.trackIndices.size());
-                dl->AddText(ImVec2(plPos.x + 15, plPos.y + 32), Colors::TextSecondary, countStr);
-                
-                ImGui::InvisibleButton("##playlist", ImVec2(200, 65));
-                ImGui::PopID();
-            }
         }
     }
     
@@ -534,16 +557,16 @@ void ImGuiView::render() {
     ImGui::SetCursorPos(ImVec2(15, 15));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 16.0f);
     
-    ImGui::PushStyleColor(ImGuiCol_Button, g_rightTabIndex == 0 ? Colors::GreenV : Colors::HoverV);
-    ImGui::PushStyleColor(ImGuiCol_Text, g_rightTabIndex == 0 ? Colors::BlackV : Colors::WhiteV);
-    if (ImGui::Button("Queue", ImVec2(80, 26))) g_rightTabIndex = 0;
+    ImGui::PushStyleColor(ImGuiCol_Button, mRightTabIndex == 0 ? Colors::GreenV : Colors::HoverV);
+    ImGui::PushStyleColor(ImGuiCol_Text, mRightTabIndex == 0 ? Colors::BlackV : Colors::WhiteV);
+    if (ImGui::Button("Queue", ImVec2(80, 26))) mRightTabIndex = 0;
     ImGui::PopStyleColor(2);
     
     ImGui::SameLine();
     
-    ImGui::PushStyleColor(ImGuiCol_Button, g_rightTabIndex == 1 ? Colors::GreenV : Colors::HoverV);
-    ImGui::PushStyleColor(ImGuiCol_Text, g_rightTabIndex == 1 ? Colors::BlackV : Colors::WhiteV);
-    if (ImGui::Button("Recent", ImVec2(80, 26))) g_rightTabIndex = 1;
+    ImGui::PushStyleColor(ImGuiCol_Button, mRightTabIndex == 1 ? Colors::GreenV : Colors::HoverV);
+    ImGui::PushStyleColor(ImGuiCol_Text, mRightTabIndex == 1 ? Colors::BlackV : Colors::WhiteV);
+    if (ImGui::Button("Recent", ImVec2(80, 26))) mRightTabIndex = 1;
     ImGui::PopStyleColor(2);
     
     ImGui::PopStyleVar();
@@ -557,7 +580,7 @@ void ImGuiView::render() {
     ImGui::SetCursorPos(ImVec2(15, 80));
     ImVec2 npPos = ImGui::GetCursorScreenPos();
     
-    DrawAlbumCover(rdl, npPos, 65, currentTrack >= 0 ? currentTrack : 0);
+    drawAlbumCover(rdl, npPos, 65, currentTrack >= 0 ? currentTrack : 0);
     
     std::string npName = "No Track Selected";
     if (currentTrack >= 0 && currentTrack < (int)mPlaylistDisplay.size()) {
@@ -574,19 +597,19 @@ void ImGuiView::render() {
     // Queue/Recent list
     ImGui::SetCursorPos(ImVec2(15, 160));
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
-    ImGui::Text(g_rightTabIndex == 0 ? "Next up" : "Recently played");
+    ImGui::Text(mRightTabIndex == 0 ? "Next up" : "Recently played");
     ImGui::PopStyleColor();
     
     ImGui::SetCursorPos(ImVec2(10, 185));
     ImGui::BeginChild("QueueList", ImVec2(rightSidebarW - 20, contentH - 205), false);
     
-    if (g_rightTabIndex == 0) {
+    if (mRightTabIndex == 0) {
         // Queue
         for (int i = currentTrack + 1; i < (int)mPlaylistDisplay.size() && i < currentTrack + 10; i++) {
             ImGui::PushID(4000 + i);
             ImVec2 tPos = ImGui::GetCursorScreenPos();
             
-            DrawAlbumCover(rdl, tPos, 40, i);
+            drawAlbumCover(rdl, tPos, 40, i);
             
             std::string tName = StripExtension(mPlaylistDisplay[i]);
             if (tName.length() > 20) tName = tName.substr(0, 17) + "...";
@@ -597,46 +620,51 @@ void ImGuiView::render() {
             
             ImGui::InvisibleButton("##q", ImVec2(rightSidebarW - 40, 45));
             if (ImGui::IsItemClicked() && mController) {
-                mController->loadTrack(mController->getTrackPath(i));
-                mController->play();
-                if (mPlayerState) mPlayerState->setCurrentTrackIndex(i);
-                if (mPlayerState) mPlayerState->setCurrentTrackIndex(i);
-                AddToRecentlyPlayed(mController, i, mPlaylistDisplay[i]);
+                mController->playTrack(i); // Use playTrack to handle history
             }
             ImGui::PopID();
         }
     } else {
         // Recent
-        for (size_t i = 0; i < g_recentlyPlayed.size() && i < 10; i++) {
-            const RecentTrack& rt = g_recentlyPlayed[i];
-            bool isCurr = (currentTrack == (int)rt.index);
-            
-            ImGui::PushID((int)(5000 + i));
-            ImVec2 tPos = ImGui::GetCursorScreenPos();
-            
-            DrawAlbumCover(rdl, tPos, 40, (int)rt.index);
-            
-            std::string tName = StripExtension(rt.name);
-            if (tName.length() > 20) tName = tName.substr(0, 17) + "...";
-            
-            rdl->AddText(ImVec2(tPos.x + 50, tPos.y + 5), 
-                isCurr ? Colors::Green : Colors::White, tName.c_str());
-            rdl->AddText(ImVec2(tPos.x + 50, tPos.y + 22), Colors::TextSecondary, rt.artist.c_str());
-            
-            ImGui::InvisibleButton("##r", ImVec2(rightSidebarW - 40, 45));
-            if (ImGui::IsItemClicked() && mController) {
-                mController->loadTrack(mController->getTrackPath(rt.index));
-                mController->play();
-                if (mPlayerState) mPlayerState->setCurrentTrackIndex((int)rt.index);
+            // Recent List Sidebar
+            if (mController) {
+                 std::vector<int> history = mController->getHistory();
+                 // Show last 10 items
+                 for (int i = (int)history.size() - 1; i >= 0 && i >= (int)history.size() - 10; i--) {
+                     int trackIdx = history[i];
+                     if (trackIdx < 0) continue;
+                     
+                     ImGui::PushID(5000 + i);
+                     ImVec2 tPos = ImGui::GetCursorScreenPos();
+                     
+                     // Cover Art
+                     drawAlbumCover(rdl, tPos, 40, trackIdx);
+                     
+                     // Track Title
+                     std::string tName = mController->getTrackName(trackIdx);
+                     tName = StripExtension(tName);
+                     if (tName.length() > 20) tName = tName.substr(0, 17) + "...";
+                     rdl->AddText(ImVec2(tPos.x + 50, tPos.y + 5), Colors::White, tName.c_str());
+
+                     // Artist
+                     std::string tArtist = mController->getTrackArtist(trackIdx);
+                     if (tArtist.length() > 25) tArtist = tArtist.substr(0, 22) + "...";
+                     rdl->AddText(ImVec2(tPos.x + 50, tPos.y + 22), Colors::TextSecondary, tArtist.c_str());
+                     
+                     // Clickable Item
+                     ImGui::InvisibleButton("##rside", ImVec2(rightSidebarW - 40, 45));
+                     if (ImGui::IsItemClicked()) {
+                          mController->playTrack(trackIdx);
+                     }
+                     ImGui::PopID();
+                     ImGui::Dummy(ImVec2(0, 5)); // Spacing
+                 }
+                 if (history.empty()) {
+                      ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
+                      ImGui::Text("No history yet");
+                      ImGui::PopStyleColor();
+                 }
             }
-            ImGui::PopID();
-        }
-        
-        if (g_recentlyPlayed.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-            ImGui::Text("No history yet");
-            ImGui::PopStyleColor();
-        }
     }
     
     ImGui::EndChild();
@@ -654,190 +682,177 @@ void ImGuiView::render() {
     ImDrawList* pdl = ImGui::GetWindowDrawList();
     ImVec2 barPos = ImGui::GetWindowPos();
     
-    // === LEFT: Track Info ===
-    ImVec2 coverPos = ImVec2(barPos.x + 12, barPos.y + 10);
-    DrawAlbumCover(pdl, coverPos, 60, currentTrack >= 0 ? currentTrack : 0);
+    // === LEFT: Album Art & Info ===
+    // Art: 64x64, centered vertically (90 - 64)/2 = 13
+    ImVec2 coverPos = ImVec2(barPos.x + 15, barPos.y + 13);
+    drawAlbumCover(pdl, coverPos, 64, currentTrack >= 0 ? currentTrack : 0);
     
-    std::string playerTrack = "No Track";
-    if (currentTrack >= 0 && currentTrack < (int)mPlaylistDisplay.size()) {
-        playerTrack = StripExtension(mPlaylistDisplay[currentTrack]);
-    }
-    if (playerTrack.length() > 25) playerTrack = playerTrack.substr(0, 22) + "...";
-    
-    pdl->AddText(ImVec2(coverPos.x + 70, coverPos.y + 10), Colors::White, playerTrack.c_str());
-    std::string pArtist = mController && currentTrack >= 0 ? mController->getTrackArtist(currentTrack) : "Unknown Artist";
-    std::string pAlbum = mController && currentTrack >= 0 ? mController->getTrackAlbum(currentTrack) : "Unknown Album";
-    pdl->AddText(ImVec2(coverPos.x + 70, coverPos.y + 28), Colors::TextSecondary, pArtist.c_str());
-    pdl->AddText(ImVec2(coverPos.x + 70, coverPos.y + 44), Colors::TextMuted, pAlbum.c_str());
-    
-    // === CENTER: Playback Controls ===
+    // Text Info
+    float infoX = coverPos.x + 75;
     float centerX = mWindowWidth / 2.0f;
     
-    // Shuffle button
-    ImGui::SetCursorPos(ImVec2(centerX - 95, 20));
-    ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
-    ImGui::PushStyleColor(ImGuiCol_Text, g_shuffleEnabled ? Colors::GreenV : Colors::TextSecV);
-    if (ImGui::Button("S##shuf", ImVec2(26, 26))) g_shuffleEnabled = !g_shuffleEnabled;
-    ImGui::PopStyleColor(2);
-    
-    ImGui::SameLine();
-    
-    // Previous button - Draw triangle
-    {
-        ImVec2 btnPos = ImGui::GetCursorScreenPos();
-        ImVec2 center = ImVec2(btnPos.x + 13, btnPos.y + 13);
-        
-        // Draw |<< icon
-        pdl->AddRectFilled(ImVec2(center.x - 8, center.y - 6), 
-                          ImVec2(center.x - 6, center.y + 6), Colors::TextSecondary);
-        pdl->AddTriangleFilled(
-            ImVec2(center.x + 6, center.y - 6),
-            ImVec2(center.x + 6, center.y + 6),
-            ImVec2(center.x - 4, center.y),
-            Colors::TextSecondary);
-        
-        ImGui::InvisibleButton("##prev", ImVec2(26, 26));
-        if (ImGui::IsItemClicked() && mController) mController->previous();
+    std::string pTitle = "No Track";
+    std::string pArtist = "Unknown Artist";
+    std::string pAlbum = "Unknown Album";
+    if (currentTrack >= 0 && currentTrack < (int)mPlaylistDisplay.size()) {
+        pTitle = StripExtension(mPlaylistDisplay[currentTrack]);
+        if (mController) {
+             pArtist = mController->getTrackArtist(currentTrack);
+             pAlbum = mController->getTrackAlbum(currentTrack);
+        }
     }
     
-    ImGui::SameLine();
+    // Title (Larger, White)
+    ImGui::SetCursorPos(ImVec2(infoX, 18));
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+    ImGui::Text("%s", pTitle.c_str());
+    ImGui::PopFont();
     
-    // Play/Pause button
+    // Artist (Gray)
+    ImGui::SetCursorPos(ImVec2(infoX, 38));
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
+    ImGui::Text("%s", pArtist.c_str());
+    
+    // Album (Gray, smaller)
+    ImGui::SetCursorPos(ImVec2(infoX, 53));
+    ImGui::Text("%s", pAlbum.c_str());
+    ImGui::PopStyleColor();
+
+    // === CENTER: Controls & Progress ===
+    float controlsY = 20.0f;
+    
+    // Play/Pause Center
     {
-        ImVec2 btnPos = ImGui::GetCursorScreenPos();
-        ImVec2 center = ImVec2(btnPos.x + 18, btnPos.y + 18);
-        
+        ImVec2 centerBtn = ImVec2(barPos.x + centerX, barPos.y + controlsY + 16);
         bool hovered = ImGui::IsMouseHoveringRect(
-            ImVec2(center.x - 18, center.y - 18),
-            ImVec2(center.x + 18, center.y + 18));
+            ImVec2(centerBtn.x - 18, centerBtn.y - 18), 
+            ImVec2(centerBtn.x + 18, centerBtn.y + 18));
+            
+        pdl->AddCircleFilled(centerBtn, 18, hovered ? Colors::TextSecondary : Colors::White, 32);
         
-        pdl->AddCircleFilled(center, 18, hovered ? Colors::TextSecondary : Colors::White, 32);
-        
+        // Icon
         if (isPlaying) {
-            pdl->AddRectFilled(ImVec2(center.x - 5, center.y - 6), 
-                              ImVec2(center.x - 1, center.y + 6), Colors::Black);
-            pdl->AddRectFilled(ImVec2(center.x + 1, center.y - 6), 
-                              ImVec2(center.x + 5, center.y + 6), Colors::Black);
+             pdl->AddRectFilled(ImVec2(centerBtn.x - 5, centerBtn.y - 6), 
+                               ImVec2(centerBtn.x - 1, centerBtn.y + 6), Colors::Black);
+             pdl->AddRectFilled(ImVec2(centerBtn.x + 1, centerBtn.y - 6), 
+                               ImVec2(centerBtn.x + 5, centerBtn.y + 6), Colors::Black);
         } else {
-            pdl->AddTriangleFilled(
-                ImVec2(center.x - 4, center.y - 7),
-                ImVec2(center.x - 4, center.y + 7),
-                ImVec2(center.x + 7, center.y),
-                Colors::Black);
+             pdl->AddTriangleFilled(
+                 ImVec2(centerBtn.x - 4, centerBtn.y - 7),
+                 ImVec2(centerBtn.x - 4, centerBtn.y + 7),
+                 ImVec2(centerBtn.x + 7, centerBtn.y),
+                 Colors::Black);
         }
         
-        ImGui::InvisibleButton("##play", ImVec2(36, 36));
-        if (ImGui::IsItemClicked() && mController) {
-            if (isPlaying) mController->pause();
-            else mController->play();
+        ImGui::SetCursorPos(ImVec2(centerX - 18, controlsY));
+        if (ImGui::InvisibleButton("##play", ImVec2(36, 36)) && mController) {
+            isPlaying ? mController->pause() : mController->play();
         }
     }
     
-    ImGui::SameLine();
-    
-    // Next button
+    // Prev Button
     {
-        ImVec2 btnPos = ImGui::GetCursorScreenPos();
-        ImVec2 center = ImVec2(btnPos.x + 13, btnPos.y + 13);
-        
+        ImVec2 prevPos = ImVec2(barPos.x + centerX - 50, barPos.y + controlsY + 16);
         pdl->AddTriangleFilled(
-            ImVec2(center.x - 6, center.y - 6),
-            ImVec2(center.x - 6, center.y + 6),
-            ImVec2(center.x + 4, center.y),
-            Colors::TextSecondary);
-        pdl->AddRectFilled(ImVec2(center.x + 6, center.y - 6), 
-                          ImVec2(center.x + 8, center.y + 6), Colors::TextSecondary);
-        
-        ImGui::InvisibleButton("##next", ImVec2(26, 26));
-        if (ImGui::IsItemClicked() && mController) mController->next();
+            ImVec2(prevPos.x + 6, prevPos.y - 6),
+            ImVec2(prevPos.x + 6, prevPos.y + 6),
+            ImVec2(prevPos.x - 4, prevPos.y), Colors::TextSecondary);
+        pdl->AddRectFilled(ImVec2(prevPos.x - 8, prevPos.y - 6),
+                          ImVec2(prevPos.x - 6, prevPos.y + 6), Colors::TextSecondary);
+                          
+        ImGui::SetCursorPos(ImVec2(centerX - 65, controlsY));
+        if (ImGui::InvisibleButton("##prev", ImVec2(30, 30)) && mController) mController->previous();
+    }
+
+    // Next Button
+    {
+         ImVec2 nextPos = ImVec2(barPos.x + centerX + 50, barPos.y + controlsY + 16);
+         pdl->AddTriangleFilled(
+             ImVec2(nextPos.x - 6, nextPos.y - 6),
+             ImVec2(nextPos.x - 6, nextPos.y + 6),
+             ImVec2(nextPos.x + 4, nextPos.y), Colors::TextSecondary);
+         pdl->AddRectFilled(ImVec2(nextPos.x + 6, nextPos.y - 6),
+                           ImVec2(nextPos.x + 8, nextPos.y + 6), Colors::TextSecondary);
+                           
+         ImGui::SetCursorPos(ImVec2(centerX + 35, controlsY));
+         if (ImGui::InvisibleButton("##next", ImVec2(30, 30)) && mController) mController->next();
     }
     
-    ImGui::SameLine();
+    // Progress Bar
+    float progY = 60.0f;
+    ImGui::SetCursorPos(ImVec2(centerX - 200, progY));
     
-    // Loop button
-    ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
-    ImGui::PushStyleColor(ImGuiCol_Text, g_loopEnabled ? Colors::GreenV : Colors::TextSecV);
-    if (ImGui::Button("R##loop", ImVec2(26, 26))) g_loopEnabled = !g_loopEnabled;
-    ImGui::PopStyleColor(2);
-    
-    // Progress bar
-    ImGui::SetCursorPos(ImVec2(centerX - 180, 52));
-    
-    // Calculate position based on elapsed time
-    uint32_t elapsedMs = 0;
+    uint32_t elapsedMs = mPlayStartPos;
     if (isPlaying) {
         auto now = std::chrono::steady_clock::now();
-        elapsedMs = g_playStartPos + (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - g_playStartTime).count();
+        elapsedMs += (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - mPlayStartTime).count();
     }
-    
-    uint32_t durationMs = 0;
-    if (mController && currentTrack >= 0) {
-        durationMs = mController->getTrackDuration(currentTrack) * 1000;
-    }
-    if (durationMs == 0) durationMs = 180000; // Fallback to 3 min if 0
-    int posM = (elapsedMs / 1000) / 60;
-    int posS = (elapsedMs / 1000) % 60;
-    int durM = (durationMs / 1000) / 60;
-    int durS = (durationMs / 1000) % 60;
-    
+    uint32_t durationMs = mController && currentTrack >= 0 ? mController->getTrackDuration(currentTrack) * 1000 : 180000;
+    if (durationMs == 0) durationMs = 1;
+
+    // Time Text Left
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-    ImGui::Text("%d:%02d", posM, posS);
+    ImGui::Text("%d:%02d", (elapsedMs/1000)/60, (elapsedMs/1000)%60);
     ImGui::PopStyleColor();
     
     ImGui::SameLine();
     
+    // Slider
     float progress = (float)elapsedMs / (float)durationMs;
     progress = std::clamp(progress, 0.0f, 1.0f);
     
+    // Slider Logic (Seek on Release)
+    static float s_dragProgress = 0.0f;
+    static bool s_dragging = false;
+
+    float* pValue = s_dragging ? &s_dragProgress : &progress;
+    if (!s_dragging) s_dragProgress = progress; // Keeping sync
+
     ImGui::PushStyleColor(ImGuiCol_FrameBg, Colors::SurfaceLightV);
     ImGui::PushStyleColor(ImGuiCol_SliderGrab, Colors::WhiteV);
-    ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 6.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0)); // Thinner slider
-    ImGui::SetNextItemWidth(280);
-    if (ImGui::SliderFloat("##prog", &progress, 0, 1, "")) {
-        uint32_t seekPos = (uint32_t)(progress * durationMs);
-        g_playStartPos = seekPos;
-        g_playStartTime = std::chrono::steady_clock::now();
-        // Seek audio to new position
-        if (mController) mController->seek(seekPos);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::SetNextItemWidth(320);
+    
+    ImGui::SliderFloat("##prog", pValue, 0, 1, "");
+    
+    if (ImGui::IsItemActive()) {
+        s_dragging = true;
     }
-    ImGui::PopStyleVar(2);
+    
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        s_dragging = false;
+        if (mController) {
+             std::cout << "[DEBUG] Seek triggered on release" << std::endl;
+             uint32_t seekPos = (uint32_t)(*pValue * durationMs);
+             mController->seek(seekPos);
+             mPlayStartPos = seekPos;
+             mPlayStartTime = std::chrono::steady_clock::now();
+        }
+    }
+
+    ImGui::PopStyleVar();
     ImGui::PopStyleColor(2);
     
     ImGui::SameLine();
     
+    // Time Text Right
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-    ImGui::Text("%d:%02d", durM, durS);
+    ImGui::Text("%d:%02d", (durationMs/1000)/60, (durationMs/1000)%60);
     ImGui::PopStyleColor();
-    
+
     // === RIGHT: Volume ===
-    float rightX = mWindowWidth - 160;
-    ImGui::SetCursorPos(ImVec2(rightX, 28));
-    
+    float volX = mWindowWidth - 140;
+    ImGui::SetCursorPos(ImVec2(volX, 35));
     int vol = mPlayerState ? mPlayerState->getVolume() : 50;
-    bool muted = mPlayerState ? mPlayerState->isMuted() : false;
     
     ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
-    ImGui::PushStyleColor(ImGuiCol_Text, muted ? Colors::TextMutedV : Colors::TextSecV);
-    if (ImGui::Button(muted ? "X" : "V", ImVec2(24, 24))) {
-        if (mController) mController->toggleMute();
-    }
-    ImGui::PopStyleColor(2);
+    if (ImGui::Button("Vol", ImVec2(30, 20)) && mController) mController->toggleMute();
+    ImGui::PopStyleColor();
     
     ImGui::SameLine();
-    
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, Colors::SurfaceLightV);
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, Colors::WhiteV);
-    ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 6.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0)); // Thinner slider
-    ImGui::SetNextItemWidth(90);
-    if (ImGui::SliderInt("##vol", &vol, 0, 100, "")) {
-        if (mController) mController->setVolume(vol);
-    }
-    ImGui::PopStyleVar(2);
-    ImGui::PopStyleColor(2);
-    
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::SliderInt("##vol", &vol, 0, 100, "") && mController) mController->setVolume(vol);
+
     ImGui::End();
     ImGui::PopStyleColor();
 

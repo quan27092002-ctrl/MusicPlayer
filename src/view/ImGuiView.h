@@ -11,11 +11,14 @@
 #include "IView.h"
 #include "../controller/IAppController.h"
 #include "../model/IPlayerState.h"
+#include "imgui/imgui.h"
 
+#include <chrono>
 #include <SDL.h>
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace View {
 
@@ -26,6 +29,8 @@ namespace View {
  * playlist display, and status information.
  */
 class ImGuiView : public IView {
+public:
+
 private:
     // Dependencies
     std::shared_ptr<Controller::IAppController> mController;
@@ -39,11 +44,29 @@ private:
     bool mRunning;
     int mWindowWidth;
     int mWindowHeight;
-
+    int mLastTrackIndex = -1; // To track changes for Recent list
+    
     // Playlist cache (for display)
     std::vector<std::string> mPlaylistDisplay;
 
-    // Private methods
+    
+    // UI State
+    int mMainTabIndex = 1;  // 0=All, 1=Music, 2=Playlist
+    int mRightTabIndex = 0; // 0=Queue, 1=Recent
+    char mSearchQuery[256] = "";
+
+    // Playback Tracking
+    std::chrono::steady_clock::time_point mPlayStartTime;
+    uint32_t mPlayStartPos = 0;
+    bool mWasPlaying = false;
+    
+    // Texture Cache
+    std::map<int, SDL_Texture*> mCoverCache;
+
+    // Helper to create texture from memory
+    SDL_Texture* createTextureFromMemory(const std::vector<uint8_t>& data);
+    void addToRecentlyPlayed(size_t index, const std::string& name);
+    
     void renderMenuBar();
     void renderTransportControls();
     void renderVolumeControl();
@@ -51,6 +74,9 @@ private:
     void renderPlaylist();
     void renderStatusBar();
     void renderSerialPanel();
+    
+    // Album Art Helper
+    void drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int trackIndex);
 
 public:
     /**

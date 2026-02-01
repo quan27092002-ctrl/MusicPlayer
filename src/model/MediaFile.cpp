@@ -22,12 +22,14 @@ MediaFile::MediaFile()
 }
 
 MediaFile::MediaFile(const std::string& filename, const std::string& path, 
-                     uint32_t duration, const std::string& artist, const std::string& album)
+                     uint32_t duration, const std::string& artist, const std::string& album,
+                     const std::vector<uint8_t>& coverArt)
     : mFilename(filename)
     , mPath(path)
     , mDuration(duration)
     , mArtist(artist)
-    , mAlbum(album) {
+    , mAlbum(album)
+    , mCoverArtData(coverArt) {
 }
 
 // ============================================================================
@@ -58,6 +60,10 @@ bool MediaFile::isValid() const {
     return !mFilename.empty() && !mPath.empty();
 }
 
+const std::vector<uint8_t>& MediaFile::getCoverArt() const {
+    return mCoverArtData;
+}
+
 // ============================================================================
 // Setters
 // ============================================================================
@@ -80,6 +86,10 @@ void MediaFile::setArtist(const std::string& artist) {
 
 void MediaFile::setAlbum(const std::string& album) {
     mAlbum = album;
+}
+
+void MediaFile::setCoverArt(const std::vector<uint8_t>& data) {
+    mCoverArtData = data;
 }
 
 // ============================================================================
