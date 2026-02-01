@@ -465,3 +465,64 @@ TEST_F(AppControllerTest, StateCallback) {
     EXPECT_GE(callCount, 1);
     EXPECT_EQ(lastState, AppState::READY);
 }
+
+// ============================================================================
+// History Tests
+// ============================================================================
+
+TEST_F(AppControllerTest, HistoryTracksSongs) {
+    controller->initialize();
+    controller->addToPlaylist("/path/song1.mp3");
+    controller->addToPlaylist("/path/song2.mp3");
+    controller->addToPlaylist("/path/song3.mp3");
+    
+    // Play 1
+    controller->playTrack(0);
+    // Play 2 (1 should be in history)
+    controller->playTrack(1);
+    
+    std::vector<int> history = controller->getHistory();
+    ASSERT_EQ(history.size(), 1u);
+    EXPECT_EQ(history[0], 0);
+
+    // Play 3 (2 should be added to history)
+    controller->playTrack(2);
+    history = controller->getHistory();
+    ASSERT_EQ(history.size(), 2u);
+    EXPECT_EQ(history[0], 0);
+    EXPECT_EQ(history[1], 1);
+}
+
+TEST_F(AppControllerTest, HistoryPrevious) {
+    controller->initialize();
+    controller->addToPlaylist("/path/song1.mp3");
+    controller->addToPlaylist("/path/song2.mp3");
+    
+    controller->playTrack(0);
+    controller->playTrack(1);
+    
+    // Now at song 2. History has [0].
+    // Previous should go back to song 1.
+    controller->previous();
+    
+    // Should be playing song 1
+    EXPECT_EQ(playerState->getCurrentTrackIndex(), 0);
+    EXPECT_EQ(mockAudio->loadedFile, "/path/song1.mp3");
+    
+    // History should be empty (popped)
+    EXPECT_TRUE(controller->getHistory().empty());
+}
+
+TEST_F(AppControllerTest, HistoryNoDuplicatesTop) {
+    controller->initialize();
+    controller->addToPlaylist("/path/song1.mp3");
+    controller->addToPlaylist("/path/song2.mp3");
+    
+    controller->playTrack(0);
+    // Play 1 again? (Should not happen via auto-advance usually, but if user clicks)
+    controller->playTrack(0); 
+    
+    // History should NOT contain 0. Logic says "if current != index, push current".
+    // 0 -> 0 : current is 0, index is 0. Identical. No push.
+    EXPECT_TRUE(controller->getHistory().empty());
+}

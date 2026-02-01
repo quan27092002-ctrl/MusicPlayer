@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <vector>
+#include <list>
 #include <mutex>
 #include <atomic>
 #include <string>
@@ -29,31 +30,6 @@ namespace Controller {
  * Processes commands from S32K board and manages playback.
  */
 class AppController : public IAppController {
-private:
-    // Subsystems (injected via constructor)
-    std::shared_ptr<IAudioPlayer> mAudioPlayer;
-    std::shared_ptr<ISerialManager> mSerialManager;
-    std::shared_ptr<Model::IPlayerState> mPlayerState;
-
-    // Internal state
-    std::atomic<AppState> mAppState;
-    AppStateCallback mStateCallback;
-    mutable std::mutex mCallbackMutex;
-
-    // Playlist
-    std::vector<Model::MediaFile> mPlaylist;
-    mutable std::mutex mPlaylistMutex;
-    int mVolumeBeforeMute;  // Stored volume for mute/unmute
-
-    // Private helpers
-    void notifyStateChange(AppState newState);
-    void onSerialDataReceived(const std::string& data);
-    void onSerialStateChanged(SerialState state);
-    void onAudioStateChanged(AudioState state, uint32_t position);
-    void processCommand(const std::string& command);
-    void sendStatusToBoard();
-    int getCurrentTrackIndex() const;
-
 public:
     /**
      * @brief Constructor with dependency injection.
@@ -99,10 +75,6 @@ public:
     void previous() override;
     void playTrack(int index) override;
     
-    // History
-    std::vector<int> getHistory() const override;
-
-
     void seek(uint32_t positionMs) override;
 
     // Volume Control
@@ -121,14 +93,59 @@ public:
     std::string getTrackAlbum(size_t index) const override;
     uint32_t getTrackDuration(size_t index) const override;
     std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
+    
+    // History
+    std::vector<int> getHistory() const override;
 
     // Callbacks
     void setStateCallback(AppStateCallback callback) override;
 
 private:
-    std::vector<int> mHistoryStack;
-    void pushHistory(int trackIndex);
-    int popHistory();
+    // Subsystems (injected via constructor)
+    std::shared_ptr<IAudioPlayer> mAudioPlayer;
+    std::shared_ptr<ISerialManager> mSerialManager;
+    std::shared_ptr<Model::IPlayerState> mPlayerState;
+
+    // Internal state
+    std::atomic<AppState> mAppState;
+    AppStateCallback mStateCallback;
+    mutable std::mutex mCallbackMutex;
+
+    // Data Structures
+    using MediaFilePtr = std::shared_ptr<Model::MediaFile>;
+    
+    // 1. Music Library (The Master Database)
+    std::vector<MediaFilePtr> mMusicLibrary;
+    
+    // 2. Playlist (The Playback Queue)
+    std::list<MediaFilePtr> mPlaylist;
+    
+    // 3. Playback Position
+    // We use iterator for O(1) next/prev, but need fallback if iterator is invalid
+    typename std::list<MediaFilePtr>::iterator mCurrentTrackIterator;
+    
+    mutable std::mutex mPlaylistMutex;
+    int mVolumeBeforeMute;
+
+    // History (Recent Songs) - Stores pointers to ensure validity even if playlist changes
+    std::vector<MediaFilePtr> mHistoryStack;
+
+    // Private helpers
+    int getCurrentTrackIndexLocked() const;
+    void notifyStateChange(AppState newState);
+    void onSerialDataReceived(const std::string& data);
+    void onSerialStateChanged(SerialState state);
+    void onAudioStateChanged(AudioState state, uint32_t position);
+    void processCommand(const std::string& command);
+    void sendStatusToBoard();
+    
+    // Helper to bridge Index-based API with Iterator-based List
+    int getCurrentTrackIndex() const;
+    typename std::list<MediaFilePtr>::iterator getTrackIterator(int index);
+    typename std::list<MediaFilePtr>::const_iterator getTrackIteratorConst(int index) const;
+
+    void pushHistory(MediaFilePtr track);
+    MediaFilePtr popHistory();
 };
 
 } // namespace Controller
