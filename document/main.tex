@@ -1,0 +1,170 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+
+\geometry{
+  a4paper,
+  total={170mm,257mm},
+  left=20mm,
+  top=20mm,
+}
+
+\begin{document}
+
+\section{Introduction}
+
+\subsection{Purpose}
+Mục đích của dự án là xây dựng một hệ thống Music Player hoàn chỉnh hoạt động trên nền tảng Linux, tuân thủ nghiêm ngặt kiến trúc phần mềm Model-View-Controller (MVC). Hệ thống được thiết kế để cung cấp trải nghiệm nghe nhạc ổn định với các tính năng quản lý danh sách phát và phát lại cơ bản. Đặc biệt, hệ thống phải hỗ trợ khả năng tương tác đa chiều, cho phép người dùng điều chỉnh âm lượng (Volume) thông qua giao diện ứng dụng (Application UI) hoặc thông qua phần cứng ngoại vi (External Hardware) kết nối qua giao thức Serial/UART. Tài liệu này mô tả các yêu cầu kỹ thuật và chức năng mà hệ thống cần đáp ứng mà không đi sâu vào chi tiết hiện thực hóa cụ thể.
+
+\subsection{Scope}
+Hệ thống phần mềm Music Player hiện tại bao gồm các chức năng cốt lõi, được xác thực thông qua source code như sau:
+\begin{itemize}
+    \item \textbf{Điều khiển Phát lại (Playback Control)}: Hỗ trợ các thao tác Play, Pause, Stop, Next, Previous và Seek (tua) đến vị trí cụ thể trong bài hát.
+    \item \textbf{Quản lý Âm lượng}: Cho phép thay đổi mức âm lượng và chuyển đổi trạng thái Mute/Unmute.
+    \item \textbf{Quản lý Playlist}: Hỗ trợ tải toàn bộ tập tin từ một thư mục vào danh sách phát và hiển thị danh sách bài hát cho người dùng.
+    \item \textbf{Giao tiếp Serial (UART)}: Tích hợp khả năng kết nối, gửi và nhận dữ liệu điều khiển với phần cứng ngoại vi (Board S32K) thông qua cổng Serial.
+    \item \textbf{Giao diện Người dùng (GUI)}: Hiển thị thông tin trạng thái (Time, Duration), Metadata bài hát (Artist, Album, Title) và Ảnh bìa (Cover Art).
+    \item \textbf{Môi trường Vận hành}: Hệ thống được xây dựng và chạy trên nền tảng hệ điều hành Linux, sử dụng thư viện đồ họa SDL2 và ImGui.
+\end{itemize}
+
+\subsection{Definitions, Acronyms, and Abbreviations}
+Danh sách các thuật ngữ, từ viết tắt được sử dụng trong tài liệu và hệ thống:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{Thuật ngữ} & \textbf{Định nghĩa / Giải thích} \\ \hline
+MVC & \textbf{Model-View-Controller}: Kiến trúc phần mềm chia ứng dụng thành 3 thành phần: quản lý dữ liệu (Model), hiển thị (View) và điều khiển logic (Controller). \\ \hline
+Model & Thành phần trong MVC chịu trách nhiệm quản lý trạng thái, dữ liệu và logic nghiệp vụ của ứng dụng (ví dụ: \texttt{PlayerState}, \texttt{MediaFile}). \\ \hline
+View & Thành phần trong MVC chịu trách nhiệm hiển thị thông tin và tương tác với người dùng (ví dụ: \texttt{ImGuiView}). \\ \hline
+Controller & Thành phần trong MVC chịu trách nhiệm điều phối hoạt động, xử lý sự kiện từ View và cập nhật Model (ví dụ: \texttt{AppController}). \\ \hline
+UART & \textbf{Universal Asynchronous Receiver-Transmitter}: Giao thức truyền thông nối tiếp dùng để giao tiếp dữ liệu giữa Application và Board S32K. \\ \hline
+GUI & \textbf{Graphical User Interface}: Giao diện người dùng đồ họa. \\ \hline
+SDL & \textbf{Simple DirectMedia Layer}: Thư viện cross-platform được sử dụng để quản lý cửa sổ, ngữ cảnh đồ họa và đầu vào (bàn phím, chuột). \\ \hline
+ImGui & \textbf{Dear ImGui}: Thư viện GUI C++ được sử dụng để xây dựng giao diện điều khiển của ứng dụng. \\ \hline
+S32K & Dòng vi điều khiển (Microcontroller) đóng vai trò là thiết bị ngoại vi điều khiển volume hoặc nhận trạng thái từ ứng dụng. \\ \hline
+\end{tabular}
+\end{center}
+
+\section{System Function List}
+Mô tả các chức năng chính của hệ thống dưới góc độ người dùng và tương tác phần cứng:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Mô tả chức năng} \\ \hline
+F1 & Phát (Play) tập tin âm thanh đang được chọn hoặc tiếp tục phát sau khi tạm dừng. \\ \hline
+F2 & Tạm dừng (Pause) quá trình phát âm thanh tại vị trí hiện tại. \\ \hline
+F3 & Dừng (Stop) hoàn toàn quá trình phát và đặt lại vị trí về đầu bài hát. \\ \hline
+F4 & Chuyển sang bài hát tiếp theo (Next) trong danh sách phát. \\ \hline
+F5 & Quay lại bài hát trước đó (Previous) trong danh sách phát. \\ \hline
+F6 & Tua (Seek) đến một vị trí thời gian cụ thể trong bài hát đang phát. \\ \hline
+F7 & Điều chỉnh mức âm lượng (Volume) của hệ thống (tăng/giảm). \\ \hline
+F8 & Chuyển đổi trạng thái tắt tiếng (Mute/Unmute). \\ \hline
+F9 & Tải danh sách bài hát từ một thư mục chỉ định vào Playlist. \\ \hline
+F10 & Hiển thị thông tin siêu dữ liệu (Metadata) của bài hát như Artist, Album, Cover Art. \\ \hline
+F11 & Thiết lập kết nối Serial tới thiết bị ngoại vi (S32K Board) (Hỗ trợ backend, chưa có UI). \\ \hline
+F12 & Nhận tín hiệu điều khiển (như thay đổi thông số) từ thiết bị ngoại vi qua Serial (Hỗ trợ backend). \\ \hline
+F13 & Tìm kiếm và lọc bài hát trong danh sách theo Tên, Nghệ sĩ hoặc Album. \\ \hline
+F14 & Hiển thị danh sách các bài hát vừa phát (History) và danh sách chờ phát (Queue). \\ \hline
+\end{tabular}
+\end{center}
+
+\section{High-Level Features}
+\subsection{Music Playback}
+Chức năng phát nhạc là tính năng trung tâm của hệ thống, cho phép người dùng tải và phát lại các tập tin âm thanh từ bộ nhớ cục bộ. Hệ thống cung cấp các cơ chế kiểm soát tiến trình phát đa dạng bao gồm phát, tạm dừng, chuyển bài và điều hướng nhanh (tua) đến bất kỳ vị trí thời gian nào trong bài hát thông qua giao diện điều khiển trực quan.
+
+\subsubsection{Low-Level Feature: Load Music Files}
+Dưới đây là các yêu cầu chức năng chi tiết cho việc tải và quản lý tập tin nhạc:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement Description} \\ \hline
+FR-1.1 & Hệ thống phải quét toàn bộ thư mục được chỉ định trong hệ thống tập tin để tìm kiếm các tập tin âm thanh. \\ \hline
+FR-1.2 & Hệ thống phải nhận diện và hỗ trợ nạp các định dạng tập tin âm thanh sau: .mp3, .wav, .ogg, .flac. \\ \hline
+FR-1.3 & Hệ thống phải trích xuất và hiển thị thông tin siêu dữ liệu (Metadata) từ tập tin bao gồm: Tên bài hát, Tên nghệ sĩ và Tên Album (nếu có). \\ \hline
+FR-1.4 & Hệ thống phải trích xuất dữ liệu ảnh bìa (Cover Art) được nhúng trong tập tin (nếu có) để hiển thị lên giao diện. \\ \hline
+FR-1.5 & Hệ thống phải thêm các tập tin âm thanh hợp lệ đã tìm thấy vào danh sách phát (Playlist) để sẵn sàng chọn và phát. \\ \hline
+\end{tabular}
+
+\end{center}
+
+\subsubsection{Low-Level Feature: Playback Control}
+Các yêu cầu chức năng cho việc điều khiển trạng thái phát nhạc (Play/Pause/Stop):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement Description} \\ \hline
+FR-1.6 & Hệ thống phải bắt đầu phát tập tin âm thanh hiện tại và chuyển trạng thái sang PLAYING khi nhận được lệnh Play. \\ \hline
+FR-1.7 & Hệ thống phải tạm dừng việc phát âm thanh, giữ nguyên vị trí phát hiện tại và chuyển trạng thái sang PAUSED khi nhận được lệnh Pause. \\ \hline
+FR-1.8 & Hệ thống phải tiếp tục phát từ vị trí đã tạm dừng và chuyển trạng thái về PLAYING khi nhận lệnh Play trong trạng thái PAUSED. \\ \hline
+FR-1.9 & Hệ thống phải dừng hoàn toàn việc phát âm thanh, đặt lại vị trí về đầu bài hát và chuyển trạng thái sang STOPPED khi nhận được lệnh Stop. \\ \hline
+FR-1.10 & Hệ thống phải thông báo mọi sự thay đổi về trạng thái phát (Playing/Paused/Stopped) cho các thành phần quan sát (View/Serial) ngay lập tức. \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection{Volume Control}
+Hệ thống cung cấp khả năng điều chỉnh cường độ âm thanh toàn cục thông qua hai cơ chế song song: thao tác trực tiếp trên giao diện ứng dụng hoặc gửi tín hiệu điều khiển từ thiết bị phần cứng ngoại vi (External Hardware) qua giao thức UART. Mọi thay đổi về mức âm lượng từ bất kỳ nguồn nào đều được đồng bộ hóa tức thời giữa ứng dụng và thiết bị ngoại vi để đảm bảo tính nhất quán của trạng thái hệ thống.
+
+\subsubsection{Low-Level Feature: Application Volume Control}
+Các yêu cầu chức năng khi người dùng điều chỉnh âm lượng từ giao diện ứng dụng (Application UI):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement Description} \\ \hline
+FR-2.1 & Hệ thống phải cập nhật giá trị âm lượng trong Model và áp dụng ngay lập tức lên Audio Player khi người dùng thay đổi thanh trượt volume trên giao diện. \\ \hline
+FR-2.2 & Hệ thống phải cập nhật trạng thái tắt tiếng (Mute) trong Model và ngắt âm lượng đầu ra khi người dùng kích hoạt chức năng Mute trên giao diện. \\ \hline
+FR-2.3 & Hệ thống phải khôi phục lại mức âm lượng trước đó khi người dùng tắt chức năng Mute (Unmute) trên giao diện. \\ \hline
+FR-2.4 & Hệ thống phải gửi thông điệp chứa trạng thái âm lượng mới nhất tới thiết bị ngoại vi qua cổng Serial ngay sau khi có sự thay đổi từ giao diện. \\ \hline
+FR-2.5 & Hệ thống phải đảm bảo giá trị âm lượng luôn nằm trong phạm vi hợp lệ (0-100) trước khi xử lý hoặc gửi đi. \\ \hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Low-Level Feature: Volume Control via UART Hardware}
+Các yêu cầu chức năng cho việc điều khiển âm lượng từ thiết bị phần cứng thông qua giao thức UART:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement Description} \\ \hline
+FR-2.6 & Hệ thống phải liên tục lắng nghe và nhận dữ liệu điều khiển từ cổng Serial khi kết nối với thiết bị ngoại vi được thiết lập. \\ \hline
+FR-2.7 & Hệ thống phải phân tích cú pháp dữ liệu nhận được để xác định lệnh điều khiển âm lượng (ví dụ: lệnh thay đổi mức Volume hoặc lệnh Mute/Unmute). \\ \hline
+FR-2.8 & Hệ thống phải cập nhật ngay lập tức giá trị Volume và trạng thái Mute trong Model khi nhận được lệnh hợp lệ từ thiết bị ngoại vi. \\ \hline
+FR-2.9 & Hệ thống phải tự động đồng bộ hóa trạng thái mới lên giao diện người dùng (UI), đảm bảo thanh trượt và nút Mute hiển thị đúng giá trị vừa nhận được từ phần cứng. \\ \hline
+FR-2.10 & Hệ thống phải gửi phản hồi trạng thái hiện tại (Status Update) ngược lại cho thiết bị ngoại vi qua cổng Serial sau khi thực hiện thay đổi thành công để xác nhận đồng bộ. \\ \hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{State Management}
+Hệ thống quản lý trạng thái phát nhạc thông qua một máy trạng thái (state machine) bên trong Model, đảm bảo tính nhất quán giữa các tương tác người dùng và phản hồi của hệ thống.
+
+\subsubsection{Playback State Management}
+Dưới đây là các trạng thái hợp lệ và quy tắc chuyển đổi trạng thái của hệ thống:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement Description} \\ \hline
+FR-3.1 & Hệ thống phải khởi tạo ở trạng thái \textbf{STOPPED} khi ứng dụng bắt đầu chạy hoặc khi không có bài hát nào được tải. \\ \hline
+FR-3.2 & Hệ thống phải chuyển từ trạng thái \textbf{STOPPED} hoặc \textbf{PAUSED} sang \textbf{PLAYING} khi nhận được lệnh Play. \\ \hline
+FR-3.3 & Hệ thống phải chuyển từ trạng thái \textbf{PLAYING} sang \textbf{PAUSED} khi nhận được lệnh Pause. \\ \hline
+FR-3.4 & Hệ thống phải chuyển từ trạng thái \textbf{PLAYING} hoặc \textbf{PAUSED} sang \textbf{STOPPED} khi nhận được lệnh Stop hoặc khi kết thúc bài hát (nếu không có bài tiếp theo/lặp lại). \\ \hline
+FR-3.5 & Hệ thống phải duy trì trạng thái \textbf{STOPPED} nếu xảy ra lỗi trong quá trình tải hoặc phát tập tin âm thanh. \\ \hline
+\end{tabular}
+\end{center}
+
+\end{document}

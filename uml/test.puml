@@ -1,0 +1,12 @@
+@startuml
+class Service {
+  +init()
+  +process()
+}
+
+class Hardware {
+  +sendUART()
+}
+
+Service --> Hardware
+@enduml
