@@ -1,4 +1,4 @@
-@startuml
+@startuml "sequence_high_level"
 actor User
 participant "Hardware Controller" as HW
 participant "ImGuiView" as View
@@ -10,70 +10,68 @@ participant "PlayerState" as State
 participant "Local/USB Storage" as USB
 
 
-autonumber
-
-    User -> View : Select Song
+    User -> View : 1.Select Song
     activate View
 
-    View -> Ctrl : loadTrack(path)
+    View -> Ctrl : 1.1.loadTrack(path)
     activate Ctrl
 
-    Ctrl -> Media : create(path)
+    Ctrl -> Media : 1.1.1.create(path)
     activate Media
-    Media -> USB : read metadata
+    Media -> USB : 1.1.1.1.read metadata
     activate USB
-    USB --> Media : file data
+    USB --> Media : 1.1.1.2.file data
     deactivate USB
-    Media --> Ctrl : return metadata
+    Media --> Ctrl : 1.1.2.return metadata
     deactivate Media
     
-    Ctrl -> Audio : load(path)
+    Ctrl -> Audio : 1.1.3.load(path)
     activate Audio
-    Audio --> Ctrl : ready to play
+    Audio --> Ctrl : 1.1.4.ready to play
     deactivate Audio
     
-    Ctrl -> State : setCurrentTrack
+    Ctrl -> State : 1.1.5.setCurrentTrack
     activate State
-    State --> Ctrl: return state track
+    State --> Ctrl: 1.1.6.return state track
     deactivate State
 
-    Ctrl --> View : ready
+    Ctrl --> View : 1.2.ready
     deactivate Ctrl
     deactivate View
 
 
     ' --- Hardware Flow Scenario ---
-    User -> HW : Press Button
-    HW -> Serial : Data Transmission
+    User -> HW : 2.Press Button
+    HW -> Ctrl : 2.1.Data Transmission
     activate HW
-    activate Serial
     deactivate HW
-    
-    Serial -> Serial : parse complete command
-    Serial -> Ctrl : trigger DataCallback("PLAY")
-    deactivate Serial
     activate Ctrl
+    Ctrl -> Serial:2.1.1.send DataCallback("PLAY")
+    activate Serial
+    Serial -> Serial : 2.1.1.1.parse complete command
+    Serial --> Ctrl : 2.1.2.trigger DataCallback("PLAY")
+    deactivate Serial
     
-    Ctrl -> Ctrl : processCommand()
+    Ctrl -> Ctrl : 2.1.3.processCommand()
     
-    Ctrl -> Audio : play()
+    Ctrl -> Audio : 2.1.4.play()
     activate Audio
-    Audio --> Ctrl : playback started
+    Audio --> Ctrl : 2.1.5.playback started
     deactivate Audio
     
-    Ctrl -> State : setPlaybackState(PLAYING)
+    Ctrl -> State : 2.1.6.setPlaybackState(PLAYING)
     activate State
-    State --> Ctrl
+    State --> Ctrl: 2.1.7.return state track
     deactivate State
     
     ' Backwards notification to HW
-    Ctrl -> Serial : send("STATUS:PLAYING")
+    Ctrl -> Serial : 2.1.8.send("STATUS:PLAYING")
     activate Serial
-    Serial --> Ctrl : 
+    Serial --> Ctrl : 2.1.9.return status
     deactivate Serial
     
     ' UI update via callback
-    Ctrl --> View : trigger StateCallback(RUNNING)
+    Ctrl --> View : 2.2.trigger StateCallback(RUNNING)
     activate View
     deactivate View
     deactivate Ctrl
