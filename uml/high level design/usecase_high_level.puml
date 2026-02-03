@@ -1,0 +1,50 @@
+@startuml
+left to right direction
+actor "User" as user
+
+
+rectangle "Music Player" {
+    usecase UC_LoadFile as "Manage Media Source"
+    usecase UC_Play as "Control Playback"
+    usecase UC_Vol as "Adjust Audio Settings"
+    usecase UC_Info as "View Media Information"
+    usecase UC_Serial as "Serial Communication"
+}
+
+user --> UC_LoadFile
+user --> UC_Play
+user --> UC_Vol
+user --> UC_Info
+user --> UC_Serial
+
+usecase USB as "USB"
+USB --> UC_LoadFile
+
+usecase Local as "Local Storage"
+Local --> UC_LoadFile
+
+usecase HardWare as "Hardware"
+HardWare --> UC_Serial
+
+note right of UC_LoadFile
+  Load file
+  Load directory
+end note
+
+note right of UC_Play
+  Play
+  Pause
+end note
+note right of UC_Vol
+  Volume up
+  Volume down
+end note
+note right of UC_Info
+  Show info
+end note
+note right of UC_Serial
+  Receive data
+end note
+
+
+@enduml

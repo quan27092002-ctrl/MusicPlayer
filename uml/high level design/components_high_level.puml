@@ -1,0 +1,41 @@
+@startuml
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+
+package "View" {
+   component [ImGuiView]
+}
+
+package "Controller" {
+   component [AppController]
+   component [AudioPlayer]
+   component [SerialManager]
+}
+
+package "Model" {
+   component [PlayerState]
+   component [MediaFile]
+}
+
+package "Data Sources" {
+    component [USB Storage]
+    component [Local Storage]
+    component [Hardware Controller]
+}
+
+' Relations
+' View dependencies
+[ImGuiView] -right-> [AppController] 
+
+' AppController as the Hub
+[AppController] -up-> [AudioPlayer] 
+[AppController] -up-> [SerialManager] 
+[AppController] -down-> [PlayerState] 
+[AppController] -down-> [MediaFile] 
+
+' Data Flow and External
+[MediaFile] --> [USB Storage] 
+[MediaFile] --> [Local Storage] 
+[SerialManager] --> [Hardware Controller]
+@enduml

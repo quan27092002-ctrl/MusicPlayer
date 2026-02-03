@@ -1,0 +1,81 @@
+@startuml
+actor User
+participant "Hardware Controller" as HW
+participant "ImGuiView" as View
+participant "AppController" as Ctrl
+participant "AudioPlayer" as Audio
+participant "SerialManager" as Serial
+participant "MediaFile" as Media
+participant "PlayerState" as State
+participant "Local/USB Storage" as USB
+
+
+autonumber
+
+    User -> View : Select Song
+    activate View
+
+    View -> Ctrl : loadTrack(path)
+    activate Ctrl
+
+    Ctrl -> Media : create(path)
+    activate Media
+    Media -> USB : read metadata
+    activate USB
+    USB --> Media : file data
+    deactivate USB
+    Media --> Ctrl : return metadata
+    deactivate Media
+    
+    Ctrl -> Audio : load(path)
+    activate Audio
+    Audio --> Ctrl : ready to play
+    deactivate Audio
+    
+    Ctrl -> State : setCurrentTrack
+    activate State
+    State --> Ctrl: return state track
+    deactivate State
+
+    Ctrl --> View : ready
+    deactivate Ctrl
+    deactivate View
+
+
+    ' --- Hardware Flow Scenario ---
+    User -> HW : Press Button
+    HW -> Serial : Data Transmission
+    activate HW
+    activate Serial
+    deactivate HW
+    
+    Serial -> Serial : parse complete command
+    Serial -> Ctrl : trigger DataCallback("PLAY")
+    deactivate Serial
+    activate Ctrl
+    
+    Ctrl -> Ctrl : processCommand()
+    
+    Ctrl -> Audio : play()
+    activate Audio
+    Audio --> Ctrl : playback started
+    deactivate Audio
+    
+    Ctrl -> State : setPlaybackState(PLAYING)
+    activate State
+    State --> Ctrl
+    deactivate State
+    
+    ' Backwards notification to HW
+    Ctrl -> Serial : send("STATUS:PLAYING")
+    activate Serial
+    Serial --> Ctrl : 
+    deactivate Serial
+    
+    ' UI update via callback
+    Ctrl --> View : trigger StateCallback(RUNNING)
+    activate View
+    deactivate View
+    deactivate Ctrl
+    
+@enduml
