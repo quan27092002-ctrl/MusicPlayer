@@ -2,13 +2,17 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/model/MediaFile.h
  * AUTHOR: Architecture Team
- * DESCRIPTION: Concrete implementation of IMediaFile - represents audio file metadata.
+ * DESCRIPTION: Concrete implementation of IMediaFile using composition.
+ *              Facade pattern - delegates to smaller components.
  */
 
 #ifndef MEDIAFILE_H
 #define MEDIAFILE_H
 
 #include "IMediaFile.h"
+#include "mediafile/MediaFileInfo.h"
+#include "mediafile/MediaMetadata.h"
+#include "mediafile/CoverArt.h"
 #include <string>
 #include <cstdint>
 #include <vector>
@@ -16,18 +20,17 @@
 namespace Model {
 
 /**
- * @brief Concrete implementation of IMediaFile.
+ * @brief Concrete implementation of IMediaFile using composition.
  * 
- * Stores metadata about an audio file: filename, path, and duration.
+ * This class acts as a facade, delegating to MediaFileInfo, MediaMetadata,
+ * and CoverArt components. It provides backward compatibility with the
+ * original MediaFile interface while internally following SOLID principles.
  */
 class MediaFile : public IMediaFile {
 private:
-    std::string mFilename;      ///< File name without path (e.g., "song.mp3")
-    std::string mPath;          ///< Full absolute path to the file
-    uint32_t mDuration;         ///< Duration in seconds (0 if unknown)
-    std::string mArtist;        ///< Artist name
-    std::string mAlbum;         ///< Album name
-    std::vector<uint8_t> mCoverArtData; ///< Raw image data from ID3 tag
+    MediaFileInfo mFileInfo;    ///< File information component
+    MediaMetadata mMetadata;    ///< Metadata component
+    CoverArt mCoverArt;         ///< Cover art component
 
 public:
     /**
@@ -42,6 +45,7 @@ public:
      * @param duration Duration in seconds (default: 0)
      * @param artist Artist name (default: empty)
      * @param album Album name (default: empty)
+     * @param coverArt Cover art data (default: empty)
      */
     MediaFile(const std::string& filename, const std::string& path, 
               uint32_t duration = 0, 
@@ -75,61 +79,59 @@ public:
     ~MediaFile() override = default;
 
     // ========================================================================
-    // IMediaFile Interface Implementation
+    // IMediaFileInfo Interface Implementation
     // ========================================================================
 
     std::string getFilename() const override;
+    void setFilename(const std::string& filename) override;
     std::string getPath() const override;
-    uint32_t getDuration() const override;
-    std::string getArtist() const override;
-    std::string getAlbum() const override;
+    void setPath(const std::string& path) override;
     bool isValid() const override;
 
     // ========================================================================
-    // Additional Methods
+    // IMediaMetadata Interface Implementation
+    // ========================================================================
+
+    uint32_t getDuration() const override;
+    void setDuration(uint32_t duration) override;
+    std::string getArtist() const override;
+    void setArtist(const std::string& artist) override;
+    std::string getAlbum() const override;
+    void setAlbum(const std::string& album) override;
+
+    // ========================================================================
+    // ICoverArt Interface Implementation
+    // ========================================================================
+
+    const std::vector<uint8_t>& getCoverArt() const override;
+    void setCoverArt(const std::vector<uint8_t>& data) override;
+    bool hasCoverArt() const override;
+
+    // ========================================================================
+    // Component Access (for advanced use)
     // ========================================================================
 
     /**
-     * @brief Set the filename.
-     * @param filename New filename
+     * @brief Get the file info component.
+     * @return Reference to MediaFileInfo
      */
-    void setFilename(const std::string& filename);
+    const MediaFileInfo& getFileInfoComponent() const { return mFileInfo; }
 
     /**
-     * @brief Set the file path.
-     * @param path New path
+     * @brief Get the metadata component.
+     * @return Reference to MediaMetadata
      */
-    void setPath(const std::string& path);
+    const MediaMetadata& getMetadataComponent() const { return mMetadata; }
 
     /**
-     * @brief Set the duration.
-     * @param duration Duration in seconds
+     * @brief Get the cover art component.
+     * @return Reference to CoverArt
      */
-    void setDuration(uint32_t duration);
+    const CoverArt& getCoverArtComponent() const { return mCoverArt; }
 
-    /**
-     * @brief Set the artist name.
-     * @param artist Artist name
-     */
-    void setArtist(const std::string& artist) override;
-
-    /**
-     * @brief Set the album name.
-     * @param album Album name
-     */
-    void setAlbum(const std::string& album) override;
-    
-    /**
-     * @brief Get the cover art data.
-     * @return Raw image data
-     */
-    const std::vector<uint8_t>& getCoverArt() const override;
-
-    /**
-     * @brief Set the cover art data.
-     * @param data Raw image data
-     */
-    void setCoverArt(const std::vector<uint8_t>& data) override;
+    // ========================================================================
+    // Operators
+    // ========================================================================
 
     /**
      * @brief Equality operator - compares by path.

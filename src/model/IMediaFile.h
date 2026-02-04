@@ -2,87 +2,34 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/model/IMediaFile.h
  * AUTHOR: Architecture Team
- * DESCRIPTION: Interface for MediaFile - represents a single audio file.
+ * DESCRIPTION: Aggregate interface for MediaFile - combines IMediaFileInfo, 
+ *              IMediaMetadata, and ICoverArt interfaces.
+ *              Provides backward compatibility while following ISP.
  */
 
 #ifndef IMEDIAFILE_H
 #define IMEDIAFILE_H
 
-#include <string>
-#include <cstdint>
-#include <vector>
+#include "mediafile/interfaces/IMediaFileInfo.h"
+#include "mediafile/interfaces/IMediaMetadata.h"
+#include "mediafile/interfaces/ICoverArt.h"
 
 namespace Model {
 
 /**
- * @brief Abstract interface for a media file.
+ * @brief Aggregate interface for a media file.
  * 
- * Defines the contract for accessing media file metadata.
- * This allows mocking in unit tests.
+ * This interface combines IMediaFileInfo, IMediaMetadata, and ICoverArt
+ * into a single interface for backward compatibility. It allows clients
+ * that need all media file features to depend on this single interface,
+ * while clients that only need specific features can depend on the
+ * smaller interfaces directly (Interface Segregation Principle).
  */
-class IMediaFile {
+class IMediaFile : public IMediaFileInfo, 
+                   public IMediaMetadata, 
+                   public ICoverArt {
 public:
     virtual ~IMediaFile() = default;
-
-    /**
-     * @brief Get the filename (without path).
-     * @return Filename string (e.g., "song.mp3")
-     */
-    virtual std::string getFilename() const = 0;
-
-    /**
-     * @brief Get the full file path.
-     * @return Full path string (e.g., "/home/user/music/song.mp3")
-     */
-    virtual std::string getPath() const = 0;
-
-    /**
-     * @brief Get the duration in seconds.
-     * @return Duration in seconds, 0 if unknown
-     */
-    virtual uint32_t getDuration() const = 0;
-
-    /**
-     * @brief Get the artist name.
-     * @return Artist name string, empty if unknown
-     */
-    virtual std::string getArtist() const = 0;
-
-    /**
-     * @brief Get the album name.
-     * @return Album name string, empty if unknown
-     */
-    virtual std::string getAlbum() const = 0;
-
-    /**
-     * @brief Set the artist name.
-     * @param artist Artist name
-     */
-    virtual void setArtist(const std::string& artist) = 0;
-
-    /**
-     * @brief Set the album name.
-     * @param album Album name
-     */
-    virtual void setAlbum(const std::string& album) = 0;
-    
-    /**
-     * @brief Get the cover art data.
-     * @return Vector containing raw image data
-     */
-    virtual const std::vector<uint8_t>& getCoverArt() const = 0;
-    
-    /**
-     * @brief Set the cover art data.
-     * @param data Raw image data
-     */
-    virtual void setCoverArt(const std::vector<uint8_t>& data) = 0;
-    
-    /**
-     * @brief Check if this media file is valid.
-     * @return true if filename and path are not empty
-     */
-    virtual bool isValid() const = 0;
 };
 
 } // namespace Model

@@ -9,7 +9,7 @@ MAKEFLAGS += -j$(shell nproc)
 
 # 1. Compiler Settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/controller -Isrc/view -Isrc/view/imgui
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/model/mediafile -Isrc/model/playerstate -Isrc/controller -Isrc/view -Isrc/view/imgui
 CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer taglib SDL2_image)
 
 # Linker flags
@@ -23,11 +23,21 @@ BUILD_DIR = build
 IMGUI_DIR = src/view/imgui
 
 # 3. Source Files
+# Model component sources (SOLID refactored)
+MODEL_SRCS = $(SRC_DIR)/model/MediaFile.cpp \
+             $(SRC_DIR)/model/PlayerState.cpp \
+             $(SRC_DIR)/model/mediafile/MediaFileInfo.cpp \
+             $(SRC_DIR)/model/mediafile/MediaMetadata.cpp \
+             $(SRC_DIR)/model/mediafile/CoverArt.cpp \
+             $(SRC_DIR)/model/playerstate/PlaybackStateImpl.cpp \
+             $(SRC_DIR)/model/playerstate/VolumeStateImpl.cpp \
+             $(SRC_DIR)/model/playerstate/TrackPositionImpl.cpp \
+             $(SRC_DIR)/model/playerstate/PlaylistNavigationImpl.cpp
+
 # Core sources
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
            $(SRC_DIR)/utils/Logger.cpp \
-           $(SRC_DIR)/model/MediaFile.cpp \
-           $(SRC_DIR)/model/PlayerState.cpp \
+           $(MODEL_SRCS) \
            $(SRC_DIR)/controller/AudioPlayer.cpp \
            $(SRC_DIR)/controller/SerialManager.cpp \
            $(SRC_DIR)/controller/AppController.cpp

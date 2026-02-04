@@ -2,41 +2,38 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/model/PlayerState.h
  * AUTHOR: Architecture Team
- * DESCRIPTION: Concrete thread-safe implementation of IPlayerState.
+ * DESCRIPTION: Concrete implementation of IPlayerState using composition.
+ *              Facade pattern - delegates to smaller components.
  */
 
 #ifndef PLAYERSTATE_H
 #define PLAYERSTATE_H
 
 #include "IPlayerState.h"
-#include <atomic>
-#include <mutex>
-#include <cstdint>
+#include "playerstate/PlaybackStateImpl.h"
+#include "playerstate/VolumeStateImpl.h"
+#include "playerstate/TrackPositionImpl.h"
+#include "playerstate/PlaylistNavigationImpl.h"
+#include <memory>
 
 namespace Model {
 
 /**
- * @brief Thread-safe implementation of IPlayerState.
+ * @brief Thread-safe implementation of IPlayerState using composition.
  * 
- * Uses std::atomic for simple types and std::mutex for complex operations.
- * All public methods are safe to call from multiple threads.
+ * This class acts as a facade, delegating to PlaybackStateImpl, VolumeStateImpl,
+ * TrackPositionImpl, and PlaylistNavigationImpl components. It provides backward
+ * compatibility with the original PlayerState interface while internally
+ * following SOLID principles.
+ * 
+ * All operations are thread-safe as they delegate to atomic-based implementations.
  */
 class PlayerState : public IPlayerState {
 private:
-    std::atomic<PlaybackState> mPlaybackState;  ///< Current playback state
-    std::atomic<int> mVolume;                    ///< Volume level (0-100)
-    std::atomic<bool> mMuted;                    ///< Mute flag
-    std::atomic<uint32_t> mCurrentPosition;      ///< Current position in seconds
-    std::atomic<int> mCurrentTrackIndex;         ///< Current track index (-1 if none)
-    std::atomic<RepeatMode> mRepeatMode;         ///< Repeat mode
-    std::atomic<bool> mShuffleEnabled;           ///< Shuffle flag
-
-    // Volume limits
-    static constexpr int MIN_VOLUME = 0;
-    static constexpr int MAX_VOLUME = 100;
-
-    // Helper to clamp volume
-    int clampVolume(int volume) const;
+    PlaybackStateImpl mPlaybackState;       ///< Playback state component
+    VolumeStateImpl mVolumeState;           ///< Volume state component
+    TrackPositionImpl mTrackPosition;       ///< Track position component
+    PlaylistNavigationImpl mNavigation;     ///< Playlist navigation component
 
 public:
     /**
@@ -49,71 +46,89 @@ public:
      */
     ~PlayerState() override = default;
 
-    // Delete copy (atomic members are not copyable)
+    // Delete copy (components contain atomic members)
     PlayerState(const PlayerState&) = delete;
     PlayerState& operator=(const PlayerState&) = delete;
 
     // ========================================================================
-    // IPlayerState Interface Implementation
+    // IPlaybackState Interface Implementation (delegated)
     // ========================================================================
 
-    // Playback State
-    PlaybackState getPlaybackState() const override;
-    void setPlaybackState(PlaybackState state) override;
+    PlaybackStatus getPlaybackStatus() const override;
+    void setPlaybackStatus(PlaybackStatus status) override;
     bool isPlaying() const override;
+    PlaybackStatus togglePlayPause() override;
 
-    // Volume Control
+    // ========================================================================
+    // IVolumeState Interface Implementation (delegated)
+    // ========================================================================
+
     int getVolume() const override;
     void setVolume(int volume) override;
     bool isMuted() const override;
     void setMuted(bool muted) override;
+    bool toggleMute() override;
 
-    // Track Position
+    // ========================================================================
+    // ITrackPosition Interface Implementation (delegated)
+    // ========================================================================
+
     uint32_t getCurrentPosition() const override;
     void setCurrentPosition(uint32_t position) override;
 
-    // Playlist Navigation
+    // ========================================================================
+    // IPlaylistNavigation Interface Implementation (delegated)
+    // ========================================================================
+
     int getCurrentTrackIndex() const override;
     void setCurrentTrackIndex(int index) override;
-
-    // Playback Modes
     RepeatMode getRepeatMode() const override;
     void setRepeatMode(RepeatMode mode) override;
+    RepeatMode cycleRepeatMode() override;
     bool isShuffleEnabled() const override;
     void setShuffleEnabled(bool enabled) override;
+    bool toggleShuffle() override;
 
     // ========================================================================
     // Additional Convenience Methods
     // ========================================================================
 
     /**
-     * @brief Reset state to defaults.
+     * @brief Reset all state to defaults.
      */
     void reset();
 
-    /**
-     * @brief Toggle play/pause state.
-     * @return New playback state after toggle
-     */
-    PlaybackState togglePlayPause();
+    // ========================================================================
+    // Component Access (for advanced use)
+    // ========================================================================
 
     /**
-     * @brief Toggle mute state.
-     * @return New mute state after toggle
+     * @brief Get the playback state component.
+     * @return Reference to PlaybackStateImpl
      */
-    bool toggleMute();
+    IPlaybackState& getPlaybackStateComponent() { return mPlaybackState; }
+    const IPlaybackState& getPlaybackStateComponent() const { return mPlaybackState; }
 
     /**
-     * @brief Cycle through repeat modes (NONE -> ONE -> ALL -> NONE).
-     * @return New repeat mode after cycle
+     * @brief Get the volume state component.
+     * @return Reference to VolumeStateImpl
      */
-    RepeatMode cycleRepeatMode();
+    IVolumeState& getVolumeStateComponent() { return mVolumeState; }
+    const IVolumeState& getVolumeStateComponent() const { return mVolumeState; }
 
     /**
-     * @brief Toggle shuffle mode.
-     * @return New shuffle state after toggle
+     * @brief Get the track position component.
+     * @return Reference to TrackPositionImpl
      */
-    bool toggleShuffle();
+    ITrackPosition& getTrackPositionComponent() { return mTrackPosition; }
+    const ITrackPosition& getTrackPositionComponent() const { return mTrackPosition; }
+
+    /**
+     * @brief Get the playlist navigation component.
+     * @return Reference to PlaylistNavigationImpl
+     */
+    IPlaylistNavigation& getNavigationComponent() { return mNavigation; }
+    const IPlaylistNavigation& getNavigationComponent() const { return mNavigation; }
 };
 
 } // namespace Model

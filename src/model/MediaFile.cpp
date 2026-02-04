@@ -2,7 +2,7 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/model/MediaFile.cpp
  * AUTHOR: Architecture Team
- * DESCRIPTION: Implementation of MediaFile class.
+ * DESCRIPTION: Implementation of MediaFile class using composition.
  */
 
 #include "MediaFile.h"
@@ -14,82 +14,85 @@ namespace Model {
 // ============================================================================
 
 MediaFile::MediaFile()
-    : mFilename("")
-    , mPath("")
-    , mDuration(0)
-    , mArtist("")
-    , mAlbum("") {
+    : mFileInfo()
+    , mMetadata()
+    , mCoverArt() {
 }
 
 MediaFile::MediaFile(const std::string& filename, const std::string& path, 
-                     uint32_t duration, const std::string& artist, const std::string& album,
-                     const std::vector<uint8_t>& coverArt)
-    : mFilename(filename)
-    , mPath(path)
-    , mDuration(duration)
-    , mArtist(artist)
-    , mAlbum(album)
-    , mCoverArtData(coverArt) {
+                     uint32_t duration, const std::string& artist, 
+                     const std::string& album, const std::vector<uint8_t>& coverArt)
+    : mFileInfo(filename, path)
+    , mMetadata(duration, artist, album)
+    , mCoverArt(coverArt) {
 }
 
 // ============================================================================
-// IMediaFile Interface Implementation
+// IMediaFileInfo Interface Implementation (delegated)
 // ============================================================================
 
 std::string MediaFile::getFilename() const {
-    return mFilename;
+    return mFileInfo.getFilename();
+}
+
+void MediaFile::setFilename(const std::string& filename) {
+    mFileInfo.setFilename(filename);
 }
 
 std::string MediaFile::getPath() const {
-    return mPath;
-}
-
-uint32_t MediaFile::getDuration() const {
-    return mDuration;
-}
-
-std::string MediaFile::getArtist() const {
-    return mArtist;
-}
-
-std::string MediaFile::getAlbum() const {
-    return mAlbum;
-}
-
-bool MediaFile::isValid() const {
-    return !mFilename.empty() && !mPath.empty();
-}
-
-const std::vector<uint8_t>& MediaFile::getCoverArt() const {
-    return mCoverArtData;
-}
-
-// ============================================================================
-// Setters
-// ============================================================================
-
-void MediaFile::setFilename(const std::string& filename) {
-    mFilename = filename;
+    return mFileInfo.getPath();
 }
 
 void MediaFile::setPath(const std::string& path) {
-    mPath = path;
+    mFileInfo.setPath(path);
+}
+
+bool MediaFile::isValid() const {
+    return mFileInfo.isValid();
+}
+
+// ============================================================================
+// IMediaMetadata Interface Implementation (delegated)
+// ============================================================================
+
+uint32_t MediaFile::getDuration() const {
+    return mMetadata.getDuration();
 }
 
 void MediaFile::setDuration(uint32_t duration) {
-    mDuration = duration;
+    mMetadata.setDuration(duration);
+}
+
+std::string MediaFile::getArtist() const {
+    return mMetadata.getArtist();
 }
 
 void MediaFile::setArtist(const std::string& artist) {
-    mArtist = artist;
+    mMetadata.setArtist(artist);
+}
+
+std::string MediaFile::getAlbum() const {
+    return mMetadata.getAlbum();
 }
 
 void MediaFile::setAlbum(const std::string& album) {
-    mAlbum = album;
+    mMetadata.setAlbum(album);
+}
+
+// ============================================================================
+// ICoverArt Interface Implementation (delegated)
+// ============================================================================
+
+const std::vector<uint8_t>& MediaFile::getCoverArt() const {
+    return mCoverArt.getCoverArt();
 }
 
 void MediaFile::setCoverArt(const std::vector<uint8_t>& data) {
-    mCoverArtData = data;
+    mCoverArt.setCoverArt(data);
+}
+
+bool MediaFile::hasCoverArt() const {
+    return mCoverArt.hasCoverArt();
 }
 
 // ============================================================================
@@ -97,7 +100,7 @@ void MediaFile::setCoverArt(const std::vector<uint8_t>& data) {
 // ============================================================================
 
 bool MediaFile::operator==(const MediaFile& other) const {
-    return mPath == other.mPath;
+    return mFileInfo.getPath() == other.mFileInfo.getPath();
 }
 
 bool MediaFile::operator!=(const MediaFile& other) const {

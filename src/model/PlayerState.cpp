@@ -2,11 +2,10 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/model/PlayerState.cpp
  * AUTHOR: Architecture Team
- * DESCRIPTION: Implementation of PlayerState class.
+ * DESCRIPTION: Implementation of PlayerState class using composition.
  */
 
 #include "PlayerState.h"
-#include <algorithm>
 
 namespace Model {
 
@@ -15,101 +14,102 @@ namespace Model {
 // ============================================================================
 
 PlayerState::PlayerState()
-    : mPlaybackState(PlaybackState::STOPPED)
-    , mVolume(50)
-    , mMuted(false)
-    , mCurrentPosition(0)
-    , mCurrentTrackIndex(-1)
-    , mRepeatMode(RepeatMode::NONE)
-    , mShuffleEnabled(false) {
+    : mPlaybackState()
+    , mVolumeState()
+    , mTrackPosition()
+    , mNavigation() {
 }
 
 // ============================================================================
-// Private Helper
+// IPlaybackState Interface Implementation (delegated)
 // ============================================================================
 
-int PlayerState::clampVolume(int volume) const {
-    return std::clamp(volume, MIN_VOLUME, MAX_VOLUME);
+PlaybackStatus PlayerState::getPlaybackStatus() const {
+    return mPlaybackState.getPlaybackStatus();
 }
 
-// ============================================================================
-// Playback State
-// ============================================================================
-
-PlaybackState PlayerState::getPlaybackState() const {
-    return mPlaybackState.load();
-}
-
-void PlayerState::setPlaybackState(PlaybackState state) {
-    mPlaybackState.store(state);
+void PlayerState::setPlaybackStatus(PlaybackStatus status) {
+    mPlaybackState.setPlaybackStatus(status);
 }
 
 bool PlayerState::isPlaying() const {
-    return mPlaybackState.load() == PlaybackState::PLAYING;
+    return mPlaybackState.isPlaying();
+}
+
+PlaybackStatus PlayerState::togglePlayPause() {
+    return mPlaybackState.togglePlayPause();
 }
 
 // ============================================================================
-// Volume Control
+// IVolumeState Interface Implementation (delegated)
 // ============================================================================
 
 int PlayerState::getVolume() const {
-    return mVolume.load();
+    return mVolumeState.getVolume();
 }
 
 void PlayerState::setVolume(int volume) {
-    mVolume.store(clampVolume(volume));
+    mVolumeState.setVolume(volume);
 }
 
 bool PlayerState::isMuted() const {
-    return mMuted.load();
+    return mVolumeState.isMuted();
 }
 
 void PlayerState::setMuted(bool muted) {
-    mMuted.store(muted);
+    mVolumeState.setMuted(muted);
+}
+
+bool PlayerState::toggleMute() {
+    return mVolumeState.toggleMute();
 }
 
 // ============================================================================
-// Track Position
+// ITrackPosition Interface Implementation (delegated)
 // ============================================================================
 
 uint32_t PlayerState::getCurrentPosition() const {
-    return mCurrentPosition.load();
+    return mTrackPosition.getCurrentPosition();
 }
 
 void PlayerState::setCurrentPosition(uint32_t position) {
-    mCurrentPosition.store(position);
+    mTrackPosition.setCurrentPosition(position);
 }
 
 // ============================================================================
-// Playlist Navigation
+// IPlaylistNavigation Interface Implementation (delegated)
 // ============================================================================
 
 int PlayerState::getCurrentTrackIndex() const {
-    return mCurrentTrackIndex.load();
+    return mNavigation.getCurrentTrackIndex();
 }
 
 void PlayerState::setCurrentTrackIndex(int index) {
-    mCurrentTrackIndex.store(index);
+    mNavigation.setCurrentTrackIndex(index);
 }
 
-// ============================================================================
-// Playback Modes
-// ============================================================================
-
 RepeatMode PlayerState::getRepeatMode() const {
-    return mRepeatMode.load();
+    return mNavigation.getRepeatMode();
 }
 
 void PlayerState::setRepeatMode(RepeatMode mode) {
-    mRepeatMode.store(mode);
+    mNavigation.setRepeatMode(mode);
+}
+
+RepeatMode PlayerState::cycleRepeatMode() {
+    return mNavigation.cycleRepeatMode();
 }
 
 bool PlayerState::isShuffleEnabled() const {
-    return mShuffleEnabled.load();
+    return mNavigation.isShuffleEnabled();
 }
 
 void PlayerState::setShuffleEnabled(bool enabled) {
-    mShuffleEnabled.store(enabled);
+    mNavigation.setShuffleEnabled(enabled);
+}
+
+bool PlayerState::toggleShuffle() {
+    return mNavigation.toggleShuffle();
 }
 
 // ============================================================================
@@ -117,60 +117,10 @@ void PlayerState::setShuffleEnabled(bool enabled) {
 // ============================================================================
 
 void PlayerState::reset() {
-    mPlaybackState.store(PlaybackState::STOPPED);
-    mVolume.store(50);
-    mMuted.store(false);
-    mCurrentPosition.store(0);
-    mCurrentTrackIndex.store(-1);
-    mRepeatMode.store(RepeatMode::NONE);
-    mShuffleEnabled.store(false);
-}
-
-PlaybackState PlayerState::togglePlayPause() {
-    PlaybackState current = mPlaybackState.load();
-    PlaybackState newState;
-
-    if (current == PlaybackState::PLAYING) {
-        newState = PlaybackState::PAUSED;
-    } else {
-        newState = PlaybackState::PLAYING;
-    }
-
-    mPlaybackState.store(newState);
-    return newState;
-}
-
-bool PlayerState::toggleMute() {
-    bool newState = !mMuted.load();
-    mMuted.store(newState);
-    return newState;
-}
-
-RepeatMode PlayerState::cycleRepeatMode() {
-    RepeatMode current = mRepeatMode.load();
-    RepeatMode newMode;
-
-    switch (current) {
-        case RepeatMode::NONE:
-            newMode = RepeatMode::ONE;
-            break;
-        case RepeatMode::ONE:
-            newMode = RepeatMode::ALL;
-            break;
-        case RepeatMode::ALL:
-        default:
-            newMode = RepeatMode::NONE;
-            break;
-    }
-
-    mRepeatMode.store(newMode);
-    return newMode;
-}
-
-bool PlayerState::toggleShuffle() {
-    bool newState = !mShuffleEnabled.load();
-    mShuffleEnabled.store(newState);
-    return newState;
+    mPlaybackState.reset();
+    mVolumeState.reset();
+    mTrackPosition.reset();
+    mNavigation.reset();
 }
 
 } // namespace Model
