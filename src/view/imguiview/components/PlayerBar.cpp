@@ -128,10 +128,11 @@ void PlayerBar::render() {
 
     // === CENTER: Controls & Progress ===
     float controlsY = 20.0f;
+    float buttonCenterY = controlsY + 18.0f; // Center of button (20 + 36/2)
     
     // Play/Pause Center
     {
-        ImVec2 centerBtn = ImVec2(barPos.x + centerX, barPos.y + controlsY + 16);
+        ImVec2 centerBtn = ImVec2(barPos.x + centerX, barPos.y + buttonCenterY);
         bool hovered = ImGui::IsMouseHoveringRect(
             ImVec2(centerBtn.x - 18, centerBtn.y - 18), 
             ImVec2(centerBtn.x + 18, centerBtn.y + 18));
@@ -160,7 +161,7 @@ void PlayerBar::render() {
     
     // Prev Button
     {
-        ImVec2 prevPos = ImVec2(barPos.x + centerX - 50, barPos.y + controlsY + 16);
+        ImVec2 prevPos = ImVec2(barPos.x + centerX - 50, barPos.y + buttonCenterY);
         pdl->AddTriangleFilled(
             ImVec2(prevPos.x + 6, prevPos.y - 6),
             ImVec2(prevPos.x + 6, prevPos.y + 6),
@@ -168,13 +169,13 @@ void PlayerBar::render() {
         pdl->AddRectFilled(ImVec2(prevPos.x - 8, prevPos.y - 6),
                           ImVec2(prevPos.x - 6, prevPos.y + 6), Colors::TextSecondary);
                           
-        ImGui::SetCursorPos(ImVec2(centerX - 65, controlsY));
+        ImGui::SetCursorPos(ImVec2(centerX - 65, controlsY)); // 50 + 15 = 65
         if (ImGui::InvisibleButton("##prev", ImVec2(30, 30)) && mController) mController->previous();
     }
 
     // Next Button
     {
-         ImVec2 nextPos = ImVec2(barPos.x + centerX + 50, barPos.y + controlsY + 16);
+         ImVec2 nextPos = ImVec2(barPos.x + centerX + 50, barPos.y + buttonCenterY);
          pdl->AddTriangleFilled(
              ImVec2(nextPos.x - 6, nextPos.y - 6),
              ImVec2(nextPos.x - 6, nextPos.y + 6),
@@ -182,7 +183,7 @@ void PlayerBar::render() {
          pdl->AddRectFilled(ImVec2(nextPos.x + 6, nextPos.y - 6),
                            ImVec2(nextPos.x + 8, nextPos.y + 6), Colors::TextSecondary);
                            
-         ImGui::SetCursorPos(ImVec2(centerX + 35, controlsY));
+         ImGui::SetCursorPos(ImVec2(centerX + 35, controlsY)); // 50 - 15 = 35
          if (ImGui::InvisibleButton("##next", ImVec2(30, 30)) && mController) mController->next();
     }
     
@@ -209,17 +210,24 @@ void PlayerBar::render() {
     ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 8);
     ImGui::SetNextItemWidth(400);
     float progress = (float)elapsedMs / durationMs;
-    // Cap progress
     if (progress > 1.0f) progress = 1.0f;
     
+    // Logic fix: Only seek on release to prevent stutter
     if (ImGui::SliderFloat("##progress", &progress, 0.0f, 1.0f, "")) {
         mIsDraggingSlider = true;
+        // Only update UI while dragging, don't seek yet
         mPlayStartPos = (uint32_t)(progress * durationMs);
         mPlayStartTime = std::chrono::steady_clock::now();
+    }
+    
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        mIsDraggingSlider = false;
         if (mController) mController->seek(mPlayStartPos);
-    } else {
+    } else if (ImGui::IsItemDeactivated()) {
+        // Fallback if AfterEdit doesn't catch just click
         mIsDraggingSlider = false;
     }
+    
     ImGui::PopStyleVar();
     
     ImGui::SameLine();
@@ -233,16 +241,9 @@ void PlayerBar::render() {
     float rightControlsX = mWindowWidth - 150;
     ImGui::SetCursorPos(ImVec2(rightControlsX, 35));
     
-    // Volume Icon
-    pdl->AddTriangleFilled(
-        ImVec2(barPos.x + rightControlsX, barPos.y + 35 + 8),
-        ImVec2(barPos.x + rightControlsX + 10, barPos.y + 35 - 3),
-        ImVec2(barPos.x + rightControlsX + 10, barPos.y + 35 + 18), Colors::TextSecondary);
-    pdl->AddRectFilled(
-        ImVec2(barPos.x + rightControlsX - 5, barPos.y + 35 + 2),
-        ImVec2(barPos.x + rightControlsX + 2, barPos.y + 35 + 12), Colors::TextSecondary);
+    // Volume Icon removed as per request
         
-    ImGui::SetCursorPosX(rightControlsX + 20);
+    ImGui::SetCursorPosX(rightControlsX + 25); // Keep spacing or adjust if needed
     int vol = 0;
     if (mController) vol = mController->getVolume();
     float fVol = vol / 100.0f;

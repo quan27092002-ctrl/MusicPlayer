@@ -27,7 +27,7 @@ ImGuiView::~ImGuiView() {
 }
 
 bool ImGuiView::initialize() {
-    if (!mLifecycle->initialize(1080, 720, "S32K Media Player")) {
+    if (!mLifecycle->initialize(1080, 720, "Media Player")) {
         return false;
     }
 
