@@ -1,0 +1,144 @@
+digraph MVC_Stack {
+    rankdir=TB;
+    splines=false;
+    nodesep=1.0;
+    ranksep=0.6;
+    pack=true; 
+
+    // Global settings
+    node [shape=note, style=filled, fillcolor=white, fontname="Arial", fontsize=11];
+    edge [style=invis]; 
+
+    // Main central alignment group
+    node [group=stack];
+
+    // ================= VIEW LAYER =================
+    subgraph cluster_view {
+        label="VIEW LAYER (src/view)";
+        style=filled;
+        color="#2196F3"; 
+        fillcolor="#E3F2FD";
+        
+        // Nested Block 1: UI Components
+        subgraph cluster_view_ui {
+            label="UI Components (src/view/imguiview/components)";
+            style=filled;
+            color="#64B5F6";
+            fillcolor="#BBDEFB";
+            node [group="", shape=rect, fillcolor=white];
+            
+            // Anchor for stacking
+            ViewUiAnchor [style=invis, shape=point, width=0];
+            
+            { rank=same; PlayerBar; MainContent; RightSidebar; ViewUiAnchor; }
+        }
+
+        // Nested Block 2: View Managers
+        subgraph cluster_view_managers {
+            label="Managers (src/view/imguiview)";
+            style=filled;
+            color="#64B5F6";
+            fillcolor="#BBDEFB";
+            node [group="", shape=rect, fillcolor=white];
+            
+            // Anchor
+            ViewMgrAnchor [style=invis, shape=point, width=0];
+
+            { rank=same; LifecycleManager; AssetManager; ViewMgrAnchor; }
+        }
+        
+        // Stack View Internals
+        ViewUiAnchor -> ViewMgrAnchor [weight=100];
+    }
+
+    // ================= CONTROLLER LAYER =================
+    subgraph cluster_controller {
+        label="CONTROLLER LAYER (src/controller)";
+        style=filled;
+        color="#4CAF50"; 
+        fillcolor="#E8F5E9";
+        
+        // Nested Block 1: App Logic Components
+        subgraph cluster_app_logic {
+            label="App Components (src/controller/appcontroller)";
+            style=filled;
+            color="#81C784";
+            fillcolor="#C8E6C9";
+            node [group="", shape=rect, fillcolor=white];
+            
+            CtrlAppAnchor [style=invis, shape=point, width=0];
+            
+            { rank=same; PlaylistManager; HistoryManager; PlaybackController; VolumeController; BoardCommunicator; CtrlAppAnchor; }
+        }
+
+        // Nested Block 2: Sub-systems
+        subgraph cluster_subsystems {
+            style=invis; 
+            node [group="", shape=rect, fillcolor=white];
+            
+            CtrlSubAnchor [style=invis, shape=point, width=0];
+
+             subgraph cluster_audio {
+                label="Audio Sub-system";
+                style=filled; color="#AED581"; fillcolor="#DCEDC8";
+                AudioPlayer [label="{AudioPlayer Facade}"];
+                { rank=same; AudioLifecycle; AudioPlayback; AudioLoader; AudioVolume; }
+            }
+            
+            // Stack Audio and Serial
+            subgraph cluster_serial {
+                label="Serial Sub-system";
+                style=filled; color="#AED581"; fillcolor="#DCEDC8";
+                SerialManager [label="{SerialManager Facade}"];
+                { rank=same; SerialConnection; SerialIO; }
+            }
+            
+            AudioPlayer -> SerialManager [weight=10]; // Internal stack
+        }
+        
+        // Stack Controller Internals
+        CtrlAppAnchor -> AudioPlayer [weight=100];
+    }
+
+    // ================= MODEL LAYER =================
+    subgraph cluster_model {
+        label="MODEL LAYER (src/model)";
+        style=filled;
+        color="#FFEB3B"; 
+        fillcolor="#FFFDE7";
+
+        // Nested Block 1: PlayerState
+        subgraph cluster_playerstate {
+            label="PlayerState (src/model/playerstate)";
+            style=filled;
+            color="#FFF176";
+            fillcolor="#FFF9C4";
+            node [group="", shape=rect, fillcolor=white];
+
+            ModelPlayerAnchor [style=invis, shape=point, width=0];
+
+            { rank=same; PlaybackState; PlaylistNavigation; TrackPosition; VolumeState; ModelPlayerAnchor; }
+        }
+
+        // Nested Block 2: MediaFile
+        subgraph cluster_mediafile {
+             label="MediaFile (src/model/mediafile)";
+             style=filled;
+             color="#FFF176";
+             fillcolor="#FFF9C4";
+             node [group="", shape=rect, fillcolor=white];
+             
+             ModelMediaAnchor [style=invis, shape=point, width=0];
+             
+             { rank=same; MediaFileInfo; MediaMetadata; CoverArt; ModelMediaAnchor; }
+        }
+        
+        // Stack Model Internals
+        ModelPlayerAnchor -> ModelMediaAnchor [weight=100];
+    }
+
+    // FORCE MAIN STACKING
+    ViewMgrAnchor -> CtrlAppAnchor [weight=1000];
+    SerialManager -> ModelPlayerAnchor [weight=1000];
+    
+}

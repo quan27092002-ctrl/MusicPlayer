@@ -1,0 +1,78 @@
+@startuml
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+top to bottom direction
+
+title S32K Media Player - MVC Architecture
+
+package "View Layer (src/view)" {
+    component [ImGuiView] <<Facade>> as ViewFacade
+    
+    package "Components" {
+        [LifecycleManager]
+        [AssetManager]
+        [MainContent]
+        [RightSidebar]
+        [PlayerBar]
+    }
+    
+    interface "IWindowComponent" as IWinComp
+}
+
+package "Controller Layer (src/controller)" {
+    component [AppController] <<Facade>> as AppCtrl
+    
+    package "AppController Components" {
+        [PlaylistManager]
+        [PlaybackController]
+        [VolumeController]
+        [HistoryManager]
+        [BoardCommunicator]
+    }
+
+    component [AudioPlayer] <<Facade>> as AudioCtrl
+    package "AudioPlayer Components" {
+        [AudioLifecycle]
+        [AudioLoader]
+        [AudioPlayback]
+        [AudioVolume]
+    }
+
+    component [SerialManager] <<Facade>> as SerialCtrl
+    package "SerialManager Components" {
+        [SerialConnection]
+        [SerialIO]
+    }
+}
+
+package "Model Layer (src/model)" {
+    component [PlayerState] <<Facade>> as ModelFacade
+    
+    package "State Components" {
+        [PlaybackState]
+        [VolumeState]
+        [TrackPosition]
+        [PlaylistNavigation]
+    }
+    
+    component [MediaFile]
+    package "Media Components" {
+        [CoverArt]
+        [MediaMetadata]
+    }
+}
+
+package "Utils (src/utils)" {
+    [Logger]
+    [Buffer]
+}
+
+' Layout enforcement (Stacking)
+PlayerBar -down-> ViewFacade
+ViewFacade -down-> AppCtrl
+AppCtrl -down-> ModelFacade
+ModelFacade -down-> [Buffer]
+
+@enduml
