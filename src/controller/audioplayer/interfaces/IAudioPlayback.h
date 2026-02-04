@@ -10,6 +10,7 @@
 #define IAUDIOPLAYBACK_H
 
 #include <cstdint>
+#include <functional>
 
 namespace Controller {
 
@@ -60,6 +61,12 @@ public:
      * @return Duration in milliseconds, 0 if no file loaded
      */
     virtual uint32_t getDuration() const = 0;
+
+    /**
+     * @brief Set callback for when playback finishes.
+     * @param callback Function to call when finished
+     */
+    virtual void setFinishedCallback(std::function<void()> callback) = 0;
 };
 
 } // namespace Controller

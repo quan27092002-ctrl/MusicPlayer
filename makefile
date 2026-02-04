@@ -42,7 +42,13 @@ CONTROLLER_SRCS = $(SRC_DIR)/controller/AudioPlayer.cpp \
                   $(SRC_DIR)/controller/appcontroller/VolumeController.cpp \
                   $(SRC_DIR)/controller/appcontroller/HistoryManager.cpp \
                   $(SRC_DIR)/controller/appcontroller/BoardCommunicator.cpp \
-                  $(SRC_DIR)/controller/appcontroller/PlaybackController.cpp
+                  $(SRC_DIR)/controller/appcontroller/PlaybackController.cpp \
+                  $(SRC_DIR)/controller/audioplayer/AudioLifecycleImpl.cpp \
+                  $(SRC_DIR)/controller/audioplayer/AudioLoaderImpl.cpp \
+                  $(SRC_DIR)/controller/audioplayer/AudioPlaybackImpl.cpp \
+                  $(SRC_DIR)/controller/audioplayer/AudioVolumeImpl.cpp \
+                  $(SRC_DIR)/controller/serialmanager/SerialConnectionImpl.cpp \
+                  $(SRC_DIR)/controller/serialmanager/SerialIOImpl.cpp
 
 # Core sources
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \

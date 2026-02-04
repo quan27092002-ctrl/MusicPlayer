@@ -3,107 +3,77 @@
  * FILE: src/controller/AudioPlayer.h
  * AUTHOR: Architecture Team
  * DESCRIPTION: SDL2-based implementation of IAudioPlayer using SDL_mixer.
- *              Facade class implementing aggregate IAudioPlayer interface.
+ *              Facade class using composition following SOLID principles.
  */
 
 #ifndef AUDIOPLAYER_H
 #define AUDIOPLAYER_H
 
 #include "IAudioPlayer.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
-#include <string>
-#include <mutex>
-#include <atomic>
+#include "audioplayer/AudioLifecycleImpl.h"
+#include "audioplayer/AudioLoaderImpl.h"
+#include "audioplayer/AudioPlaybackImpl.h"
+#include "audioplayer/AudioVolumeImpl.h"
+#include <memory>
 
 namespace Controller {
 
 /**
- * @brief SDL2-based audio player implementation.
+ * @brief SDL2-based audio player implementation (Facade).
  * 
- * Uses SDL_mixer for audio playback, supporting MP3, WAV, OGG, FLAC formats.
- * Thread-safe for concurrent access.
+ * Uses composition to delegate to specialized components:
+ * - AudioLifecycleImpl: Initialization/shutdown
+ * - AudioLoaderImpl: File loading/unloading
+ * - AudioPlaybackImpl: Play/pause/stop/seek
+ * - AudioVolumeImpl: Volume control
  */
 class AudioPlayer : public IAudioPlayer {
-private:
-    Mix_Music* mMusic;                    ///< SDL_mixer music handle
-    std::string mCurrentFilePath;         ///< Currently loaded file path
-    
-    std::atomic<AudioState> mState;       ///< Current state
-    std::atomic<int> mVolume;             ///< Volume level (0-100)
-    std::atomic<uint32_t> mDuration;      ///< Duration in ms
-    std::atomic<bool> mIsManualStop;      ///< Flag to prevent recursion in callback
-    
-    AudioCallback mCallback;              ///< State change callback
-    std::function<void()> mFinishedCallback; ///< Called when song ends
-    mutable std::mutex mMutex;            ///< Protects callback and music handle
-    
-    bool mInitialized;                    ///< SDL initialized flag
-
 public:
-    static AudioPlayer* sInstance;        ///< Static instance for SDL callback (public for callback)
-
-    // Callback from SDL thread
-    void handleMusicFinished();
-
-    // Helper to notify callback
-    void notifyCallback(AudioState state, uint32_t positionMs);
-
-    // Convert volume 0-100 to SDL 0-128
-    int volumeToSDL(int volume) const;
-
-public:
-    /**
-     * @brief Constructor.
-     */
     AudioPlayer();
-
-    /**
-     * @brief Destructor - ensures cleanup.
-     */
     ~AudioPlayer() override;
 
-    // Delete copy (SDL resources are unique)
+    // Delete copy
     AudioPlayer(const AudioPlayer&) = delete;
     AudioPlayer& operator=(const AudioPlayer&) = delete;
 
     // ========================================================================
-    // IAudioPlayer Interface Implementation
+    // IAudioLifecycle (delegates to mLifecycle)
     // ========================================================================
-
-    // Lifecycle
     bool initialize() override;
     void shutdown() override;
+    AudioState getState() const override;
+    void setCallback(AudioCallback callback) override;
 
-    // File Operations
+    // ========================================================================
+    // IAudioLoader (delegates to mLoader)
+    // ========================================================================
     bool load(const std::string& filePath) override;
     void unload() override;
+    bool isLoaded() const override;
 
-    // Playback Control
+    // ========================================================================
+    // IAudioPlayback (delegates to mPlayback)
+    // ========================================================================
     void play() override;
     void pause() override;
     void stop() override;
     void seek(uint32_t positionMs) override;
+    bool isPlaying() const override;
+    uint32_t getPosition() const override;
+    uint32_t getDuration() const override;
+    void setFinishedCallback(std::function<void()> callback) override;
 
-    // Volume Control
+    // ========================================================================
+    // IAudioVolume (delegates to mVolume)
+    // ========================================================================
     void setVolume(int volume) override;
     int getVolume() const override;
 
-    // State Queries
-    AudioState getState() const override;
-    uint32_t getPosition() const override;
-    uint32_t getDuration() const override;
-    bool isLoaded() const override;
-    bool isPlaying() const override;
-
-    // Callbacks
-    void setCallback(AudioCallback callback) override;
-    
-    /**
-     * @brief Set callback for when playback finishes.
-     * @param callback Function to call when song ends
-     */
-    void setFinishedCallback(std::function<void()> callback);
+private:
+    std::unique_ptr<AudioLifecycleImpl> mLifecycle;
+    std::unique_ptr<AudioLoaderImpl> mLoader;
+    std::unique_ptr<AudioPlaybackImpl> mPlayback;
+    std::unique_ptr<AudioVolumeImpl> mVolume;
 };
 
 } // namespace Controller
