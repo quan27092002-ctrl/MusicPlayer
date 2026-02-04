@@ -47,10 +47,7 @@ int main(int /*argc*/, char** /*argv*/) {
     size_t loadedCount = appController->loadDirectory("./mMusic");
     std::cout << "Loaded " << loadedCount << " tracks." << std::endl;
 
-    // Sync playlist to view
-    for (size_t i = 0; i < loadedCount; ++i) {
-        view->addPlaylistItem(appController->getTrackName(i));
-    }
+    // Sync playlist to view handled automatically by ImGuiView::render()
 
     // Load first track if available
     if (loadedCount > 0) {

@@ -62,10 +62,16 @@ IMGUI_SRCS = $(IMGUI_DIR)/imgui.cpp \
              $(IMGUI_DIR)/imgui_tables.cpp \
              $(IMGUI_DIR)/imgui_widgets.cpp \
              $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp \
-             $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer2.cpp
+             $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer2.cpp \
+             $(SRC_DIR)/view/ImGuiView.cpp \
+             $(SRC_DIR)/view/imguiview/LifecycleManager.cpp \
+             $(SRC_DIR)/view/imguiview/AssetManager.cpp \
+             $(SRC_DIR)/view/imguiview/components/PlayerBar.cpp \
+             $(SRC_DIR)/view/imguiview/components/MainContent.cpp \
+             $(SRC_DIR)/view/imguiview/components/RightSidebar.cpp
 
 # View sources
-VIEW_SRCS = $(SRC_DIR)/view/ImGuiView.cpp
+VIEW_SRCS =
 
 # Test sources
 TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
