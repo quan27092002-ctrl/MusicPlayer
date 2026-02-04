@@ -9,7 +9,7 @@ MAKEFLAGS += -j$(shell nproc)
 
 # 1. Compiler Settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/model/mediafile -Isrc/model/playerstate -Isrc/controller -Isrc/view -Isrc/view/imgui
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/model/mediafile -Isrc/model/playerstate -Isrc/controller -Isrc/controller/appcontroller -Isrc/controller/audioplayer -Isrc/controller/serialmanager -Isrc/view -Isrc/view/imgui
 CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer taglib SDL2_image)
 
 # Linker flags
@@ -34,13 +34,21 @@ MODEL_SRCS = $(SRC_DIR)/model/MediaFile.cpp \
              $(SRC_DIR)/model/playerstate/TrackPositionImpl.cpp \
              $(SRC_DIR)/model/playerstate/PlaylistNavigationImpl.cpp
 
+# Controller component sources (SOLID refactored)
+CONTROLLER_SRCS = $(SRC_DIR)/controller/AudioPlayer.cpp \
+                  $(SRC_DIR)/controller/SerialManager.cpp \
+                  $(SRC_DIR)/controller/AppController.cpp \
+                  $(SRC_DIR)/controller/appcontroller/PlaylistManager.cpp \
+                  $(SRC_DIR)/controller/appcontroller/VolumeController.cpp \
+                  $(SRC_DIR)/controller/appcontroller/HistoryManager.cpp \
+                  $(SRC_DIR)/controller/appcontroller/BoardCommunicator.cpp \
+                  $(SRC_DIR)/controller/appcontroller/PlaybackController.cpp
+
 # Core sources
 SRC_SRCS = $(SRC_DIR)/utils/Buffer.cpp \
            $(SRC_DIR)/utils/Logger.cpp \
            $(MODEL_SRCS) \
-           $(SRC_DIR)/controller/AudioPlayer.cpp \
-           $(SRC_DIR)/controller/SerialManager.cpp \
-           $(SRC_DIR)/controller/AppController.cpp
+           $(CONTROLLER_SRCS)
 
 # ImGui sources
 IMGUI_SRCS = $(IMGUI_DIR)/imgui.cpp \

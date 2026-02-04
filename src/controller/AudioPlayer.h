@@ -3,6 +3,7 @@
  * FILE: src/controller/AudioPlayer.h
  * AUTHOR: Architecture Team
  * DESCRIPTION: SDL2-based implementation of IAudioPlayer using SDL_mixer.
+ *              Facade class implementing aggregate IAudioPlayer interface.
  */
 
 #ifndef AUDIOPLAYER_H

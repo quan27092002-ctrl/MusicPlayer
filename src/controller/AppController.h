@@ -3,6 +3,8 @@
  * FILE: src/controller/AppController.h
  * AUTHOR: Architecture Team
  * DESCRIPTION: Main application controller implementation.
+ *              Facade class implementing IAppController using composition.
+ *              Delegates to specialized components following SOLID principles.
  */
 
 #ifndef APPCONTROLLER_H
@@ -14,20 +16,31 @@
 #include "../model/IPlayerState.h"
 #include "../model/MediaFile.h"
 
+// Include concrete implementations for composition
+#include "appcontroller/PlaylistManager.h"
+#include "appcontroller/VolumeController.h"
+#include "appcontroller/HistoryManager.h"
+#include "appcontroller/BoardCommunicator.h"
+#include "appcontroller/PlaybackController.h"
+
 #include <memory>
-#include <vector>
-#include <list>
-#include <mutex>
 #include <atomic>
-#include <string>
+#include <mutex>
 
 namespace Controller {
 
 /**
- * @brief Main application controller.
+ * @brief Main application controller (Facade).
  * 
- * Coordinates AudioPlayer, SerialManager, and PlayerState.
- * Processes commands from S32K board and manages playback.
+ * Coordinates all subsystems using composition:
+ * - PlaylistManagerImpl: Playlist operations
+ * - VolumeControllerImpl: Volume control
+ * - HistoryManagerImpl: History navigation
+ * - BoardCommunicatorImpl: S32K board communication
+ * - PlaybackControllerImpl: Playback operations
+ * 
+ * This facade provides a unified interface while delegating
+ * to specialized components, adhering to SRP.
  */
 class AppController : public IAppController {
 public:
@@ -53,20 +66,23 @@ public:
     AppController& operator=(const AppController&) = delete;
 
     // ========================================================================
-    // IAppController Interface Implementation
+    // IAppLifecycle Interface
     // ========================================================================
-
-    // Lifecycle
     bool initialize() override;
     void shutdown() override;
     AppState getState() const override;
+    void setStateCallback(AppStateCallback callback) override;
 
-    // Serial Connection
+    // ========================================================================
+    // IBoardCommunicator Interface (delegates to mBoardCommunicator)
+    // ========================================================================
     bool connectToBoard(const std::string& portName, uint32_t baudRate = 115200) override;
     void disconnectFromBoard() override;
     bool isConnectedToBoard() const override;
 
-    // Playback Control
+    // ========================================================================
+    // IPlaybackController Interface (delegates to mPlaybackController)
+    // ========================================================================
     bool loadTrack(const std::string& filePath) override;
     void play() override;
     void pause() override;
@@ -74,15 +90,18 @@ public:
     void next() override;
     void previous() override;
     void playTrack(int index) override;
-    
     void seek(uint32_t positionMs) override;
 
-    // Volume Control
+    // ========================================================================
+    // IVolumeController Interface (delegates to mVolumeController)
+    // ========================================================================
     void setVolume(int volume) override;
     int getVolume() const override;
     void toggleMute() override;
 
-    // Playlist Management
+    // ========================================================================
+    // IPlaylistManager Interface (delegates to mPlaylistManager)
+    // ========================================================================
     void addToPlaylist(const std::string& filePath) override;
     void clearPlaylist() override;
     size_t getPlaylistSize() const override;
@@ -94,58 +113,43 @@ public:
     uint32_t getTrackDuration(size_t index) const override;
     std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
     
-    // History
+    // ========================================================================
+    // IHistoryManager Interface (delegates to mHistoryManager)
+    // ========================================================================
     std::vector<int> getHistory() const override;
 
-    // Callbacks
-    void setStateCallback(AppStateCallback callback) override;
-
 private:
-    // Subsystems (injected via constructor)
+    // ========================================================================
+    // Injected Dependencies
+    // ========================================================================
     std::shared_ptr<IAudioPlayer> mAudioPlayer;
     std::shared_ptr<ISerialManager> mSerialManager;
     std::shared_ptr<Model::IPlayerState> mPlayerState;
 
-    // Internal state
+    // ========================================================================
+    // Composed Components (SOLID - SRP)
+    // ========================================================================
+    std::unique_ptr<PlaylistManagerImpl> mPlaylistManager;
+    std::unique_ptr<VolumeControllerImpl> mVolumeController;
+    std::unique_ptr<HistoryManagerImpl> mHistoryManager;
+    std::unique_ptr<BoardCommunicatorImpl> mBoardCommunicator;
+    std::unique_ptr<PlaybackControllerImpl> mPlaybackController;
+
+    // ========================================================================
+    // Lifecycle State
+    // ========================================================================
     std::atomic<AppState> mAppState;
     AppStateCallback mStateCallback;
     mutable std::mutex mCallbackMutex;
 
-    // Data Structures
-    using MediaFilePtr = std::shared_ptr<Model::MediaFile>;
-    
-    // 1. Music Library (The Master Database)
-    std::vector<MediaFilePtr> mMusicLibrary;
-    
-    // 2. Playlist (The Playback Queue)
-    std::list<MediaFilePtr> mPlaylist;
-    
-    // 3. Playback Position
-    // We use iterator for O(1) next/prev, but need fallback if iterator is invalid
-    typename std::list<MediaFilePtr>::iterator mCurrentTrackIterator;
-    
-    mutable std::mutex mPlaylistMutex;
-    int mVolumeBeforeMute;
-
-    // History (Recent Songs) - Stores pointers to ensure validity even if playlist changes
-    std::vector<MediaFilePtr> mHistoryStack;
-
-    // Private helpers
-    int getCurrentTrackIndexLocked() const;
+    // ========================================================================
+    // Private Helpers
+    // ========================================================================
     void notifyStateChange(AppState newState);
     void onSerialDataReceived(const std::string& data);
     void onSerialStateChanged(SerialState state);
     void onAudioStateChanged(AudioState state, uint32_t position);
     void processCommand(const std::string& command);
-    void sendStatusToBoard();
-    
-    // Helper to bridge Index-based API with Iterator-based List
-    int getCurrentTrackIndex() const;
-    typename std::list<MediaFilePtr>::iterator getTrackIterator(int index);
-    typename std::list<MediaFilePtr>::const_iterator getTrackIteratorConst(int index) const;
-
-    void pushHistory(MediaFilePtr track);
-    MediaFilePtr popHistory();
 };
 
 } // namespace Controller

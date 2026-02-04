@@ -3,6 +3,7 @@
  * FILE: src/controller/SerialManager.h
  * AUTHOR: Architecture Team
  * DESCRIPTION: POSIX-based implementation of ISerialManager using termios.
+ *              Facade class implementing aggregate ISerialManager interface.
  */
 
 #ifndef SERIALMANAGER_H
