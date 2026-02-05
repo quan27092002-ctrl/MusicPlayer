@@ -56,11 +56,11 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
         { "Focus Flow", "Instrumental study mix", 2, {} }
     };
     
-    // Populate Initial Indices (Simulated)
-    // Chill: 0-9, High Energy: 10-19, Focus: 20-29
-    for(int i=0; i<10; ++i) mPlaylists[0].trackIndices.push_back(i);
-    for(int i=0; i<10; ++i) mPlaylists[1].trackIndices.push_back(10 + i);
-    for(int i=0; i<10; ++i) mPlaylists[2].trackIndices.push_back(20 + i);
+    // Populate Initial Indices (Simulated) - REMOVED as we use paths now and can't easily guess paths
+    
+    // Initial indices population removed as we now use persistent paths.
+    // Real paths will be added by user interaction.
+    mDefaultPlaylistsPopulated = false;
 }
 
 void MainContent::setPlaylist(const std::vector<std::string>& playlist) {
@@ -308,6 +308,26 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
 
 
 void MainContent::renderPlaylistTab() {
+    // Auto-populate default playlists if library is loaded and not yet done
+    if (!mDefaultPlaylistsPopulated && mController) {
+        size_t totalTracks = mController->getPlaylistSize(); // Currently loadDirectory adds to queue
+        if (totalTracks > 0) {
+            // Distribute tracks: 0-9 to Chill, 10-19 to High Energy, 20-29 to Focus
+            for (int i = 0; i < 3 && i < (int)mPlaylists.size(); ++i) {
+                int startIdx = i * 10;
+                for (int j = 0; j < 10; ++j) {
+                    int trackIdx = startIdx + j;
+                    if (trackIdx < (int)totalTracks) {
+                        std::string path = mController->getTrackPath(trackIdx);
+                        if (!path.empty()) {
+                            mPlaylists[i].trackPaths.push_back(path);
+                        }
+                    }
+                }
+            }
+            mDefaultPlaylistsPopulated = true;
+        }
+    }
     ImGui::Indent(10);
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
     ImGui::Text("Saved Playlists");
@@ -338,16 +358,16 @@ void MainContent::renderPlaylistTab() {
         
         // Icon Box (Left side: 10,10 to 70,70 -> 60x60)
         // User Request: Theme is the first song's cover art
-        if (!mPlaylists[i].trackIndices.empty()) {
+        // Icon Box (Left side: 10,10 to 70,70 -> 60x60)
+        // User Request: Theme is the first song's cover art
+        if (!mPlaylists[i].trackPaths.empty()) {
              // Draw Cover Art
-             int firstTrackIdx = mPlaylists[i].trackIndices[0];
+             std::string firstPath = mPlaylists[i].trackPaths[0];
+             auto mediaFile = mController ? mController->acquireMediaFile(firstPath) : nullptr;
              std::vector<uint8_t> artData;
-             if (mController) artData = mController->getTrackCoverArt(firstTrackIdx);
+             if (mediaFile) artData = mediaFile->getCoverArt();
              
-             // Reuse drawAlbumCover but need to position reasonably
-             // drawAlbumCover takes center pos or top-left? It usually draws at cursor or specified pos
-             // AssetManager::drawAlbumCover(drawList, pos, size, ...)
-             mAssetManager->drawAlbumCover(dl, ImVec2(p.x + 10, p.y + 10), 60, firstTrackIdx, artData);
+             mAssetManager->drawAlbumCover(dl, ImVec2(p.x + 10, p.y + 10), 60, i * 100, artData); // Use synthetic index for cache key
         } else {
              // Fallback to Color Box if empty
             ImU32 iconCol = IM_COL32(30, 215, 96, 255);
@@ -449,17 +469,8 @@ void MainContent::renderPlaylistDetailView() {
     ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
-        if (mController) {
-             std::vector<std::string> paths;
-             for (int idx : pl.trackIndices) {
-                  std::string path = mController->getTrackPath(idx);
-                  if (!path.empty()) {
-                      paths.push_back(path);
-                  }
-             }
-             if (!paths.empty()) {
-                 mController->playPlaylist(paths);
-             }
+        if (mController && !pl.trackPaths.empty()) {
+             mController->playPlaylist(pl.trackPaths);
         }
     }
     ImGui::PopStyleColor(2);
@@ -475,25 +486,26 @@ void MainContent::renderPlaylistDetailView() {
     // We assume library is loaded or load it now
     
     
-    // Iterate indices
-    for (size_t i = 0; i < pl.trackIndices.size(); ++i) {
-        int trackRefIdx = pl.trackIndices[i];
+    // Iterate paths
+    for (size_t i = 0; i < pl.trackPaths.size(); ++i) {
+        std::string path = pl.trackPaths[i];
+        auto mediaFile = mController ? mController->acquireMediaFile(path) : nullptr;
         
         ImGui::PushID((int)i);
         ImVec2 rowPos = ImGui::GetCursorScreenPos();
         
         // Album Cover
         std::vector<uint8_t> artData;
-        if (mController) artData = mController->getTrackCoverArt(trackRefIdx);
-        // Note: Check bounds in controller happens inside getTrackCoverArt usually
-        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, i, artData);
+        if (mediaFile) artData = mediaFile->getCoverArt();
+        
+        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, (int)i + 1000 + mSelectedPlaylistIndex*100, artData);
         
         // Text
-        std::string tName = mController ? mController->getTrackName(trackRefIdx) : "";
-        std::string tArtist = mController ? mController->getTrackArtist(trackRefIdx) : "";
-        std::string tAlbum = mController ? mController->getTrackAlbum(trackRefIdx) : "";
+        std::string tName = mediaFile ? mediaFile->getFilename() : "Unknown";
+        std::string tArtist = mediaFile ? mediaFile->getArtist() : "Unknown";
+        std::string tAlbum = mediaFile ? mediaFile->getAlbum() : "Unknown";
         
-        if (tName.empty()) tName = "Track " + std::to_string(trackRefIdx);
+        if (tName.empty()) tName = "Track";
         
         std::string dispName = stripExtension(tName);
         if (dispName.length() > 35) dispName = dispName.substr(0, 32) + "...";
@@ -513,25 +525,17 @@ void MainContent::renderPlaylistDetailView() {
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
         if (ImGui::Button("X", ImVec2(30, 30))) {
             // Remove from vector
-            mPlaylists[mSelectedPlaylistIndex].trackIndices.erase(mPlaylists[mSelectedPlaylistIndex].trackIndices.begin() + i);
+            mPlaylists[mSelectedPlaylistIndex].trackPaths.erase(mPlaylists[mSelectedPlaylistIndex].trackPaths.begin() + i);
             ImGui::PopStyleColor();
             ImGui::PopID();
-            break; // Break loop to avoid iterator invalidation issues in this frame
+            break; // Break loop
         }
         ImGui::PopStyleColor();
         
-        // Click to Play specific track
+        // Click to Play specific track in context
         ImGui::SetCursorScreenPos(rowPos);
         if (ImGui::InvisibleButton("##pldet", ImVec2(mainW - 60, 45)) && mController) {
-             // To play just this track, we might need to add it to queue or play directly from library index?
-             // Since "Active Playlist" is separate, let's just clear and play this one?
-             // Or play in context of this playlist?
-             // Play context: Clear -> Add all -> Play index i
-             mController->clearPlaylist();
-              for (int idx : pl.trackIndices) {
-                  std::string path = mController->getTrackPath(idx);
-                  if (!path.empty()) mController->addToPlaylist(path);
-             }
+             mController->playPlaylist(pl.trackPaths);
              mController->playTrack((int)i);
         }
         
@@ -581,8 +585,11 @@ void MainContent::deletePlaylist(int idx) {
 }
 
 void MainContent::addTrackToPlaylist(int trackIdx, int playlistIdx) {
-    if (playlistIdx >= 0 && playlistIdx < (int)mPlaylists.size()) {
-        mPlaylists[playlistIdx].trackIndices.push_back(trackIdx);
+    if (playlistIdx >= 0 && playlistIdx < (int)mPlaylists.size() && mController) {
+        std::string path = mController->getTrackPath(trackIdx);
+        if (!path.empty()) {
+            mPlaylists[playlistIdx].trackPaths.push_back(path);
+        }
     }
 }
 

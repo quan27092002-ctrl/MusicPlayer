@@ -76,9 +76,10 @@ private:
         std::string name;
         std::string desc;
         int colorIdx;
-        std::vector<int> trackIndices;
+        std::vector<std::string> trackPaths;
     };
     std::vector<PlaylistData> mPlaylists;
+    bool mDefaultPlaylistsPopulated;
     
     // Helper Functions for CRUD
     void renderCreatePlaylistModal();
