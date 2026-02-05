@@ -35,6 +35,24 @@ class IAppController : public IAppLifecycle,
                        public IHistoryManager,
                        public IBoardCommunicator {
 public:
+    /**
+     * @brief Play a track by index in current queue.
+     * @param index Index in the playlist
+     */
+    virtual void playTrack(int index) = 0;
+
+    /**
+     * @brief Play a list of tracks (replaces current queue).
+     * @param filePaths Vector of file paths
+     */
+    virtual void playPlaylist(const std::vector<std::string>& filePaths) = 0;
+    
+    /**
+     * @brief Queue a track to play next.
+     * @param filePath Path to file
+     */
+    virtual void queueNext(const std::string& filePath) = 0;
+
     virtual ~IAppController() = default;
 };
 

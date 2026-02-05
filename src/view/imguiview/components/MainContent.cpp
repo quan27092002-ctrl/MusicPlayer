@@ -450,16 +450,15 @@ void MainContent::renderPlaylistDetailView() {
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
         if (mController) {
-             mController->clearPlaylist();
-             // Play All from indices
+             std::vector<std::string> paths;
              for (int idx : pl.trackIndices) {
                   std::string path = mController->getTrackPath(idx);
                   if (!path.empty()) {
-                      mController->addToPlaylist(path);
+                      paths.push_back(path);
                   }
              }
-             if (!pl.trackIndices.empty()) {
-                 mController->playTrack(0);
+             if (!paths.empty()) {
+                 mController->playPlaylist(paths);
              }
         }
     }
@@ -716,6 +715,7 @@ void MainContent::renderEditPlaylistModal() {
 void MainContent::renderDeleteConfirmModal() {
     if (mShowDeleteConfirm) {
         ImGui::OpenPopup("Delete Playlist?");
+        mShowDeleteConfirm = false; // Reset trigger immediately
     }
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -739,8 +739,7 @@ void MainContent::renderDeleteConfirmModal() {
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            mShowDeleteConfirm = false;
-            mDeletePlaylistIdx = -1;
+            mDeletePlaylistIdx = -1; // Clear selection
             ImGui::CloseCurrentPopup();
         }
         
@@ -751,7 +750,7 @@ void MainContent::renderDeleteConfirmModal() {
 void MainContent::renderAddToPlaylistMenu() {
     if (mShowAddToPlaylistMenu) {
         ImGui::OpenPopup("Add to Playlist");
-        mShowAddToPlaylistMenu = false; // Reset trigger
+        mShowAddToPlaylistMenu = false; // Reset trigger immediately
     }
     
     if (ImGui::BeginPopup("Add to Playlist")) {

@@ -256,6 +256,14 @@ void AppController::playTrack(int index) {
     mPlaybackController->playTrack(index);
 }
 
+void AppController::playPlaylist(const std::vector<std::string>& filePaths) {
+    mPlaybackController->replaceQueue(filePaths);
+}
+
+void AppController::replaceQueue(const std::vector<std::string>& filePaths) {
+    mPlaybackController->replaceQueue(filePaths);
+}
+
 void AppController::queueNext(const std::string& filePath) {
     mPlaybackController->queueNext(filePath);
 }

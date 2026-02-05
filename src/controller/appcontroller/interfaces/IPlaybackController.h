@@ -10,6 +10,7 @@
 #define IPLAYBACKCONTROLLER_H
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 namespace Controller {
@@ -71,10 +72,16 @@ public:
     virtual void seek(uint32_t positionMs) = 0;
     
     /**
-     * @brief Adds a track to be played immediately after the current one.
-     * @param filePath Path to the track.
+     * @brief Queue a track to play next.
+     * @param filePath Path to the track file
      */
     virtual void queueNext(const std::string& filePath) = 0;
+    
+    /**
+     * @brief Replace the current queue with a list of tracks.
+     * @param filePaths Vector of file paths
+     */
+    virtual void replaceQueue(const std::vector<std::string>& filePaths) = 0;
 };
 
 } // namespace Controller

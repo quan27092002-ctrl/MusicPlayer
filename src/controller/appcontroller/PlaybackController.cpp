@@ -246,6 +246,48 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
     }
 }
 
+void PlaybackControllerImpl::replaceQueue(const std::vector<std::string>& filePaths) {
+    if (!mPlaylistManager) return;
+
+    // 1. Acquire MediaFiles OUTSIDE the lock (to avoid potential recursion if acquire locks)
+    // Actually acquireMediaFile locks internally.
+    std::vector<MediaFilePtr> newTracks;
+    newTracks.reserve(filePaths.size());
+    for (const auto& path : filePaths) {
+        auto ptr = mPlaylistManager->acquireMediaFile(path);
+        if (ptr) newTracks.push_back(ptr);
+    }
+    
+    // 2. Lock and Replace
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        auto& playlist = mPlaylistManager->getPlaylistRef();
+        
+        // Push current to history if playing? 
+        // Logic depends on UX. "Play All" usually resets history context or starts fresh.
+        // Let's just clear.
+        
+        playlist.clear();
+        for (const auto& track : newTracks) {
+            playlist.push_back(track);
+        }
+        
+        // 3. Reset Iterator
+        if (!playlist.empty()) {
+            mCurrentTrackIterator = playlist.begin();
+        } else {
+            mCurrentTrackIterator = playlist.end();
+        }
+    }
+    
+    // 4. Play
+    if (!filePaths.empty()) {
+        play();
+    } else {
+        stop();
+    }
+}
+
 int PlaybackControllerImpl::getCurrentTrackIndex() const {
     if (!mPlaylistManager) return -1;
     std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());

@@ -90,6 +90,8 @@ public:
     void next() override;
     void previous() override;
     void playTrack(int index) override;
+    void playPlaylist(const std::vector<std::string>& filePaths) override;
+    void replaceQueue(const std::vector<std::string>& filePaths) override;
     void queueNext(const std::string& filePath) override;
     void seek(uint32_t positionMs) override;
 
