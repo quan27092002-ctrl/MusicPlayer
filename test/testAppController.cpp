@@ -105,6 +105,9 @@ public:
     void setCallback(AudioCallback cb) override {
         callback = cb;
     }
+    void setFinishedCallback(std::function<void()> callback) override {
+        (void)callback;
+    }
 };
 
 // ============================================================================

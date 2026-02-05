@@ -110,7 +110,12 @@ void PlaybackControllerImpl::next() {
         int currentIndex = getCurrentTrackIndexLocked();
         
         // Push current to history before moving
-        if (currentIndex >= 0 && mHistoryManager && mCurrentTrackIterator != playlist.end()) {
+        bool isPlaying = false;
+        if (mPlayerState) {
+            isPlaying = (mPlayerState->getPlaybackStatus() == Model::PlaybackStatus::PLAYING);
+        }
+
+        if (currentIndex >= 0 && mHistoryManager && mCurrentTrackIterator != playlist.end() && isPlaying) {
             mHistoryManager->pushHistory(*mCurrentTrackIterator);
         }
 
