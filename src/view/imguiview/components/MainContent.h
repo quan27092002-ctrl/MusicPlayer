@@ -49,6 +49,11 @@ private:
     void renderRecentTab(float mainW, float contentH);
     void renderMusicTab(float mainW, float contentH);
     void renderPlaylistTab();
+    void renderPlaylistDetailView(); // Detail View renderer
+
+    // UI State
+    bool mShowPlaylistDetail;
+    int mSelectedPlaylistIndex;
 };
 
 } // namespace View

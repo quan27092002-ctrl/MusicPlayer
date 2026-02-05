@@ -35,6 +35,8 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
     , mMainTabIndex(1)
 {
     mSearchQuery[0] = '\0';
+    mShowPlaylistDetail = false;
+    mSelectedPlaylistIndex = -1;
 }
 
 void MainContent::setPlaylist(const std::vector<std::string>& playlist) {
@@ -93,7 +95,10 @@ void MainContent::render() {
     
     if (mMainTabIndex == 0) renderRecentTab(mainW, contentH);
     else if (mMainTabIndex == 1) renderMusicTab(mainW, contentH);
-    else if (mMainTabIndex == 2) renderPlaylistTab();
+    else if (mMainTabIndex == 2) {
+        if (mShowPlaylistDetail) renderPlaylistDetailView();
+        else renderPlaylistTab();
+    }
     
     ImGui::EndChild();
     ImGui::End();
@@ -270,6 +275,7 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
     ImGui::Unindent(10);
 }
 
+
 void MainContent::renderPlaylistTab() {
     ImGui::Indent(10);
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
@@ -302,72 +308,9 @@ void MainContent::renderPlaylistTab() {
         // Custom Button Background
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::HoverV);
         if (ImGui::Button("##plbtn", ImVec2(btnWidth, btnHeight))) {
-            // Action: Play this playlist
-            if (mController) {
-                mController->clearPlaylist();
-                // Add range of tracks (simulated)
-                // We need to access library... accessing via IAppController is limited to getMusicLibrarySize logic?
-                // Wait, AppController.h has `loadDirectory`.
-                // For this demo, we can just assume music is loaded.
-                
-                size_t libSize = mController->loadDirectory("./mMusic"); // Refresh/Ensure loaded
-                
-                int start = demos[i].startTrack;
-                int end = start + demos[i].count;
-                if (end > (int)libSize) end = (int)libSize;
-                
-                // Add tracks by path? 
-                // We need `getTrackPath` from library... but AppController delegates getTrackPath to `mPlaylistManager` which reads from *Playlist* now?
-                // Ah, the user changed `getTrackPath` to read from `mPlaylist`.
-                // This means we can't easily "browse" library if `mPlaylist` is empty!
-                // CRITICAL ISSUE: Accessing "Library" vs "Active Playlist".
-                // 
-                // User re-mapped everything to `mPlaylist`.
-                // `loadDirectory` returns count but might essentially be "loading into playlist" or "loading into library"?
-                // Let's check `PlaylistManager.cpp` => `loadDirectory` adds to `mMusicLibrary` AND `mPlaylist` if empty? 
-                // No, legacy `addToPlaylist` adds to library.
-                // 
-                // WORKAROUND:
-                // We will call `loadDirectory` to ensure they are in library (and maybe playlist).
-                // But wait, if `loadDirectory` loads ALL tracks into `mPlaylist` (if implemented that way), then we are good.
-                // But we want a SUBSET.
-                // 
-                // If `mPlaylist` holds the "Active Queue", then:
-                // 1. `clearPlaylist()` -> empties `mPlaylist`.
-                // 2. We need to add specific songs. `addToPlaylist` takes a FILE PATH.
-                // 3. We need valid file paths.
-                
-                // Hack/Simulation:
-                // We will re-load the directory (to get paths... wait we can't get paths if we can't read library?)
-                // Accessing library is blocked by API shift.
-                // 
-                // Alternate Plan: Use hardcoded paths? No, too risky.
-                //
-                // Better Plan: 
-                // 1. `loadDirectory` loads everything into `mMusicLibrary`.
-                // 2. `PlaylistManager` MIGHT expose library? No `getMusicLibrarySize` is gone/remapped.
-                
-                // Assumption: `loadDirectory` populates `mMusicLibrary`.
-                // `addToPlaylist(path)` adds to `mPlaylist`.
-                // We need to find paths.
-                
-                // Let's just create "Dummy" behavior:
-                // Re-load directory (resets everything usually).
-                // This is the safest fallback without refactoring Controller again.
-                // Or better: Just "Shuffle" the existing big playlist?
-                //
-                // Let's try: `loadDirectory` (loads all 112 songs).
-                // Then `playTrack(random_start)`.
-                
-                // OK, adapting plan:
-                // Instead of "subset", we will play the FULL library but starting at different offsets to simulate different "moods".
-                // Playlist 1 -> Start at 0
-                // Playlist 2 -> Start at 15
-                // Playlist 3 -> Start at 30
-                
-                mController->loadDirectory("./mMusic"); 
-                mController->playTrack(demos[i].startTrack); 
-            }
+            // Action: Open Detail View
+            mSelectedPlaylistIndex = i;
+            mShowPlaylistDetail = true;
         }
         ImGui::PopStyleColor();
         
@@ -397,6 +340,116 @@ void MainContent::renderPlaylistTab() {
     }
     
     ImGui::Unindent(10);
+}
+
+void MainContent::renderPlaylistDetailView() {
+    // Shared Data Definition (duplicated locally for simplicity)
+    struct DemoPlaylist {
+        const char* name;
+        const char* desc;
+        int colorIdx;
+        int startTrack;
+        int count;
+    };
+    DemoPlaylist demos[] = {
+        { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, 0, 10 },
+        { "High Energy", "Workout & Upbeat hits", 1, 10, 10 },
+        { "Focus Flow", "Instrumental study mix", 2, 20, 10 }
+    };
+
+    if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= 3) {
+        mShowPlaylistDetail = false;
+        return;
+    }
+    
+    DemoPlaylist& pl = demos[mSelectedPlaylistIndex];
+
+    // Header with Back Button
+    ImGui::Indent(10);
+    if (ImGui::Button("<- Back")) {
+        mShowPlaylistDetail = false;
+        mSelectedPlaylistIndex = -1;
+    }
+    ImGui::SameLine();
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+    ImGui::Text("%s", pl.name);
+    ImGui::PopFont();
+    
+    ImGui::Spacing();
+    
+    // Play All Button
+    ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
+    if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
+        if (mController) {
+             mController->clearPlaylist();
+             size_t libSize = mController->loadDirectory("./mMusic"); 
+             int start = pl.startTrack;
+             int end = start + pl.count;
+             if (end > (int)libSize) end = (int)libSize;
+             
+             // Just play from start logic
+             mController->playTrack(start);
+        }
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Track List
+    ImDrawList* cdl = ImGui::GetWindowDrawList();
+    float mainW = ImGui::GetWindowWidth();
+    
+    // Safety check for library size
+    // We assume library is loaded or load it now
+    if (mController) mController->loadDirectory("./mMusic");
+    
+    int start = pl.startTrack;
+    int end = start + pl.count;
+    // Bounds check? Logic assumed library is big enough for demo
+    
+    for (int i = start; i < end; ++i) {
+        ImGui::PushID(i);
+        ImVec2 rowPos = ImGui::GetCursorScreenPos();
+        
+        // Album Cover
+        std::vector<uint8_t> artData;
+        if (mController) artData = mController->getTrackCoverArt(i);
+        // Note: Check bounds in controller happens inside getTrackCoverArt usually
+        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, i, artData);
+        
+        // Text
+        std::string tName = mController ? mController->getTrackName(i) : "";
+        std::string tArtist = mController ? mController->getTrackArtist(i) : "";
+        std::string tAlbum = mController ? mController->getTrackAlbum(i) : "";
+        
+        if (tName.empty()) tName = "Track " + std::to_string(i);
+        
+        std::string dispName = stripExtension(tName);
+        if (dispName.length() > 40) dispName = dispName.substr(0, 37) + "...";
+        
+        ImGui::SetCursorPosX(60);
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
+        ImGui::Text("%s", dispName.c_str());
+        ImGui::PopStyleColor();
+        
+        ImGui::SetCursorPosX(60);
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
+        ImGui::Text("%s | %s", tArtist.c_str(), tAlbum.c_str());
+        ImGui::PopStyleColor();
+        
+        // Click to Play specific track
+        ImGui::SetCursorScreenPos(rowPos);
+        if (ImGui::InvisibleButton("##pldet", ImVec2(mainW - 40, 45)) && mController) {
+             mController->playTrack(i);
+        }
+        
+        ImGui::PopID();
+    }
+    
+    ImGui::Unindent(10);
+
 }
 
 } // namespace View
