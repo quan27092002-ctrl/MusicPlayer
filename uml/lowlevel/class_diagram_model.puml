@@ -228,19 +228,4 @@ package "mediafile" {
     MediaFile *-- CoverArt
 }
 
-' ============================================================================
-' NOTES
-' ============================================================================
-note as N1
-  <b>Thread Safety:</b>
-  All PlayerState implementations use
-  std::atomic for thread-safe access.
-  
-  <b>Design Patterns:</b>
-  - Interface Segregation (ISP)
-  - Facade Pattern (composition)
-end note
-
-N1 .. PlayerState
-
 @enduml
