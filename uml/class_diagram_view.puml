@@ -1,0 +1,199 @@
+@startuml class_diagram_view
+' ============================================================================
+' S32K_MediaPlayer - View Layer Class Diagram
+' ============================================================================
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam groupInheritance 2
+
+' ============================================================================
+' PACKAGE: View
+' ============================================================================
+package "view" {
+    ' ---- Interface ----
+    interface IView <<interface>> {
+        +initialize() : bool
+        +shutdown() : void
+        +isRunning() : bool
+        +processEvents() : void
+        +render() : void
+    }
+
+    interface IWindowComponent <<interface>> {
+        +render() : void
+    }
+
+    ' ---- Manager Classes ----
+    class LifecycleManager {
+        -mWindow : SDL_Window*
+        -mRenderer : SDL_Renderer*
+        -mInitialized : bool
+        ==
+        +LifecycleManager()
+        +~LifecycleManager()
+        --
+        +initialize(width : int, height : int, title : char*) : bool
+        +shutdown() : void
+        +processEvents(running : bool&) : void
+        +getWindow() : SDL_Window*
+        +getRenderer() : SDL_Renderer*
+        +getWindowWidth() : int
+        +getWindowHeight() : int
+        +beginFrame() : void
+        +endFrame() : void
+        --
+        -setupStyle() : void
+    }
+
+    class AssetManager {
+        -mRenderer : SDL_Renderer*
+        -mCoverCache : map<int, SDL_Texture*>
+        ==
+        +AssetManager(renderer : SDL_Renderer*)
+        +~AssetManager()
+        --
+        +clearCache() : void
+        +drawAlbumCover(dl, pos, size, trackIndex, data) : void
+        --
+        -createTextureFromMemory(data) : SDL_Texture*
+    }
+
+    ' ---- UI Components ----
+    class MainContent {
+        -mController : shared_ptr<IAppController>
+        -mPlayerState : shared_ptr<IPlayerState>
+        -mAssetManager : shared_ptr<AssetManager>
+        -mPlaylistDisplay : vector<string>
+        -mSearchQuery : char[256]
+        -mMainTabIndex : int
+        ==
+        +MainContent(controller, playerState, assetManager)
+        --
+        +render() : void
+        +setPlaylist(playlist : vector<string>) : void
+        --
+        -stripExtension(name : string) : string
+        -matchesSearch(text, query) : bool
+        -renderSearch() : void
+        -renderTabs() : void
+        -renderRecentTab(mainW, contentH) : void
+        -renderMusicTab(mainW, contentH) : void
+        -renderPlaylistTab() : void
+    }
+
+    class RightSidebar {
+        -mController : shared_ptr<IAppController>
+        -mPlayerState : shared_ptr<IPlayerState>
+        -mAssetManager : shared_ptr<AssetManager>
+        -mPlaylistDisplay : vector<string>
+        -mRightTabIndex : int
+        ==
+        +RightSidebar(controller, playerState, assetManager)
+        --
+        +render() : void
+        +setPlaylist(playlist : vector<string>) : void
+        --
+        -stripExtension(name : string) : string
+        -renderNowPlaying(dl : ImDrawList*) : void
+        -renderTabs() : void
+        -renderQueue(dl, width, currentTrack) : void
+        -renderRecent(dl, width) : void
+    }
+
+    class PlayerBar {
+        -mController : shared_ptr<IAppController>
+        -mPlayerState : shared_ptr<IPlayerState>
+        -mAssetManager : shared_ptr<AssetManager>
+        -mWasPlaying : bool
+        -mPlayStartTime : time_point
+        -mPlayStartPos : uint32_t
+        -mLastTrack : int
+        -mIsDraggingSlider : bool
+        ==
+        +PlayerBar(controller, playerState, assetManager)
+        --
+        +render() : void
+        +update(windowWidth : float, windowHeight : float) : void
+        --
+        -stripExtension(name : string) : string
+    }
+
+    ' ---- Main Facade ----
+    class ImGuiView {
+        -mController : shared_ptr<IAppController>
+        -mPlayerState : shared_ptr<IPlayerState>
+        -mLifecycle : unique_ptr<LifecycleManager>
+        -mAssetManager : shared_ptr<AssetManager>
+        -mMainContent : unique_ptr<MainContent>
+        -mRightSidebar : unique_ptr<RightSidebar>
+        -mPlayerBar : unique_ptr<PlayerBar>
+        -mRunning : bool
+        ==
+        +ImGuiView(controller, playerState)
+        +~ImGuiView()
+        --
+        +initialize() : bool
+        +shutdown() : void
+        +isRunning() : bool
+        +processEvents() : void
+        +render() : void
+        --
+        -updatePlaylistData() : void
+    }
+
+    ' ---- Relationships ----
+    ImGuiView ..|> IView
+    MainContent ..|> IWindowComponent
+    RightSidebar ..|> IWindowComponent
+    PlayerBar ..|> IWindowComponent
+
+    ImGuiView *-- LifecycleManager
+    ImGuiView *-- AssetManager
+    ImGuiView *-- MainContent
+    ImGuiView *-- RightSidebar
+    ImGuiView *-- PlayerBar
+
+    MainContent --> AssetManager : uses
+    RightSidebar --> AssetManager : uses
+    PlayerBar --> AssetManager : uses
+}
+
+' ============================================================================
+' EXTERNAL DEPENDENCIES (from other layers)
+' ============================================================================
+package "external" <<Frame>> {
+    interface IAppController <<interface>> {
+        .. from Controller layer ..
+    }
+    interface IPlayerState <<interface>> {
+        .. from Model layer ..
+    }
+}
+
+ImGuiView --> IAppController : uses
+ImGuiView --> IPlayerState : reads
+MainContent --> IAppController : uses
+MainContent --> IPlayerState : reads
+RightSidebar --> IAppController : uses
+RightSidebar --> IPlayerState : reads
+PlayerBar --> IAppController : uses
+PlayerBar --> IPlayerState : reads
+
+' ============================================================================
+' NOTES
+' ============================================================================
+note as N1
+  <b>Design Patterns:</b>
+  - Facade (ImGuiView)
+  - Composition over inheritance
+  - Dependency Injection
+  
+  <b>SOLID:</b>
+  - SRP: Each component has single responsibility
+  - ISP: IWindowComponent is minimal
+  - DIP: Components depend on interfaces
+end note
+
+N1 .. ImGuiView
+
+@enduml

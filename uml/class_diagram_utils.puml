@@ -1,0 +1,147 @@
+@startuml class_diagram_utils
+' ============================================================================
+' S32K_MediaPlayer - Utils Layer Class Diagram
+' ============================================================================
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam groupInheritance 2
+
+' ============================================================================
+' PACKAGE: Utils
+' ============================================================================
+package "utils" {
+    ' ---- Enums ----
+    enum LogLevel {
+        DEBUG
+        INFO
+        WARNING
+        ERROR
+        NONE
+    }
+
+    ' ---- Buffer ----
+    interface IBuffer <<interface>> {
+        +write(data : uint8_t*, len : size_t) : size_t
+        +read(dest : uint8_t*, len : size_t) : size_t
+        +clear() : void
+        +available() : size_t
+        +capacity() : size_t
+    }
+
+    class Buffer {
+        -mBuffer : vector<uint8_t>
+        -mHead : size_t
+        -mTail : size_t
+        -mIsFull : bool
+        -mCapacity : size_t
+        -mMutex : mutex
+        ==
+        +Buffer(capacityBytes : size_t = 1MB)
+        +~Buffer()
+        --
+        +write(data : uint8_t*, len : size_t) : size_t
+        +read(dest : uint8_t*, len : size_t) : size_t
+        +clear() : void
+        +available() : size_t
+        +capacity() : size_t
+        --
+        -getAvailableInternal() : size_t
+        -isFullInternal() : bool
+        -isEmptyInternal() : bool
+    }
+
+    Buffer ..|> IBuffer
+
+    ' ---- Logger ----
+    interface ILogger <<interface>> {
+        +setLevel(level : LogLevel) : void
+        +getLevel() : LogLevel
+        +log(level : LogLevel, message : string) : void
+    }
+
+    class Logger <<Singleton>> {
+        -{static} sInstance : Logger&
+        -mLevel : LogLevel
+        -mMutex : mutex
+        ==
+        -Logger()
+        --
+        +{static}getInstance() : Logger&
+        +setLevel(level : LogLevel) : void
+        +getLevel() : LogLevel
+        +log(level : LogLevel, message : string) : void
+        --
+        -getTimestamp() : string
+        -getLevelName(level : LogLevel) : char*
+    }
+
+    Logger ..|> ILogger
+
+    ' ---- ThreadSafeQueue ----
+    interface "IThreadSafeQueue<T>" as IThreadSafeQueue <<interface>> {
+        +push(value : T&) : void
+        +tryPop(value : T&) : bool
+        +waitAndPop(value : T&) : void
+        +empty() : bool
+    }
+
+    class "ThreadSafeQueue<T>" as ThreadSafeQueue {
+        -mQueue : queue<T>
+        -mMutex : mutex
+        -mCondVar : condition_variable
+        ==
+        +ThreadSafeQueue()
+        +~ThreadSafeQueue()
+        --
+        +push(value : T&) : void
+        +tryPop(value : T&) : bool
+        +waitAndPop(value : T&) : void
+        +empty() : bool
+    }
+
+    ThreadSafeQueue ..|> IThreadSafeQueue
+}
+
+' ============================================================================
+' NOTES
+' ============================================================================
+note as N1
+  <b>Design Patterns:</b>
+  - Singleton (Logger)
+  - Template (ThreadSafeQueue)
+  - DIP (interfaces)
+  
+  <b>Thread Safety:</b>
+  - Buffer: mutex for circular buffer access
+  - Logger: mutex for synchronized output
+  - ThreadSafeQueue: mutex + condition_variable
+    for producer-consumer pattern
+  
+  <b>Data Structures:</b>
+  - Buffer: Circular buffer for audio streaming
+  - ThreadSafeQueue: FIFO for inter-thread messages
+end note
+
+N1 .. utils
+
+note left of Buffer
+  Circular buffer implementation
+  for efficient streaming I/O
+  Default capacity: 1MB
+end note
+
+note right of Logger
+  Thread-safe singleton logger
+  with timestamped output
+  Macros: LOG_DEBUG, LOG_INFO,
+  LOG_WARNING, LOG_ERROR
+end note
+
+note bottom of ThreadSafeQueue
+  Producer-Consumer queue
+  - push(): non-blocking
+  - tryPop(): non-blocking
+  - waitAndPop(): blocking
+end note
+
+@enduml
