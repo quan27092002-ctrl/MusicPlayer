@@ -38,6 +38,17 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
     mShowPlaylistDetail = false;
     mSelectedPlaylistIndex = -1;
     
+    // Initialize CRUD UI state
+    mViewMode = ViewMode::NORMAL;
+    mShowDeleteConfirm = false;
+    mDeletePlaylistIdx = -1;
+    mEditingPlaylistIdx = -1;
+    mNewPlaylistName[0] = '\0';
+    mNewPlaylistDesc[0] = '\0';
+    mNewPlaylistColorIdx = 0;
+    mShowAddToPlaylistMenu = false;
+    mAddToPlaylistTrackIdx = -1;
+    
     // Initialize Session Playlists
     mPlaylists = {
         { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, {} },
@@ -116,6 +127,12 @@ void MainContent::render() {
     ImGui::EndChild();
     ImGui::End();
     ImGui::PopStyleColor();
+    
+    // Render Modals
+    renderCreatePlaylistModal();
+    renderEditPlaylistModal();
+    renderDeleteConfirmModal();
+    renderAddToPlaylistMenu();
 }
 
 void MainContent::renderSearch() {
@@ -268,17 +285,13 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         ImGui::Text("%s | %s", artistStr.c_str(), albumStr.c_str());
         ImGui::PopStyleColor();
         
-        // Add to playlist button -> Changed to "Add Next" (Queue Next)
+        // Add to playlist button (Original was Add Next, now we use it for Playlist Menu)
         ImGui::SameLine(mainW - 60);
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
         if (ImGui::Button("+##add", ImVec2(25, 25))) {
-            if (mController) {
-                 std::string path = mController->getTrackPath(i);
-                 if (!path.empty()) {
-                     mController->queueNext(path);
-                 }
-            }
+             mShowAddToPlaylistMenu = true;
+             mAddToPlaylistTrackIdx = (int)i;
         }
         ImGui::PopStyleColor(2);
         
@@ -306,11 +319,12 @@ void MainContent::renderPlaylistTab() {
     float btnWidth = 280.0f;
     float btnHeight = 80.0f;
     
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < (int)mPlaylists.size(); i++) {
         ImGui::PushID(i);
         ImVec2 p = ImGui::GetCursorScreenPos();
         
         // Custom Button Background
+        ImGui::SetNextItemAllowOverlap(); // Allow clicking buttons rendered on top (must be called before item)
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::HoverV);
         if (ImGui::Button("##plbtn", ImVec2(btnWidth, btnHeight))) {
             // Action: Open Detail View
@@ -322,27 +336,88 @@ void MainContent::renderPlaylistTab() {
         // Decoration
         ImDrawList* dl = ImGui::GetWindowDrawList();
         
-        // Icon Box
-        ImU32 iconCol = IM_COL32(30, 215, 96, 255);
-        if (mPlaylists[i].colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
-        if (mPlaylists[i].colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
+        // Icon Box (Left side: 10,10 to 70,70 -> 60x60)
+        // User Request: Theme is the first song's cover art
+        if (!mPlaylists[i].trackIndices.empty()) {
+             // Draw Cover Art
+             int firstTrackIdx = mPlaylists[i].trackIndices[0];
+             std::vector<uint8_t> artData;
+             if (mController) artData = mController->getTrackCoverArt(firstTrackIdx);
+             
+             // Reuse drawAlbumCover but need to position reasonably
+             // drawAlbumCover takes center pos or top-left? It usually draws at cursor or specified pos
+             // AssetManager::drawAlbumCover(drawList, pos, size, ...)
+             mAssetManager->drawAlbumCover(dl, ImVec2(p.x + 10, p.y + 10), 60, firstTrackIdx, artData);
+        } else {
+             // Fallback to Color Box if empty
+            ImU32 iconCol = IM_COL32(30, 215, 96, 255);
+            if (mPlaylists[i].colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
+            if (mPlaylists[i].colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
+            
+            dl->AddRectFilled(ImVec2(p.x + 10, p.y + 10), ImVec2(p.x + 70, p.y + 70), iconCol, 8.0f);
+        }
         
-        dl->AddRectFilled(ImVec2(p.x + 10, p.y + 10), ImVec2(p.x + 70, p.y + 70), iconCol, 8.0f);
-        
-        // Text
-        ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 80, ImGui::GetCursorPosY() - btnHeight + 15));
+        // Text (Name at 80, 15)
+        ImGui::SetCursorScreenPos(ImVec2(p.x + 80, p.y + 15));
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
         ImGui::Text("%s", mPlaylists[i].name.c_str());
         ImGui::PopFont();
         
-        ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 80, ImGui::GetCursorPosY() + 5));
+        // Text (Desc at 80, 40)
+        ImGui::SetCursorScreenPos(ImVec2(p.x + 80, p.y + 40));
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
         ImGui::Text("%s", mPlaylists[i].desc.c_str());
         ImGui::PopStyleColor();
         
+        // Edit/Delete Buttons (Right side)
+        // Edit at Width - 95
+        ImGui::SetCursorScreenPos(ImVec2(p.x + btnWidth - 95, p.y + 25));
+        if (ImGui::SmallButton("Edit")) {
+             mViewMode = ViewMode::EDIT_PLAYLIST;
+             mEditingPlaylistIdx = i;
+             std::strncpy(mNewPlaylistName, mPlaylists[i].name.c_str(), sizeof(mNewPlaylistName)-1);
+             std::strncpy(mNewPlaylistDesc, mPlaylists[i].desc.c_str(), sizeof(mNewPlaylistDesc)-1);
+             mNewPlaylistColorIdx = mPlaylists[i].colorIdx;
+        }
+        
+        // Del at Width - 45
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+        if (ImGui::SmallButton("Del")) {
+             mShowDeleteConfirm = true;
+             mDeletePlaylistIdx = i;
+        }
+        ImGui::PopStyleColor();
+        
         ImGui::Spacing();
         ImGui::PopID();
+        
+        // Reset cursor for next item to be below this button
+        // Since we messed with cursor pos, let's just make sure we are good.
+        // The loop continues and ImGui::Button in next iteration will likely position itself relatively?
+        // Actually, ImGui::Button calculates pos based on Layout.
+        // We used SetCursorScreenPos which might update the internal cursor?
+        // It's safer to ensure we are back in flow.
+        // But since we are at end of loop scope, next calling SetCursorPos or having Button auto-layout should work
+        // IF we didn't screw up the "Current Window Cursor".
+        // SetCursorScreenPos updates the window cursor.
+        // So we should reset it to below the button.
+        ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + btnHeight + 5)); 
     }
+
+    // Create New Playlist Button
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, Colors::HoverV);
+    if (ImGui::Button("+ Create New Playlist", ImVec2(btnWidth, 40))) {
+        mViewMode = ViewMode::CREATE_PLAYLIST;
+        mNewPlaylistName[0] = '\0';
+        mNewPlaylistDesc[0] = '\0';
+        mNewPlaylistColorIdx = 0;
+    }
+    ImGui::PopStyleColor();
     
     ImGui::Unindent(10);
 }
@@ -350,7 +425,7 @@ void MainContent::renderPlaylistTab() {
 void MainContent::renderPlaylistDetailView() {
     // Use mPlaylists
 
-    if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= 3) {
+    if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= (int)mPlaylists.size()) {
         mShowPlaylistDetail = false;
         return;
     }
@@ -466,6 +541,240 @@ void MainContent::renderPlaylistDetailView() {
     
     ImGui::Unindent(10);
 
+}
+
+void MainContent::createPlaylist() {
+    if (std::strlen(mNewPlaylistName) == 0) return;
+    
+    PlaylistData pd;
+    pd.name = mNewPlaylistName;
+    pd.desc = mNewPlaylistDesc;
+    pd.colorIdx = mNewPlaylistColorIdx;
+    
+    mPlaylists.push_back(pd);
+    mViewMode = ViewMode::NORMAL;
+}
+
+void MainContent::updatePlaylist() {
+    if (mEditingPlaylistIdx < 0 || mEditingPlaylistIdx >= (int)mPlaylists.size()) return;
+    if (std::strlen(mNewPlaylistName) == 0) return;
+    
+    mPlaylists[mEditingPlaylistIdx].name = mNewPlaylistName;
+    mPlaylists[mEditingPlaylistIdx].desc = mNewPlaylistDesc;
+    mPlaylists[mEditingPlaylistIdx].colorIdx = mNewPlaylistColorIdx;
+    
+    mViewMode = ViewMode::NORMAL;
+    mEditingPlaylistIdx = -1;
+}
+
+void MainContent::deletePlaylist(int idx) {
+    if (idx >= 0 && idx < (int)mPlaylists.size()) {
+        mPlaylists.erase(mPlaylists.begin() + idx);
+        if (mSelectedPlaylistIndex == idx) {
+            mShowPlaylistDetail = false;
+            mSelectedPlaylistIndex = -1;
+        } else if (mSelectedPlaylistIndex > idx) {
+            mSelectedPlaylistIndex--;
+        }
+    }
+    mShowDeleteConfirm = false;
+    mDeletePlaylistIdx = -1;
+}
+
+void MainContent::addTrackToPlaylist(int trackIdx, int playlistIdx) {
+    if (playlistIdx >= 0 && playlistIdx < (int)mPlaylists.size()) {
+        mPlaylists[playlistIdx].trackIndices.push_back(trackIdx);
+    }
+}
+
+void MainContent::renderCreatePlaylistModal() {
+    if (mViewMode == ViewMode::CREATE_PLAYLIST) {
+        ImGui::OpenPopup("Create Playlist");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(400, 160)); // Compact height
+
+    // Use NoTitleBar for custom header
+    if (ImGui::BeginPopupModal("Create Playlist", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+        
+        // Custom Header
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
+        ImGui::Text("Create Playlist");
+        ImGui::PopFont();
+        
+        // Close Button (X)
+        ImGui::SameLine(ImGui::GetWindowWidth() - 35);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0));
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
+        if (ImGui::Button("X", ImVec2(25, 25))) {
+             mViewMode = ViewMode::NORMAL;
+             ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor(2);
+        
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        
+        // Content
+        ImGui::Indent(20);
+        
+        ImGui::Text("Name");
+        ImGui::PushItemWidth(320);
+        ImGui::InputText("##Name", mNewPlaylistName, 128);
+        ImGui::PopItemWidth();
+        
+        // Removed Description & Color Theme as requested
+        
+        ImGui::Unindent(20);
+        
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Create Button (Centered)
+        float btnW = 120.0f;
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - btnW) * 0.5f);
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
+        if (ImGui::Button("Create", ImVec2(btnW, 35))) {
+            createPlaylist();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor(2);
+        
+        ImGui::EndPopup();
+    }
+}
+
+void MainContent::renderEditPlaylistModal() {
+    if (mViewMode == ViewMode::EDIT_PLAYLIST) {
+        ImGui::OpenPopup("Edit Playlist");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(400, 160)); // Compact height
+
+    // Use NoTitleBar to implement custom header with X button
+    if (ImGui::BeginPopupModal("Edit Playlist", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+        
+        // Custom Header: Title Left, X Right
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
+        ImGui::Text("Edit Playlist");
+        ImGui::PopFont();
+        
+        ImGui::SameLine(ImGui::GetWindowWidth() - 35);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0)); // Transparent background
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
+        if (ImGui::Button("X", ImVec2(25, 25))) {
+             mViewMode = ViewMode::NORMAL;
+             mEditingPlaylistIdx = -1;
+             ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor(2);
+        
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        
+        // Indented Content
+        ImGui::Indent(20);
+        
+        ImGui::Text("Name");
+        ImGui::PushItemWidth(320);
+        ImGui::InputText("##Name", mNewPlaylistName, 128);
+        ImGui::PopItemWidth();
+        
+        ImGui::Unindent(20);
+        
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Save Button (Centered)
+        float saveBtnW = 120.0f;
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - saveBtnW) * 0.5f);
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
+        if (ImGui::Button("Save", ImVec2(saveBtnW, 35))) {
+            updatePlaylist();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor(2);
+        
+        ImGui::EndPopup();
+    }
+}
+
+void MainContent::renderDeleteConfirmModal() {
+    if (mShowDeleteConfirm) {
+        ImGui::OpenPopup("Delete Playlist?");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal("Delete Playlist?", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to delete this playlist?");
+        ImGui::Text("This action cannot be undone.");
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        if (ImGui::Button("Delete", ImVec2(120, 0))) {
+            deletePlaylist(mDeletePlaylistIdx);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            mShowDeleteConfirm = false;
+            mDeletePlaylistIdx = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::EndPopup();
+    }
+}
+
+void MainContent::renderAddToPlaylistMenu() {
+    if (mShowAddToPlaylistMenu) {
+        ImGui::OpenPopup("Add to Playlist");
+        mShowAddToPlaylistMenu = false; // Reset trigger
+    }
+    
+    if (ImGui::BeginPopup("Add to Playlist")) {
+        ImGui::Text("Select Playlist:");
+        ImGui::Separator();
+        
+        for (int i = 0; i < (int)mPlaylists.size(); i++) {
+            if (ImGui::Selectable(mPlaylists[i].name.c_str())) {
+                addTrackToPlaylist(mAddToPlaylistTrackIdx, i);
+            }
+        }
+        
+        if (ImGui::Selectable("+ Create New Playlist")) {
+            mViewMode = ViewMode::CREATE_PLAYLIST;
+            // Pre-fill creation modal? Maybe later.
+            // For now just open creation mode
+            mNewPlaylistName[0] = '\0';
+            mNewPlaylistDesc[0] = '\0';
+            mNewPlaylistColorIdx = 0;
+        }
+        
+        ImGui::EndPopup();
+    }
 }
 
 } // namespace View

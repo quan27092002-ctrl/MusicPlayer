@@ -55,6 +55,22 @@ private:
     bool mShowPlaylistDetail;
     int mSelectedPlaylistIndex;
     
+    // Playlist CRUD UI State
+    enum class ViewMode { NORMAL, CREATE_PLAYLIST, EDIT_PLAYLIST };
+    ViewMode mViewMode;
+    bool mShowDeleteConfirm;
+    int mDeletePlaylistIdx;
+    int mEditingPlaylistIdx;
+    
+    // Form Inputs
+    char mNewPlaylistName[128];
+    char mNewPlaylistDesc[256];
+    int mNewPlaylistColorIdx;
+    
+    // Add to Playlist UI
+    bool mShowAddToPlaylistMenu;
+    int mAddToPlaylistTrackIdx;
+    
     // Mutable Playlist Data (Session Persistence)
     struct PlaylistData {
         std::string name;
@@ -63,6 +79,17 @@ private:
         std::vector<int> trackIndices;
     };
     std::vector<PlaylistData> mPlaylists;
+    
+    // Helper Functions for CRUD
+    void renderCreatePlaylistModal();
+    void renderEditPlaylistModal();
+    void renderDeleteConfirmModal();
+    void renderAddToPlaylistMenu();
+    
+    void createPlaylist();
+    void updatePlaylist();
+    void deletePlaylist(int idx);
+    void addTrackToPlaylist(int trackIdx, int playlistIdx);
 };
 
 } // namespace View
