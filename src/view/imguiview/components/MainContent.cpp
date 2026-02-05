@@ -470,7 +470,17 @@ void MainContent::renderPlaylistDetailView() {
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
         if (mController && !pl.trackPaths.empty()) {
-             mController->playPlaylist(pl.trackPaths);
+             // Logic: If playing, append to queue. If stopped/paused, replace and play.
+             bool isPlaying = false;
+             if (mPlayerState) {
+                 isPlaying = (mPlayerState->getPlaybackStatus() == Model::PlaybackStatus::PLAYING);
+             }
+             
+             if (isPlaying) {
+                 mController->queuePlaylist(pl.trackPaths);
+             } else {
+                 mController->playPlaylist(pl.trackPaths);
+             }
         }
     }
     ImGui::PopStyleColor(2);
@@ -535,6 +545,11 @@ void MainContent::renderPlaylistDetailView() {
         // Click to Play specific track in context
         ImGui::SetCursorScreenPos(rowPos);
         if (ImGui::InvisibleButton("##pldet", ImVec2(mainW - 60, 45)) && mController) {
+             // Logic: If playing, append whole playlist but jump to this track? 
+             // Or just replace queue starting with this track?
+             // User just asked for "play playlist" behavior.
+             // For specific track click, usually users expect immediate play.
+             // Let's keep it safe: Replace queue.
              mController->playPlaylist(pl.trackPaths);
              mController->playTrack((int)i);
         }

@@ -264,6 +264,10 @@ void AppController::replaceQueue(const std::vector<std::string>& filePaths) {
     mPlaybackController->replaceQueue(filePaths);
 }
 
+void AppController::queuePlaylist(const std::vector<std::string>& filePaths) {
+    mPlaybackController->queuePlaylist(filePaths);
+}
+
 void AppController::queueNext(const std::string& filePath) {
     mPlaybackController->queueNext(filePath);
 }

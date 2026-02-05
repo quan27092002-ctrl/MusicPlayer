@@ -48,7 +48,8 @@ public:
     void playTrack(int index) override;
     void seek(uint32_t positionMs) override;
     void queueNext(const std::string& filePath) override;
-    void replaceQueue(const std::vector<std::string>& filePaths) override; // Added override for the new method
+    void replaceQueue(const std::vector<std::string>& filePaths) override;
+    void queuePlaylist(const std::vector<std::string>& filePaths) override;
     
     // Additional methods
     int getCurrentTrackIndex() const;

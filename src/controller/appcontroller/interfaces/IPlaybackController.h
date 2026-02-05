@@ -82,6 +82,12 @@ public:
      * @param filePaths Vector of file paths
      */
     virtual void replaceQueue(const std::vector<std::string>& filePaths) = 0;
+
+    /**
+     * @brief Append a list of tracks to the end of the current queue.
+     * @param filePaths Vector of file paths
+     */
+    virtual void queuePlaylist(const std::vector<std::string>& filePaths) = 0;
 };
 
 } // namespace Controller

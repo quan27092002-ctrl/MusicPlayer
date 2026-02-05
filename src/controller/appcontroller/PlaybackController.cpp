@@ -119,13 +119,18 @@ void PlaybackControllerImpl::next() {
             mHistoryManager->pushHistory(*mCurrentTrackIterator);
         }
 
-        // Move Iterator
+        // Move Iterator - Stop at end
         if (mCurrentTrackIterator == playlist.end()) {
             mCurrentTrackIterator = playlist.begin();
         } else {
             mCurrentTrackIterator++;
+            // If we reached the end, do NOT loop back to begin.
+            // This ensures playback stops.
             if (mCurrentTrackIterator == playlist.end()) {
-                mCurrentTrackIterator = playlist.begin();
+                // Do nothing. pathToLoad remains empty.
+                // Optionally reset to beginning explicitly if desired for "next play" but not auto-play?
+                // User requirement: "phát hết bài cuối trong queue thì sẽ dừng".
+                // So leaving it at end() is correct.
             }
         }
         
@@ -288,6 +293,38 @@ void PlaybackControllerImpl::replaceQueue(const std::vector<std::string>& filePa
     }
 }
 
+void PlaybackControllerImpl::queuePlaylist(const std::vector<std::string>& filePaths) {
+    if (!mPlaylistManager) return;
+
+    std::vector<MediaFilePtr> newTracks;
+    newTracks.reserve(filePaths.size());
+    for (const auto& path : filePaths) {
+        auto ptr = mPlaylistManager->acquireMediaFile(path);
+        if (ptr) newTracks.push_back(ptr);
+    }
+    
+    if (newTracks.empty()) return;
+
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        auto& playlist = mPlaylistManager->getPlaylistRef();
+        
+        bool wasEmpty = playlist.empty();
+        
+        for (const auto& track : newTracks) {
+            playlist.push_back(track);
+        }
+        
+        // If playlist was empty, set iterator to beginning so we can play immediately if needed
+        // (though this function implies just queuing, caller decides to play?)
+        // If caller calls this whenstopped/empty, they might expect play.
+        // But usually "Queue" means add to end.
+        if (wasEmpty) {
+            mCurrentTrackIterator = playlist.begin();
+        }
+    }
+}
+
 int PlaybackControllerImpl::getCurrentTrackIndex() const {
     if (!mPlaylistManager) return -1;
     std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
@@ -331,5 +368,6 @@ typename std::list<PlaybackControllerImpl::MediaFilePtr>::iterator&
 PlaybackControllerImpl::getCurrentIterator() {
     return mCurrentTrackIterator;
 }
+
 
 } // namespace Controller
