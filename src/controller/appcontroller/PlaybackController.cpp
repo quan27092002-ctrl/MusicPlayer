@@ -215,6 +215,37 @@ void PlaybackControllerImpl::seek(uint32_t positionMs) {
     }
 }
 
+void PlaybackControllerImpl::queueNext(const std::string& filePath) {
+    if (!mPlaylistManager) return;
+    
+    auto trackPtr = mPlaylistManager->acquireMediaFile(filePath);
+    if (!trackPtr) return;
+    
+    std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+    auto& playlist = mPlaylistManager->getPlaylistRef();
+    
+    if (playlist.empty()) {
+        playlist.push_back(trackPtr);
+        mCurrentTrackIterator = playlist.begin(); // Ready to play
+    } else {
+        // Insert AFTER current track
+        auto insertPos = mCurrentTrackIterator;
+        if (insertPos != playlist.end()) {
+            insertPos++; 
+        } else {
+            insertPos = playlist.end();
+        }
+        playlist.insert(insertPos, trackPtr);
+        
+        // If nothing was playing (stopped state with non-empty playlist?), 
+        // this just adds to queue.
+        // If we want to move iterator if it was at end?
+        if (mCurrentTrackIterator == playlist.end()) {
+            mCurrentTrackIterator = playlist.begin(); // Reset if we were at end
+        }
+    }
+}
+
 int PlaybackControllerImpl::getCurrentTrackIndex() const {
     if (!mPlaylistManager) return -1;
     std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());

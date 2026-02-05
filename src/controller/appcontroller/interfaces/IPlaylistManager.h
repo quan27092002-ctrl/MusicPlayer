@@ -11,7 +11,9 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include <cstdint>
+#include "MediaFile.h"
 
 namespace Controller {
 
@@ -91,6 +93,12 @@ public:
      * @return Raw image data
      */
     virtual std::vector<uint8_t> getTrackCoverArt(size_t index) const = 0;
+    /**
+     * @brief Gets or creates a media file pointer for a given path.
+     * @param filePath Absolute path to the file.
+     * @return Shared pointer to MediaFile, or nullptr if invalid.
+     */
+    virtual std::shared_ptr<Model::MediaFile> acquireMediaFile(const std::string& filePath) = 0;
 };
 
 } // namespace Controller

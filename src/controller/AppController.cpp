@@ -256,6 +256,10 @@ void AppController::playTrack(int index) {
     mPlaybackController->playTrack(index);
 }
 
+void AppController::queueNext(const std::string& filePath) {
+    mPlaybackController->queueNext(filePath);
+}
+
 void AppController::seek(uint32_t positionMs) {
     mPlaybackController->seek(positionMs);
 }
@@ -346,6 +350,10 @@ uint32_t AppController::getTrackDuration(size_t index) const {
 
 std::vector<uint8_t> AppController::getTrackCoverArt(size_t index) const {
     return mPlaylistManager->getTrackCoverArt(index);
+}
+
+std::shared_ptr<Model::MediaFile> AppController::acquireMediaFile(const std::string& filePath) {
+    return mPlaylistManager->acquireMediaFile(filePath);
 }
 
 // ============================================================================

@@ -47,6 +47,7 @@ public:
     void previous() override;
     void playTrack(int index) override;
     void seek(uint32_t positionMs) override;
+    void queueNext(const std::string& filePath) override;
     
     // Additional methods
     int getCurrentTrackIndex() const;

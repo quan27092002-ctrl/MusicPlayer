@@ -90,6 +90,7 @@ public:
     void next() override;
     void previous() override;
     void playTrack(int index) override;
+    void queueNext(const std::string& filePath) override;
     void seek(uint32_t positionMs) override;
 
     // ========================================================================
@@ -112,6 +113,7 @@ public:
     std::string getTrackAlbum(size_t index) const override;
     uint32_t getTrackDuration(size_t index) const override;
     std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
+    std::shared_ptr<Model::MediaFile> acquireMediaFile(const std::string& filePath) override;
     
     // ========================================================================
     // IHistoryManager Interface (delegates to mHistoryManager)

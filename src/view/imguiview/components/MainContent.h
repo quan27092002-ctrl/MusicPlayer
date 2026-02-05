@@ -54,6 +54,15 @@ private:
     // UI State
     bool mShowPlaylistDetail;
     int mSelectedPlaylistIndex;
+    
+    // Mutable Playlist Data (Session Persistence)
+    struct PlaylistData {
+        std::string name;
+        std::string desc;
+        int colorIdx;
+        std::vector<int> trackIndices;
+    };
+    std::vector<PlaylistData> mPlaylists;
 };
 
 } // namespace View

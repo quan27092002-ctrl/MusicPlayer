@@ -69,6 +69,12 @@ public:
      * @param positionMs Position in milliseconds
      */
     virtual void seek(uint32_t positionMs) = 0;
+    
+    /**
+     * @brief Adds a track to be played immediately after the current one.
+     * @param filePath Path to the track.
+     */
+    virtual void queueNext(const std::string& filePath) = 0;
 };
 
 } // namespace Controller

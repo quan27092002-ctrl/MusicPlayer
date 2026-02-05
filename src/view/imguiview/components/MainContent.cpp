@@ -37,6 +37,19 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
     mSearchQuery[0] = '\0';
     mShowPlaylistDetail = false;
     mSelectedPlaylistIndex = -1;
+    
+    // Initialize Session Playlists
+    mPlaylists = {
+        { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, {} },
+        { "High Energy", "Workout & Upbeat hits", 1, {} },
+        { "Focus Flow", "Instrumental study mix", 2, {} }
+    };
+    
+    // Populate Initial Indices (Simulated)
+    // Chill: 0-9, High Energy: 10-19, Focus: 20-29
+    for(int i=0; i<10; ++i) mPlaylists[0].trackIndices.push_back(i);
+    for(int i=0; i<10; ++i) mPlaylists[1].trackIndices.push_back(10 + i);
+    for(int i=0; i<10; ++i) mPlaylists[2].trackIndices.push_back(20 + i);
 }
 
 void MainContent::setPlaylist(const std::vector<std::string>& playlist) {
@@ -255,12 +268,17 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         ImGui::Text("%s | %s", artistStr.c_str(), albumStr.c_str());
         ImGui::PopStyleColor();
         
-        // Add to playlist button
+        // Add to playlist button -> Changed to "Add Next" (Queue Next)
         ImGui::SameLine(mainW - 60);
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
         if (ImGui::Button("+##add", ImVec2(25, 25))) {
-            // TODO
+            if (mController) {
+                 std::string path = mController->getTrackPath(i);
+                 if (!path.empty()) {
+                     mController->queueNext(path);
+                 }
+            }
         }
         ImGui::PopStyleColor(2);
         
@@ -283,20 +301,7 @@ void MainContent::renderPlaylistTab() {
     ImGui::PopStyleColor();
     ImGui::Spacing();
     
-    // Predefined Playlists Data
-    struct DemoPlaylist {
-        const char* name;
-        const char* desc;
-        int colorIdx; // 0=Green, 1=Blue, 2=Orange
-        int startTrack;
-        int count;
-    };
-    
-    DemoPlaylist demos[] = {
-        { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, 0, 10 },
-        { "High Energy", "Workout & Upbeat hits", 1, 10, 10 },
-        { "Focus Flow", "Instrumental study mix", 2, 20, 10 }
-    };
+    // Use mPlaylists instead of local struct
     
     float btnWidth = 280.0f;
     float btnHeight = 80.0f;
@@ -319,20 +324,20 @@ void MainContent::renderPlaylistTab() {
         
         // Icon Box
         ImU32 iconCol = IM_COL32(30, 215, 96, 255);
-        if (demos[i].colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
-        if (demos[i].colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
+        if (mPlaylists[i].colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
+        if (mPlaylists[i].colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
         
         dl->AddRectFilled(ImVec2(p.x + 10, p.y + 10), ImVec2(p.x + 70, p.y + 70), iconCol, 8.0f);
         
         // Text
         ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 80, ImGui::GetCursorPosY() - btnHeight + 15));
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
-        ImGui::Text("%s", demos[i].name);
+        ImGui::Text("%s", mPlaylists[i].name.c_str());
         ImGui::PopFont();
         
         ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 80, ImGui::GetCursorPosY() + 5));
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-        ImGui::Text("%s", demos[i].desc);
+        ImGui::Text("%s", mPlaylists[i].desc.c_str());
         ImGui::PopStyleColor();
         
         ImGui::Spacing();
@@ -343,26 +348,14 @@ void MainContent::renderPlaylistTab() {
 }
 
 void MainContent::renderPlaylistDetailView() {
-    // Shared Data Definition (duplicated locally for simplicity)
-    struct DemoPlaylist {
-        const char* name;
-        const char* desc;
-        int colorIdx;
-        int startTrack;
-        int count;
-    };
-    DemoPlaylist demos[] = {
-        { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, 0, 10 },
-        { "High Energy", "Workout & Upbeat hits", 1, 10, 10 },
-        { "Focus Flow", "Instrumental study mix", 2, 20, 10 }
-    };
+    // Use mPlaylists
 
     if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= 3) {
         mShowPlaylistDetail = false;
         return;
     }
     
-    DemoPlaylist& pl = demos[mSelectedPlaylistIndex];
+    const auto& pl = mPlaylists[mSelectedPlaylistIndex];
 
     // Header with Back Button
     ImGui::Indent(10);
@@ -372,7 +365,7 @@ void MainContent::renderPlaylistDetailView() {
     }
     ImGui::SameLine();
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-    ImGui::Text("%s", pl.name);
+    ImGui::Text("%s", pl.name.c_str());
     ImGui::PopFont();
     
     ImGui::Spacing();
@@ -383,13 +376,16 @@ void MainContent::renderPlaylistDetailView() {
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
         if (mController) {
              mController->clearPlaylist();
-             size_t libSize = mController->loadDirectory("./mMusic"); 
-             int start = pl.startTrack;
-             int end = start + pl.count;
-             if (end > (int)libSize) end = (int)libSize;
-             
-             // Just play from start logic
-             mController->playTrack(start);
+             // Play All from indices
+             for (int idx : pl.trackIndices) {
+                  std::string path = mController->getTrackPath(idx);
+                  if (!path.empty()) {
+                      mController->addToPlaylist(path);
+                  }
+             }
+             if (!pl.trackIndices.empty()) {
+                 mController->playTrack(0);
+             }
         }
     }
     ImGui::PopStyleColor(2);
@@ -403,31 +399,30 @@ void MainContent::renderPlaylistDetailView() {
     
     // Safety check for library size
     // We assume library is loaded or load it now
-    if (mController) mController->loadDirectory("./mMusic");
     
-    int start = pl.startTrack;
-    int end = start + pl.count;
-    // Bounds check? Logic assumed library is big enough for demo
     
-    for (int i = start; i < end; ++i) {
-        ImGui::PushID(i);
+    // Iterate indices
+    for (size_t i = 0; i < pl.trackIndices.size(); ++i) {
+        int trackRefIdx = pl.trackIndices[i];
+        
+        ImGui::PushID((int)i);
         ImVec2 rowPos = ImGui::GetCursorScreenPos();
         
         // Album Cover
         std::vector<uint8_t> artData;
-        if (mController) artData = mController->getTrackCoverArt(i);
+        if (mController) artData = mController->getTrackCoverArt(trackRefIdx);
         // Note: Check bounds in controller happens inside getTrackCoverArt usually
         mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, i, artData);
         
         // Text
-        std::string tName = mController ? mController->getTrackName(i) : "";
-        std::string tArtist = mController ? mController->getTrackArtist(i) : "";
-        std::string tAlbum = mController ? mController->getTrackAlbum(i) : "";
+        std::string tName = mController ? mController->getTrackName(trackRefIdx) : "";
+        std::string tArtist = mController ? mController->getTrackArtist(trackRefIdx) : "";
+        std::string tAlbum = mController ? mController->getTrackAlbum(trackRefIdx) : "";
         
-        if (tName.empty()) tName = "Track " + std::to_string(i);
+        if (tName.empty()) tName = "Track " + std::to_string(trackRefIdx);
         
         std::string dispName = stripExtension(tName);
-        if (dispName.length() > 40) dispName = dispName.substr(0, 37) + "...";
+        if (dispName.length() > 35) dispName = dispName.substr(0, 32) + "...";
         
         ImGui::SetCursorPosX(60);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
@@ -439,10 +434,31 @@ void MainContent::renderPlaylistDetailView() {
         ImGui::Text("%s | %s", tArtist.c_str(), tAlbum.c_str());
         ImGui::PopStyleColor();
         
+        // Delete Button
+        ImGui::SetCursorPosX(mainW - 50);
+        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
+        if (ImGui::Button("X", ImVec2(30, 30))) {
+            // Remove from vector
+            mPlaylists[mSelectedPlaylistIndex].trackIndices.erase(mPlaylists[mSelectedPlaylistIndex].trackIndices.begin() + i);
+            ImGui::PopStyleColor();
+            ImGui::PopID();
+            break; // Break loop to avoid iterator invalidation issues in this frame
+        }
+        ImGui::PopStyleColor();
+        
         // Click to Play specific track
         ImGui::SetCursorScreenPos(rowPos);
-        if (ImGui::InvisibleButton("##pldet", ImVec2(mainW - 40, 45)) && mController) {
-             mController->playTrack(i);
+        if (ImGui::InvisibleButton("##pldet", ImVec2(mainW - 60, 45)) && mController) {
+             // To play just this track, we might need to add it to queue or play directly from library index?
+             // Since "Active Playlist" is separate, let's just clear and play this one?
+             // Or play in context of this playlist?
+             // Play context: Clear -> Add all -> Play index i
+             mController->clearPlaylist();
+              for (int idx : pl.trackIndices) {
+                  std::string path = mController->getTrackPath(idx);
+                  if (!path.empty()) mController->addToPlaylist(path);
+             }
+             mController->playTrack((int)i);
         }
         
         ImGui::PopID();

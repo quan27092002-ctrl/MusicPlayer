@@ -43,6 +43,9 @@ public:
     uint32_t getTrackDuration(size_t index) const override;
     std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
     
+    // New method
+    MediaFilePtr acquireMediaFile(const std::string& filePath) override;
+    
     // Additional methods for internal use
     MediaFilePtr getTrackAt(size_t index) const;
     std::list<MediaFilePtr>& getPlaylistRef();

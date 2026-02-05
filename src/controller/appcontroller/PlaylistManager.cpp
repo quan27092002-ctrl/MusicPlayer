@@ -19,11 +19,8 @@ namespace Controller {
 
 PlaylistManagerImpl::PlaylistManagerImpl() {}
 
-void PlaylistManagerImpl::addToPlaylist(const std::string& filePath) {
-    // 1. Check if song exists in Library
+PlaylistManagerImpl::MediaFilePtr PlaylistManagerImpl::acquireMediaFile(const std::string& filePath) {
     MediaFilePtr trackPtr = findInLibrary(filePath);
-    
-    // 2. If not in Library, create new and add to Library first
     if (!trackPtr) {
         trackPtr = createMediaFile(filePath);
         if (trackPtr) {
@@ -31,6 +28,11 @@ void PlaylistManagerImpl::addToPlaylist(const std::string& filePath) {
             mMusicLibrary.push_back(trackPtr);
         }
     }
+    return trackPtr;
+}
+
+void PlaylistManagerImpl::addToPlaylist(const std::string& filePath) {
+    MediaFilePtr trackPtr = acquireMediaFile(filePath);
     
     // 3. Add pointer to Playlist
     if (trackPtr) {
