@@ -20,30 +20,6 @@ skinparam package {
 ' CONTROLLER LAYER
 ' ============================================================================
 package "Controller" <<Controller>> {
-    ' ---- Enums ----
-    enum AppState {
-        UNINITIALIZED
-        READY
-        RUNNING
-        ERROR
-    }
-
-    enum AudioState {
-        IDLE
-        LOADED
-        PLAYING
-        PAUSED
-        ERROR
-        FINISHED
-    }
-
-    enum SerialState {
-        DISCONNECTED
-        CONNECTING
-        CONNECTED
-        ERROR
-    }
-
     ' ---- Aggregate Interfaces ----
     interface IAppController <<interface>> {
         +initialize() : bool
@@ -116,19 +92,6 @@ package "Controller" <<Controller>> {
 ' MODEL LAYER
 ' ============================================================================
 package "Model" <<Model>> {
-    ' ---- Enums ----
-    enum PlaybackStatus {
-        STOPPED
-        PLAYING
-        PAUSED
-    }
-
-    enum RepeatMode {
-        NONE
-        ONE
-        ALL
-    }
-
     ' ---- Aggregate Interfaces ----
     interface IPlayerState <<interface>> {
         +getPlaybackStatus() : PlaybackStatus
@@ -225,79 +188,12 @@ package "View" <<View>> {
 }
 
 ' ============================================================================
-' UTILS LAYER
-' ============================================================================
-package "Utils" <<Utils>> {
-    enum LogLevel {
-        DEBUG
-        INFO
-        WARNING
-        ERROR
-        NONE
-    }
-
-    interface IBuffer <<interface>> {
-        +write(data, len) : size_t
-        +read(dest, len) : size_t
-        +available() : size_t
-    }
-
-    interface ILogger <<interface>> {
-        +log(level, message) : void
-    }
-
-    interface "IThreadSafeQueue<T>" as IThreadSafeQueue <<interface>> {
-        +push(value) : void
-        +tryPop(value) : bool
-        +waitAndPop(value) : void
-    }
-
-    class Buffer {
-        -mBuffer : vector<uint8_t>
-        -mMutex : mutex
-    }
-
-    class Logger <<Singleton>> {
-        -mLevel : LogLevel
-        -mMutex : mutex
-    }
-
-    class "ThreadSafeQueue<T>" as ThreadSafeQueue {
-        -mQueue : queue<T>
-        -mCondVar : condition_variable
-    }
-
-    Buffer ..|> IBuffer
-    Logger ..|> ILogger
-    ThreadSafeQueue ..|> IThreadSafeQueue
-}
-
-' ============================================================================
 ' INTER-LAYER DEPENDENCIES
 ' ============================================================================
-' Controller -> Model
-Controller.AppController --> Model.IPlayerState : reads/writes
 
-' View -> Controller & Model
-View.ImGuiView --> Controller.IAppController : uses
-View.ImGuiView --> Model.IPlayerState : reads
+Controller <--> Model
+View <--> Controller
 
-' ============================================================================
-' LEGEND
-' ============================================================================
-legend right
-  |= Layer |= Color |= Responsibility |
-  | Controller | Blue | Business logic, orchestration |
-  | Model | Green | Data, state management |
-  | View | Orange | UI rendering |
-  | Utils | Purple | Shared utilities |
-  ----
-  <b>Patterns Used:</b>
-  - MVC Architecture
-  - Facade Pattern
-  - ISP (Interface Segregation)
-  - DIP (Dependency Inversion)
-  - Singleton (Logger)
-endlegend
+
 
 @enduml

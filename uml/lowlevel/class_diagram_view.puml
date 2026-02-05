@@ -153,47 +153,8 @@ package "view" {
     ImGuiView *-- RightSidebar
     ImGuiView *-- PlayerBar
 
-    MainContent --> AssetManager : uses
-    RightSidebar --> AssetManager : uses
-    PlayerBar --> AssetManager : uses
+    MainContent --> AssetManager 
+    RightSidebar --> AssetManager 
+    PlayerBar --> AssetManager
 }
-
-' ============================================================================
-' EXTERNAL DEPENDENCIES (from other layers)
-' ============================================================================
-package "external" <<Frame>> {
-    interface IAppController <<interface>> {
-        .. from Controller layer ..
-    }
-    interface IPlayerState <<interface>> {
-        .. from Model layer ..
-    }
-}
-
-ImGuiView --> IAppController : uses
-ImGuiView --> IPlayerState : reads
-MainContent --> IAppController : uses
-MainContent --> IPlayerState : reads
-RightSidebar --> IAppController : uses
-RightSidebar --> IPlayerState : reads
-PlayerBar --> IAppController : uses
-PlayerBar --> IPlayerState : reads
-
-' ============================================================================
-' NOTES
-' ============================================================================
-note as N1
-  <b>Design Patterns:</b>
-  - Facade (ImGuiView)
-  - Composition over inheritance
-  - Dependency Injection
-  
-  <b>SOLID:</b>
-  - SRP: Each component has single responsibility
-  - ISP: IWindowComponent is minimal
-  - DIP: Components depend on interfaces
-end note
-
-N1 .. ImGuiView
-
 @enduml
