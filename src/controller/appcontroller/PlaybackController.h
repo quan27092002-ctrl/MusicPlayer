@@ -65,6 +65,7 @@ private:
     HistoryManagerImpl* mHistoryManager;
     
     typename std::list<MediaFilePtr>::iterator mCurrentTrackIterator;
+    std::string mCurrentLoadedPath;
     std::function<void()> mStatusCallback;
     
     int getCurrentTrackIndexLocked() const;

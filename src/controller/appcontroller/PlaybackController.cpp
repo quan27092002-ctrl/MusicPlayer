@@ -36,6 +36,8 @@ bool PlaybackControllerImpl::loadTrack(const std::string& filePath) {
     bool success = mAudioPlayer->load(filePath);
     
     if (success) {
+        mCurrentLoadedPath = filePath; // Track loaded path
+        
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
         auto& playlist = mPlaylistManager->getPlaylistRef();
         mCurrentTrackIterator = playlist.end();
@@ -51,6 +53,11 @@ bool PlaybackControllerImpl::loadTrack(const std::string& filePath) {
             }
             index++;
         }
+    } else {
+        // Optional: clear if load failed? Or keep old?
+        // Usually if load fails, state is undefined / old track might still be there but error occurred.
+        // Let's safe keep old or clear? 
+        // If load fails, AudioPlayer might be in weird state.
     }
 
     return success;
@@ -84,16 +91,33 @@ void PlaybackControllerImpl::play() {
     
     // Only play if we have a valid track loaded or selected
     bool canPlay = false;
+    std::string pathToString;
+    bool needsLoad = false;
+    
     {
         // quick check without lock if possible, or reliance on flow
         // Re-locking to check iterator validity is safest
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
         if (mCurrentTrackIterator != mPlaylistManager->getPlaylistRef().end()) {
             canPlay = true;
+            pathToString = (*mCurrentTrackIterator)->getPath();
+        }
+    }
+    
+    if (canPlay) {
+        // Strict check: Is the audio player actually holding this file?
+        // Even if isLoaded() is true, it might be the OLD file.
+        if (mCurrentLoadedPath != pathToString) {
+             needsLoad = true;
         }
     }
 
     if (canPlay) {
+        if (needsLoad) {
+             loadTrack(pathToString);
+             // loadTrack updates mCurrentLoadedPath and usually resets iterator logic, 
+             // but path is same so iterator remains valid/correct.
+        }
         mAudioPlayer->play();
     }
 }
