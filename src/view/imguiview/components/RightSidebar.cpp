@@ -172,30 +172,34 @@ void RightSidebar::renderQueue(ImDrawList* dl, float width, int currentTrack) {
 
 void RightSidebar::renderRecent(ImDrawList* dl, float width) {
     if (mController) {
-        std::vector<int> history = mController->getHistory();
-        for (int i = (int)history.size() - 1; i >= 0 && i >= (int)history.size() - 10; i--) {
-            int trackIdx = history[i];
-            if (trackIdx < 0) continue;
-            
+        size_t historyCount = mController->getHistorySize();
+        
+        // Show last 10 items (or all if < 10)
+        // History Stack: [Oldest ... Newest]
+        // We want to show Newest at top.
+        // So iterate from size-1 down to max(0, size-10)
+        
+        int count = 0;
+        for (int i = (int)historyCount - 1; i >= 0 && count < 10; i--, count++) {
             ImGui::PushID(5000 + i);
             ImVec2 tPos = ImGui::GetCursorScreenPos();
             
-            std::vector<uint8_t> artData = mController->getTrackCoverArt(trackIdx);
-            mAssetManager->drawAlbumCover(dl, tPos, 40, trackIdx, artData);
+            std::vector<uint8_t> artData = mController->getHistoryTrackCoverArt(i);
+            mAssetManager->drawAlbumCover(dl, tPos, 40, i + 5000, artData); // Use synthetic index + offset for cache
             
-            std::string tName = mController->getTrackName(trackIdx);
+            std::string tName = mController->getHistoryTrackName(i);
             tName = stripExtension(tName);
             if (tName.length() > 20) tName = tName.substr(0, 17) + "...";
             
             dl->AddText(ImVec2(tPos.x + 50, tPos.y + 5), Colors::White, tName.c_str());
 
-            std::string tArtist = mController->getTrackArtist(trackIdx);
+            std::string tArtist = mController->getHistoryTrackArtist(i);
             if (tArtist.length() > 25) tArtist = tArtist.substr(0, 22) + "...";
             dl->AddText(ImVec2(tPos.x + 50, tPos.y + 22), Colors::TextSecondary, tArtist.c_str());
             
             ImGui::InvisibleButton("##rside", ImVec2(width - 40, 45));
             if (ImGui::IsItemClicked()) {
-                 mController->playTrack(trackIdx);
+                 mController->playHistoryTrack(i);
             }
             ImGui::PopID();
             ImGui::Dummy(ImVec2(0, 5));

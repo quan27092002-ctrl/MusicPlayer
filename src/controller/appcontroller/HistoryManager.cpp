@@ -37,6 +37,17 @@ std::vector<int> HistoryManagerImpl::getHistory() const {
     return result;
 }
 
+size_t HistoryManagerImpl::getHistorySize() const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mHistoryStack.size();
+}
+
+std::shared_ptr<Model::MediaFile> HistoryManagerImpl::getHistoryItem(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mHistoryStack.size()) return nullptr;
+    return mHistoryStack[index];
+}
+
 void HistoryManagerImpl::pushHistory(MediaFilePtr track) {
     if (!track) return;
     

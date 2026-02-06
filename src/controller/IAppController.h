@@ -43,6 +43,14 @@ public:
     virtual std::string getLibraryTrackAlbum(size_t index) const = 0;
     virtual std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const = 0;
 
+    // History Accessors
+    virtual size_t getHistorySize() const = 0;
+    virtual std::string getHistoryTrackName(size_t index) const = 0;
+    virtual std::string getHistoryTrackArtist(size_t index) const = 0;
+    virtual std::string getHistoryTrackAlbum(size_t index) const = 0;
+    virtual std::vector<uint8_t> getHistoryTrackCoverArt(size_t index) const = 0;
+    virtual void playHistoryTrack(size_t index) = 0;
+
     /**
      * @brief Play a track by index in current queue.
      * @param index Index in the playlist

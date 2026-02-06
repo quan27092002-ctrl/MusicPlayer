@@ -107,41 +107,51 @@ void PlaybackControllerImpl::next() {
         
         if (playlist.empty()) return;
 
-        int currentIndex = getCurrentTrackIndexLocked();
-        
-        // Push current to history before moving
-        bool isPlaying = false;
-        if (mPlayerState) {
-            isPlaying = (mPlayerState->getPlaybackStatus() == Model::PlaybackStatus::PLAYING);
-        }
+        // Consumer Mode:
+        // 1. Push current to history (if valid)
+        // 2. Erase current from queue
+        // 3. Play next (which is now head, or whatever erase returned)
 
-        if (currentIndex >= 0 && mHistoryManager && mCurrentTrackIterator != playlist.end() && isPlaying) {
-            mHistoryManager->pushHistory(*mCurrentTrackIterator);
-        }
-
-        // Move Iterator - Stop at end
-        if (mCurrentTrackIterator == playlist.end()) {
-            mCurrentTrackIterator = playlist.begin();
-        } else {
-            mCurrentTrackIterator++;
-            // If we reached the end, do NOT loop back to begin.
-            // This ensures playback stops.
-            if (mCurrentTrackIterator == playlist.end()) {
-                // Do nothing. pathToLoad remains empty.
-                // Optionally reset to beginning explicitly if desired for "next play" but not auto-play?
-                // User requirement: "phát hết bài cuối trong queue thì sẽ dừng".
-                // So leaving it at end() is correct.
+        // Safety: ensure iterator is valid
+        if (mCurrentTrackIterator != playlist.end()) {
+            if (mHistoryManager) {
+                mHistoryManager->pushHistory(*mCurrentTrackIterator);
             }
+            
+            // Advance iterator by erasing current
+            // erase returns iterator following the removed element
+            mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
+        } else {
+             // If iterator was already at end (shouldn't happen if playing, but maybe manual next at end?)
+             // Just wrap or stop?
+             // If we are at end of queue, and queue is not empty, maybe we should just play the first one?
+             // But in consumer mode, we play HEAD usually?
+             // Let's assume play front if iterator invalid
+             if (!playlist.empty()) {
+                  mCurrentTrackIterator = playlist.begin();
+                  // Don't erase yet, we haven't played it.
+             }
         }
         
+        // If we still have tracks
         if (mCurrentTrackIterator != playlist.end()) {
             pathToLoad = (*mCurrentTrackIterator)->getPath();
+        } else {
+            // Queue is empty (or we reached end). Stop.
+            // If we want to loop? "add 2 times -> loop 2 times".
+            // Since we erased, there is no loop. We just stop.
         }
     }
     
     if (!pathToLoad.empty()) {
         loadTrack(pathToLoad);
         play();
+    } else {
+        // Queue finished
+        // Ensure state is stopped
+        if (mPlayerState) {
+            mPlayerState->setPlaybackStatus(Model::PlaybackStatus::STOPPED);
+        }
     }
 }
 

@@ -391,9 +391,46 @@ std::vector<uint8_t> AppController::getLibraryTrackCoverArt(size_t index) const 
 // ============================================================================
 // IHistoryManager Delegation
 // ============================================================================
+// IHistoryManager Delegation
+// ============================================================================
 
 std::vector<int> AppController::getHistory() const {
     return mHistoryManager->getHistory();
+}
+
+std::shared_ptr<Model::MediaFile> AppController::getHistoryItem(size_t index) const {
+    return mHistoryManager->getHistoryItem(index);
+}
+
+size_t AppController::getHistorySize() const {
+    return mHistoryManager->getHistorySize();
+}
+
+std::string AppController::getHistoryTrackName(size_t index) const {
+    auto item = mHistoryManager->getHistoryItem(index);
+    return item ? item->getFilename() : "Unknown";
+}
+
+std::string AppController::getHistoryTrackArtist(size_t index) const {
+    auto item = mHistoryManager->getHistoryItem(index);
+    return item ? item->getArtist() : "Unknown";
+}
+
+std::string AppController::getHistoryTrackAlbum(size_t index) const {
+    auto item = mHistoryManager->getHistoryItem(index);
+    return item ? item->getAlbum() : "Unknown";
+}
+
+std::vector<uint8_t> AppController::getHistoryTrackCoverArt(size_t index) const {
+    auto item = mHistoryManager->getHistoryItem(index);
+    return item ? item->getCoverArt() : std::vector<uint8_t>{};
+}
+
+void AppController::playHistoryTrack(size_t index) {
+    auto item = mHistoryManager->getHistoryItem(index);
+    if (item && !item->getPath().empty()) {
+        playPlaylist({item->getPath()});
+    }
 }
 
 } // namespace Controller

@@ -126,10 +126,19 @@ public:
     std::string getLibraryTrackAlbum(size_t index) const override;
     std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const override;
 
+    // History Accessors
+    size_t getHistorySize() const override;
+    std::string getHistoryTrackName(size_t index) const override;
+    std::string getHistoryTrackArtist(size_t index) const override;
+    std::string getHistoryTrackAlbum(size_t index) const override;
+    std::vector<uint8_t> getHistoryTrackCoverArt(size_t index) const override;
+    void playHistoryTrack(size_t index) override;
+
     // ========================================================================
     // IHistoryManager Interface (delegates to mHistoryManager)
     // ========================================================================
     std::vector<int> getHistory() const override;
+    std::shared_ptr<Model::MediaFile> getHistoryItem(size_t index) const override;
 
 private:
     // ========================================================================
