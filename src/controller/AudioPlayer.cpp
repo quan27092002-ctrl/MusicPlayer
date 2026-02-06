@@ -63,6 +63,12 @@ void AudioPlayer::setCallback(AudioCallback callback) {
 // ============================================================================
 
 bool AudioPlayer::load(const std::string& filePath) {
+    // Stop playback first so that the manual stop flag is set (in AudioPlaybackImpl).
+    // This prevents the 'Finished' callback from firing when the loader unloads the previous track,
+    // which effectively fixes the "double skip" bug.
+    if (mPlayback) {
+        mPlayback->stop();
+    }
     return mLoader->load(filePath);
 }
 
