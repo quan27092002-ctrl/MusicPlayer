@@ -53,6 +53,9 @@ private:
     
     // Helper to sync playlist data to components
     void updatePlaylistData();
+    
+    // Thread safety for updates
+    std::atomic<bool> mPlaylistDirty;
 };
 
 } // namespace View

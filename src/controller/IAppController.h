@@ -42,6 +42,9 @@ public:
     virtual std::string getLibraryTrackArtist(size_t index) const = 0;
     virtual std::string getLibraryTrackAlbum(size_t index) const = 0;
     virtual std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const = 0;
+    
+    // Callback for playlist updates
+    virtual void setPlaylistUpdatedCallback(std::function<void()> callback) = 0;
 
     // History Accessors
     virtual size_t getHistorySize() const = 0;

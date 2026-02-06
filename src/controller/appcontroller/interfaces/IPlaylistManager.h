@@ -13,6 +13,7 @@
 #include <vector>
 #include <memory>
 #include <cstdint>
+#include <functional>
 #include "MediaFile.h"
 
 namespace Controller {
@@ -107,6 +108,16 @@ public:
     virtual std::string getLibraryTrackArtist(size_t index) const = 0;
     virtual std::string getLibraryTrackAlbum(size_t index) const = 0;
     virtual std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const = 0;
+
+    /**
+     * @brief Set a callback to be notified when playlist changes.
+     */
+    virtual void setPlaylistUpdatedCallback(std::function<void()> callback) = 0;
+    
+    /**
+     * @brief Notify listeners that playlist has updated.
+     */
+    virtual void notifyPlaylistUpdated() = 0;
 };
 
 } // namespace Controller

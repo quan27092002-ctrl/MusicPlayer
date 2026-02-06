@@ -237,4 +237,21 @@ PlaylistManagerImpl::MediaFilePtr PlaylistManagerImpl::createMediaFile(const std
     return std::make_shared<Model::MediaFile>(filename, filePath, duration, artist, album, coverArt);
 }
 
+void PlaylistManagerImpl::setPlaylistUpdatedCallback(std::function<void()> callback) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    mPlaylistUpdatedCallback = callback;
+}
+
+void PlaylistManagerImpl::notifyPlaylistUpdated() {
+    // Invoke callback WITHOUT holding mutex to avoid deadlocks
+    std::function<void()> cb;
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        cb = mPlaylistUpdatedCallback;
+    }
+    if (cb) {
+        cb();
+    }
+}
+
 } // namespace Controller

@@ -100,6 +100,7 @@ void PlaybackControllerImpl::next() {
     if (!mPlaylistManager) return;
     
     std::string pathToLoad;
+    bool shouldNotify = false;
     
     {
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
@@ -107,40 +108,64 @@ void PlaybackControllerImpl::next() {
         
         if (playlist.empty()) return;
 
-        // Consumer Mode:
+    // Consumer Mode:
         // 1. Push current to history (if valid)
-        // 2. Erase current from queue
-        // 3. Play next (which is now head, or whatever erase returned)
+        // 2. Erase current from queue (UNLESS it's the last one)
+        // 3. Play next
 
         // Safety: ensure iterator is valid
         if (mCurrentTrackIterator != playlist.end()) {
-            if (mHistoryManager) {
-                mHistoryManager->pushHistory(*mCurrentTrackIterator);
-            }
             
-            // Advance iterator by erasing current
-            // erase returns iterator following the removed element
-            mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
+            // Check if this is the last track
+            auto nextIt = mCurrentTrackIterator;
+            std::advance(nextIt, 1);
+            bool isLastTrack = (nextIt == playlist.end());
+
+            if (isLastTrack) {
+                // It is the last track. Use Special Behavior.
+                // 1. Push to history (so it shows in history too)
+                if (mHistoryManager) {
+                    mHistoryManager->pushHistory(*mCurrentTrackIterator);
+                }
+                
+                // 2. DO NOT erase. Keep it as "Current".
+                // We want the UI to show this track as "Current Song" even if stopped.
+                
+                // 3. Do NOT set pathToLoad, so we enter the "Queue finished" block below.
+                shouldNotify = true; // Helper to ensure history update is reflected if needed
+                
+                // Stop playback state manually here or let the "else" block handle it?
+                // The "else" block handles it if pathToLoad is empty.
+                
+            } else {
+                // NOT the last track. Normal Consumer Behavior.
+                if (mHistoryManager) {
+                    mHistoryManager->pushHistory(*mCurrentTrackIterator);
+                }
+                
+                // Advance iterator by erasing current
+                // erase returns iterator following the removed element
+                mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
+                
+                shouldNotify = true;
+                
+                 // If we still have tracks (which we should, since it wasn't last)
+                if (mCurrentTrackIterator != playlist.end()) {
+                    pathToLoad = (*mCurrentTrackIterator)->getPath();
+                }
+            }
         } else {
              // If iterator was already at end (shouldn't happen if playing, but maybe manual next at end?)
-             // Just wrap or stop?
-             // If we are at end of queue, and queue is not empty, maybe we should just play the first one?
-             // But in consumer mode, we play HEAD usually?
-             // Let's assume play front if iterator invalid
              if (!playlist.empty()) {
                   mCurrentTrackIterator = playlist.begin();
-                  // Don't erase yet, we haven't played it.
+                  pathToLoad = (*mCurrentTrackIterator)->getPath();
              }
         }
-        
-        // If we still have tracks
-        if (mCurrentTrackIterator != playlist.end()) {
-            pathToLoad = (*mCurrentTrackIterator)->getPath();
-        } else {
-            // Queue is empty (or we reached end). Stop.
-            // If we want to loop? "add 2 times -> loop 2 times".
-            // Since we erased, there is no loop. We just stop.
-        }
+    }
+
+    // Call notification OUTSIDE the lock
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
     }
     
     if (!pathToLoad.empty()) {
@@ -236,36 +261,44 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
     auto trackPtr = mPlaylistManager->acquireMediaFile(filePath);
     if (!trackPtr) return;
     
-    std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
-    auto& playlist = mPlaylistManager->getPlaylistRef();
-    
-    if (playlist.empty()) {
-        playlist.push_back(trackPtr);
-        mCurrentTrackIterator = playlist.begin(); // Ready to play
-    } else {
-        // Insert AFTER current track
-        auto insertPos = mCurrentTrackIterator;
-        if (insertPos != playlist.end()) {
-            insertPos++; 
-        } else {
-            insertPos = playlist.end();
-        }
-        playlist.insert(insertPos, trackPtr);
+    bool shouldNotify = false;
+
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        auto& playlist = mPlaylistManager->getPlaylistRef();
         
-        // If nothing was playing (stopped state with non-empty playlist?), 
-        // this just adds to queue.
-        // If we want to move iterator if it was at end?
-        if (mCurrentTrackIterator == playlist.end()) {
-            mCurrentTrackIterator = playlist.begin(); // Reset if we were at end
+        if (playlist.empty()) {
+            playlist.push_back(trackPtr);
+            mCurrentTrackIterator = playlist.begin(); // Ready to play
+        } else {
+            // Insert AFTER current track
+            auto insertPos = mCurrentTrackIterator;
+            if (insertPos != playlist.end()) {
+                insertPos++; 
+            } else {
+                insertPos = playlist.end();
+            }
+            playlist.insert(insertPos, trackPtr);
+            
+            // If nothing was playing (stopped state with non-empty playlist?), 
+            // this just adds to queue.
+            // If we want to move iterator if it was at end?
+            if (mCurrentTrackIterator == playlist.end()) {
+                mCurrentTrackIterator = playlist.begin(); // Reset if we were at end
+            }
         }
+        shouldNotify = true;
+    }
+
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
     }
 }
 
 void PlaybackControllerImpl::replaceQueue(const std::vector<std::string>& filePaths) {
     if (!mPlaylistManager) return;
 
-    // 1. Acquire MediaFiles OUTSIDE the lock (to avoid potential recursion if acquire locks)
-    // Actually acquireMediaFile locks internally.
+    // 1. Acquire MediaFiles OUTSIDE the lock
     std::vector<MediaFilePtr> newTracks;
     newTracks.reserve(filePaths.size());
     for (const auto& path : filePaths) {
@@ -273,14 +306,12 @@ void PlaybackControllerImpl::replaceQueue(const std::vector<std::string>& filePa
         if (ptr) newTracks.push_back(ptr);
     }
     
+    bool shouldNotify = false;
+
     // 2. Lock and Replace
     {
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
         auto& playlist = mPlaylistManager->getPlaylistRef();
-        
-        // Push current to history if playing? 
-        // Logic depends on UX. "Play All" usually resets history context or starts fresh.
-        // Let's just clear.
         
         playlist.clear();
         for (const auto& track : newTracks) {
@@ -293,6 +324,11 @@ void PlaybackControllerImpl::replaceQueue(const std::vector<std::string>& filePa
         } else {
             mCurrentTrackIterator = playlist.end();
         }
+        shouldNotify = true;
+    }
+
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
     }
     
     // 4. Play
@@ -315,6 +351,8 @@ void PlaybackControllerImpl::queuePlaylist(const std::vector<std::string>& fileP
     
     if (newTracks.empty()) return;
 
+    bool shouldNotify = false;
+
     {
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
         auto& playlist = mPlaylistManager->getPlaylistRef();
@@ -325,13 +363,15 @@ void PlaybackControllerImpl::queuePlaylist(const std::vector<std::string>& fileP
             playlist.push_back(track);
         }
         
-        // If playlist was empty, set iterator to beginning so we can play immediately if needed
-        // (though this function implies just queuing, caller decides to play?)
-        // If caller calls this whenstopped/empty, they might expect play.
-        // But usually "Queue" means add to end.
         if (wasEmpty) {
             mCurrentTrackIterator = playlist.begin();
         }
+        
+        shouldNotify = true;
+    }
+
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
     }
 }
 

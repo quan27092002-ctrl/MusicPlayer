@@ -17,6 +17,7 @@ ImGuiView::ImGuiView(std::shared_ptr<Controller::IAppController> controller,
     : mController(controller)
     , mPlayerState(playerState)
     , mRunning(false)
+    , mPlaylistDirty(false)
 {
     // Lifecycle manager created first
     mLifecycle = std::make_unique<LifecycleManager>();
@@ -41,6 +42,11 @@ bool ImGuiView::initialize() {
 
     // Initial playlist load
     updatePlaylistData();
+
+    // Subscribe to playlist updates from Controller
+    mController->setPlaylistUpdatedCallback([this]() {
+        this->updatePlaylistData();
+    });
 
     mRunning = true;
     return true;

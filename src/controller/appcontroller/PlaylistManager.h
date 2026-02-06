@@ -15,6 +15,7 @@
 #include <list>
 #include <mutex>
 #include <memory>
+#include <functional>
 
 namespace Controller {
 
@@ -61,10 +62,15 @@ public:
     std::vector<MediaFilePtr>& getMusicLibraryRef();
     std::mutex& getMutex() const;
 
+    // Callback support
+    void setPlaylistUpdatedCallback(std::function<void()> callback) override;
+    void notifyPlaylistUpdated() override;
+
 private:
     std::vector<MediaFilePtr> mMusicLibrary;
     std::list<MediaFilePtr> mPlaylist;
     mutable std::mutex mMutex;
+    std::function<void()> mPlaylistUpdatedCallback;
     
     MediaFilePtr findInLibrary(const std::string& filePath) const;
     MediaFilePtr createMediaFile(const std::string& filePath);

@@ -433,4 +433,18 @@ void AppController::playHistoryTrack(size_t index) {
     }
 }
 
+void AppController::setPlaylistUpdatedCallback(std::function<void()> callback) {
+    // Forward to PlaylistManager
+    mPlaylistManager->setPlaylistUpdatedCallback(callback); 
+    // Wait, PlaylistManager callback calls THIS callback?
+    // PlaylistManager stores a std::function. 
+    // Yes, we just pass the View's callback into PlaylistManager.
+    // Or we could wrap it if we needed to do AppController logic.
+    // For now, direct forwarding is fine.
+}
+
+void AppController::notifyPlaylistUpdated() {
+    mPlaylistManager->notifyPlaylistUpdated();
+}
+
 } // namespace Controller
