@@ -231,18 +231,35 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
     (void)contentH;
     ImGui::Indent(10);
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
-    ImGui::Text("Music Library (%zu tracks)", mPlaylistDisplay.size());
+    ImGui::Text("Music Library (%zu tracks)", mController ? mController->getLibrarySize() : 0);
     ImGui::PopStyleColor();
+    
+    ImGui::SameLine(mainW - 100);
+    if (ImGui::Button("Play All", ImVec2(80, 24)) && mController) {
+        // Collect all library tracks and play
+        std::vector<std::string> allPaths;
+        size_t count = mController->getLibrarySize();
+        for (size_t i = 0; i < count; ++i) {
+            std::string p = mController->getLibraryTrackPath(i);
+            if (!p.empty()) allPaths.push_back(p);
+        }
+        if (!allPaths.empty()) {
+            mController->playPlaylist(allPaths);
+        }
+    }
+
     ImGui::Spacing();
     
     int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
     ImDrawList* cdl = ImGui::GetWindowDrawList();
     
-    for (size_t i = 0; i < mPlaylistDisplay.size(); i++) {
-        std::string trackName = mPlaylistDisplay[i];
+    size_t libSize = mController ? mController->getLibrarySize() : 0;
+    
+    for (size_t i = 0; i < libSize; i++) {
+        std::string trackName = mController ? mController->getLibraryTrackName(i) : "";
         
-        std::string sArtist = mController ? mController->getTrackArtist(i) : "";
-        std::string sAlbum = mController ? mController->getTrackAlbum(i) : "";
+        std::string sArtist = mController ? mController->getLibraryTrackArtist(i) : "";
+        std::string sAlbum = mController ? mController->getLibraryTrackAlbum(i) : "";
         
         bool match = matchesSearch(trackName, mSearchQuery) || 
                      matchesSearch(sArtist.c_str(), mSearchQuery) || 
@@ -250,7 +267,16 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
                      
         if (!match) continue;
         
-        bool isCurrent = (currentTrack == (int)i);
+        // Is this track currently playing?
+        // Logic: Check if current playing path matches this library path
+        bool isCurrent = false;
+        if (currentTrack >= 0 && mController) {
+            std::string currPath = mController->getTrackPath(currentTrack); // from queue
+            std::string thisPath = mController->getLibraryTrackPath(i); // from library
+            if (!currPath.empty() && currPath == thisPath) {
+                 isCurrent = true;
+            }
+        }
         
         ImGui::PushID((int)i);
         ImVec2 rowPos = ImGui::GetCursorScreenPos();
@@ -266,7 +292,7 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         
         // Album cover
         std::vector<uint8_t> artData;
-        if (mController) artData = mController->getTrackCoverArt(i);
+        if (mController) artData = mController->getLibraryTrackCoverArt(i);
         mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, (int)i, artData);
         
         // Track info
@@ -280,25 +306,34 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         
         ImGui::SetCursorPosX(95);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
-        std::string artistStr = mController ? mController->getTrackArtist(i) : "Unknown Artist";
-        std::string albumStr = mController ? mController->getTrackAlbum(i) : "Unknown Album";
-        ImGui::Text("%s | %s", artistStr.c_str(), albumStr.c_str());
+        ImGui::Text("%s | %s", sArtist.c_str(), sAlbum.c_str());
         ImGui::PopStyleColor();
         
-        // Add to playlist button (Original was Add Next, now we use it for Playlist Menu)
+        // Add to playlist button
         ImGui::SameLine(mainW - 60);
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
         if (ImGui::Button("+##add", ImVec2(25, 25))) {
              mShowAddToPlaylistMenu = true;
-             mAddToPlaylistTrackIdx = (int)i;
+             mAddToPlaylistTrackIdx = (int)i; // Use library index
         }
         ImGui::PopStyleColor(2);
         
-        // Full row clickable
+        // Full row clickable -> Play Library Track
         ImGui::SetCursorScreenPos(rowPos);
         if (ImGui::InvisibleButton("##track", ImVec2(mainW - 80, 45)) && mController) {
-            mController->playTrack((int)i);
+            // Play specifically this track from library
+            // This usually means: Replace queue with this track? Or play from library context?
+            // Given "Play All" exists, maybe clicking one just plays it (replaces queue with 1 item)?
+            // Or maybe it effectively does "Play All" but starts at index i?
+            // Users usually expect "Play this song" to play it.
+            // Let's use the explicit playLibraryTrack we defined in interface?
+             // Actually we removed playLibraryTrack in favor of playPlaylist.
+             // To play a specific library track, we can just replace queue with it.
+             std::string p = mController->getLibraryTrackPath(i);
+             if (!p.empty()) {
+                  mController->playPlaylist({p});
+             }
         }
         
         ImGui::PopID();
@@ -310,7 +345,7 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
 void MainContent::renderPlaylistTab() {
     // Auto-populate default playlists if library is loaded and not yet done
     if (!mDefaultPlaylistsPopulated && mController) {
-        size_t totalTracks = mController->getPlaylistSize(); // Currently loadDirectory adds to queue
+        size_t totalTracks = mController->getLibrarySize(); // Use Library size
         if (totalTracks > 0) {
             // Distribute tracks: 0-9 to Chill, 10-19 to High Energy, 20-29 to Focus
             for (int i = 0; i < 3 && i < (int)mPlaylists.size(); ++i) {
@@ -318,7 +353,7 @@ void MainContent::renderPlaylistTab() {
                 for (int j = 0; j < 10; ++j) {
                     int trackIdx = startIdx + j;
                     if (trackIdx < (int)totalTracks) {
-                        std::string path = mController->getTrackPath(trackIdx);
+                        std::string path = mController->getLibraryTrackPath(trackIdx); // Use Library accessor
                         if (!path.empty()) {
                             mPlaylists[i].trackPaths.push_back(path);
                         }
@@ -470,17 +505,8 @@ void MainContent::renderPlaylistDetailView() {
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
         if (mController && !pl.trackPaths.empty()) {
-             // Logic: If playing, append to queue. If stopped/paused, replace and play.
-             bool isPlaying = false;
-             if (mPlayerState) {
-                 isPlaying = (mPlayerState->getPlaybackStatus() == Model::PlaybackStatus::PLAYING);
-             }
-             
-             if (isPlaying) {
-                 mController->queuePlaylist(pl.trackPaths);
-             } else {
-                 mController->playPlaylist(pl.trackPaths);
-             }
+             // Always replace queue and play when "Play All" is clicked
+             mController->playPlaylist(pl.trackPaths);
         }
     }
     ImGui::PopStyleColor(2);

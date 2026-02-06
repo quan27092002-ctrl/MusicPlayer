@@ -368,6 +368,26 @@ std::shared_ptr<Model::MediaFile> AppController::acquireMediaFile(const std::str
     return mPlaylistManager->acquireMediaFile(filePath);
 }
 
+// Library Accessors Implementation
+size_t AppController::getLibrarySize() const {
+    return mPlaylistManager->getLibrarySize();
+}
+std::string AppController::getLibraryTrackName(size_t index) const {
+    return mPlaylistManager->getLibraryTrackName(index);
+}
+std::string AppController::getLibraryTrackPath(size_t index) const {
+    return mPlaylistManager->getLibraryTrackPath(index);
+}
+std::string AppController::getLibraryTrackArtist(size_t index) const {
+    return mPlaylistManager->getLibraryTrackArtist(index);
+}
+std::string AppController::getLibraryTrackAlbum(size_t index) const {
+    return mPlaylistManager->getLibraryTrackAlbum(index);
+}
+std::vector<uint8_t> AppController::getLibraryTrackCoverArt(size_t index) const {
+    return mPlaylistManager->getLibraryTrackCoverArt(index);
+}
+
 // ============================================================================
 // IHistoryManager Delegation
 // ============================================================================

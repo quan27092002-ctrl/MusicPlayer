@@ -52,6 +52,7 @@ size_t PlaylistManagerImpl::getPlaylistSize() const {
 }
 
 size_t PlaylistManagerImpl::loadDirectory(const std::string& directoryPath) {
+    std::cerr << "DEBUG: PlaylistManager::loadDirectory scanning: " << directoryPath << std::endl;
     size_t count = 0;
     
     try {
@@ -62,7 +63,9 @@ size_t PlaylistManagerImpl::loadDirectory(const std::string& directoryPath) {
                     [](unsigned char c){ return std::tolower(c); });
                 
                 if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
-                    addToPlaylist(entry.path().string());
+                    // std::cerr << "Found audio file: " << entry.path().string() << std::endl;
+                    // Acquire file into library, do NOT add to playlist (queue) automatically
+                    acquireMediaFile(entry.path().string());
                     count++;
                 }
             }
@@ -102,6 +105,42 @@ uint32_t PlaylistManagerImpl::getTrackDuration(size_t index) const {
 std::vector<uint8_t> PlaylistManagerImpl::getTrackCoverArt(size_t index) const {
     auto track = getTrackAt(index);
     return track ? track->getCoverArt() : std::vector<uint8_t>{};
+}
+
+// Library Accessors Implementation
+size_t PlaylistManagerImpl::getLibrarySize() const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mMusicLibrary.size();
+}
+
+std::string PlaylistManagerImpl::getLibraryTrackName(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mMusicLibrary.size()) return "";
+    return mMusicLibrary[index]->getFilename();
+}
+
+std::string PlaylistManagerImpl::getLibraryTrackPath(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mMusicLibrary.size()) return "";
+    return mMusicLibrary[index]->getPath();
+}
+
+std::string PlaylistManagerImpl::getLibraryTrackArtist(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mMusicLibrary.size()) return "Unknown Artist";
+    return mMusicLibrary[index]->getArtist();
+}
+
+std::string PlaylistManagerImpl::getLibraryTrackAlbum(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mMusicLibrary.size()) return "Unknown Album";
+    return mMusicLibrary[index]->getAlbum();
+}
+
+std::vector<uint8_t> PlaylistManagerImpl::getLibraryTrackCoverArt(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mMusicLibrary.size()) return {};
+    return mMusicLibrary[index]->getCoverArt();
 }
 
 PlaylistManagerImpl::MediaFilePtr PlaylistManagerImpl::getTrackAt(size_t index) const {

@@ -35,6 +35,14 @@ class IAppController : public IAppLifecycle,
                        public IHistoryManager,
                        public IBoardCommunicator {
 public:
+    // Library Accessors (Re-exposed from IPlaylistManager)
+    virtual size_t getLibrarySize() const = 0;
+    virtual std::string getLibraryTrackName(size_t index) const = 0;
+    virtual std::string getLibraryTrackPath(size_t index) const = 0;
+    virtual std::string getLibraryTrackArtist(size_t index) const = 0;
+    virtual std::string getLibraryTrackAlbum(size_t index) const = 0;
+    virtual std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const = 0;
+
     /**
      * @brief Play a track by index in current queue.
      * @param index Index in the playlist

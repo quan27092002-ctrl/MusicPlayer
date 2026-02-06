@@ -99,6 +99,14 @@ public:
      * @return Shared pointer to MediaFile, or nullptr if invalid.
      */
     virtual std::shared_ptr<Model::MediaFile> acquireMediaFile(const std::string& filePath) = 0;
+
+    // Library Accessors
+    virtual size_t getLibrarySize() const = 0;
+    virtual std::string getLibraryTrackName(size_t index) const = 0;
+    virtual std::string getLibraryTrackPath(size_t index) const = 0;
+    virtual std::string getLibraryTrackArtist(size_t index) const = 0;
+    virtual std::string getLibraryTrackAlbum(size_t index) const = 0;
+    virtual std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const = 0;
 };
 
 } // namespace Controller

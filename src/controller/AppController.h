@@ -118,6 +118,14 @@ public:
     std::vector<uint8_t> getTrackCoverArt(size_t index) const override;
     std::shared_ptr<Model::MediaFile> acquireMediaFile(const std::string& filePath) override;
     
+    // Library Accessors
+    size_t getLibrarySize() const override;
+    std::string getLibraryTrackName(size_t index) const override;
+    std::string getLibraryTrackPath(size_t index) const override;
+    std::string getLibraryTrackArtist(size_t index) const override;
+    std::string getLibraryTrackAlbum(size_t index) const override;
+    std::vector<uint8_t> getLibraryTrackCoverArt(size_t index) const override;
+
     // ========================================================================
     // IHistoryManager Interface (delegates to mHistoryManager)
     // ========================================================================
