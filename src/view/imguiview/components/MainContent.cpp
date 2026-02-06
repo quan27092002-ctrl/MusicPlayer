@@ -631,7 +631,8 @@ void MainContent::deletePlaylist(int idx) {
 
 void MainContent::addTrackToPlaylist(int trackIdx, int playlistIdx) {
     if (playlistIdx >= 0 && playlistIdx < (int)mPlaylists.size() && mController) {
-        std::string path = mController->getTrackPath(trackIdx);
+        // Fix: Use getLibraryTrackPath because the index comes from the Music Tab (Library)
+        std::string path = mController->getLibraryTrackPath(trackIdx);
         if (!path.empty()) {
             mPlaylists[playlistIdx].trackPaths.push_back(path);
         }
