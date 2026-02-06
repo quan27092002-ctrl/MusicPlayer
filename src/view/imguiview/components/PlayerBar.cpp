@@ -137,7 +137,10 @@ void PlayerBar::render() {
             ImVec2(centerBtn.x - 18, centerBtn.y - 18), 
             ImVec2(centerBtn.x + 18, centerBtn.y + 18));
             
-        pdl->AddCircleFilled(centerBtn, 18, hovered ? Colors::TextSecondary : Colors::White, 32);
+        bool isDisabled = (currentTrack < 0);
+        ImU32 btnColor = isDisabled ? Colors::TextMuted : (hovered ? Colors::TextSecondary : Colors::White);
+        
+        pdl->AddCircleFilled(centerBtn, 18, btnColor, 32);
         
         // Icon
         if (isPlaying) {
@@ -154,8 +157,13 @@ void PlayerBar::render() {
         }
         
         ImGui::SetCursorPos(ImVec2(centerX - 18, controlsY));
-        if (ImGui::InvisibleButton("##play", ImVec2(36, 36)) && mController) {
-            isPlaying ? mController->pause() : mController->play();
+        if (!isDisabled) {
+            if (ImGui::InvisibleButton("##play", ImVec2(36, 36)) && mController) {
+                isPlaying ? mController->pause() : mController->play();
+            }
+        } else {
+            // Check button to consume event but do nothing, or just don't draw button
+             ImGui::InvisibleButton("##play_disabled", ImVec2(36, 36));
         }
     }
     

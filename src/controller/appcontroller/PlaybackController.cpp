@@ -82,7 +82,20 @@ void PlaybackControllerImpl::play() {
         mAudioPlayer->setVolume(mPlayerState->getVolume());
     }
     
-    mAudioPlayer->play();
+    // Only play if we have a valid track loaded or selected
+    bool canPlay = false;
+    {
+        // quick check without lock if possible, or reliance on flow
+        // Re-locking to check iterator validity is safest
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        if (mCurrentTrackIterator != mPlaylistManager->getPlaylistRef().end()) {
+            canPlay = true;
+        }
+    }
+
+    if (canPlay) {
+        mAudioPlayer->play();
+    }
 }
 
 void PlaybackControllerImpl::pause() {
@@ -150,6 +163,9 @@ void PlaybackControllerImpl::next() {
         play();
     } else {
         // Queue finished
+        if (mAudioPlayer) {
+            mAudioPlayer->stop();
+        }
         // Ensure state is stopped
         if (mPlayerState) {
             mPlayerState->setPlaybackStatus(Model::PlaybackStatus::STOPPED);

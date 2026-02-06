@@ -276,6 +276,7 @@ TEST_F(AppControllerTest, LoadTrack) {
 
 TEST_F(AppControllerTest, Play) {
     controller->initialize();
+    controller->addToPlaylist("/path/to/song.mp3");
     controller->loadTrack("/path/to/song.mp3");
     controller->play();
     
@@ -380,6 +381,7 @@ TEST_F(AppControllerTest, FirstTrackSetsIndex) {
 TEST_F(AppControllerTest, CommandPlay) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
+    controller->addToPlaylist("/path/song.mp3");
     controller->loadTrack("/path/song.mp3");
     
     mockSerial->simulateReceive("PLAY");
@@ -416,6 +418,7 @@ TEST_F(AppControllerTest, CommandMute) {
 TEST_F(AppControllerTest, CommandCaseInsensitive) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
+    controller->addToPlaylist("/path/song.mp3");
     controller->loadTrack("/path/song.mp3");
     
     mockSerial->simulateReceive("play");  // lowercase
@@ -438,6 +441,8 @@ TEST_F(AppControllerTest, StatusSentOnConnect) {
 TEST_F(AppControllerTest, StatusContainsPlaybackState) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
+    controller->addToPlaylist("/path/song.mp3");
+    controller->loadTrack("/path/song.mp3");
     controller->play();
     
     bool foundPlaying = false;
