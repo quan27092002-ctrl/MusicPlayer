@@ -505,8 +505,12 @@ void MainContent::renderPlaylistDetailView() {
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
     if (ImGui::Button("PLAY ALL", ImVec2(120, 36))) {
         if (mController && !pl.trackPaths.empty()) {
-             // Always replace queue and play when "Play All" is clicked
-             mController->playPlaylist(pl.trackPaths);
+             // Logic: If queue has items, append. If empty, replace and play.
+             if (mController->getPlaylistSize() > 0) {
+                 mController->queuePlaylist(pl.trackPaths);
+             } else {
+                 mController->playPlaylist(pl.trackPaths);
+             }
         }
     }
     ImGui::PopStyleColor(2);
