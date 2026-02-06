@@ -43,7 +43,7 @@ void AudioPlaybackImpl::play() {
     if (currentState == AudioState::PAUSED) {
         Mix_ResumeMusic();
     } else if (currentState == AudioState::LOADED || currentState == AudioState::PLAYING) {
-        Mix_PlayMusic(music, 0);
+        Mix_PlayMusic(music, 1); // Play 1 time (arguments: music, loops). 0 might mean 0 times in some versions, 1 is safer for "play once".
     }
 
     mLifecycle->setState(AudioState::PLAYING);

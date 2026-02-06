@@ -6,6 +6,7 @@
  */
 
 #include "PlaybackController.h"
+#include <iostream>
 
 namespace Controller {
 
@@ -110,52 +111,28 @@ void PlaybackControllerImpl::next() {
 
     // Consumer Mode:
         // 1. Push current to history (if valid)
-        // 2. Erase current from queue (UNLESS it's the last one)
+        // 2. Erase current from queue
         // 3. Play next
 
         // Safety: ensure iterator is valid
         if (mCurrentTrackIterator != playlist.end()) {
             
-            // Check if this is the last track
-            auto nextIt = mCurrentTrackIterator;
-            std::advance(nextIt, 1);
-            bool isLastTrack = (nextIt == playlist.end());
-
-            if (isLastTrack) {
-                // It is the last track. Use Special Behavior.
-                // 1. Push to history (so it shows in history too)
-                if (mHistoryManager) {
-                    mHistoryManager->pushHistory(*mCurrentTrackIterator);
-                }
-                
-                // 2. DO NOT erase. Keep it as "Current".
-                // We want the UI to show this track as "Current Song" even if stopped.
-                
-                // 3. Do NOT set pathToLoad, so we enter the "Queue finished" block below.
-                shouldNotify = true; // Helper to ensure history update is reflected if needed
-                
-                // Stop playback state manually here or let the "else" block handle it?
-                // The "else" block handles it if pathToLoad is empty.
-                
-            } else {
-                // NOT the last track. Normal Consumer Behavior.
-                if (mHistoryManager) {
-                    mHistoryManager->pushHistory(*mCurrentTrackIterator);
-                }
-                
-                // Advance iterator by erasing current
-                // erase returns iterator following the removed element
-                mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
-                
-                shouldNotify = true;
-                
-                 // If we still have tracks (which we should, since it wasn't last)
-                if (mCurrentTrackIterator != playlist.end()) {
-                    pathToLoad = (*mCurrentTrackIterator)->getPath();
-                }
+            if (mHistoryManager) {
+                mHistoryManager->pushHistory(*mCurrentTrackIterator);
+            }
+            
+            // Advance iterator by erasing current
+            // erase returns iterator following the removed element
+            mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
+            
+            shouldNotify = true;
+            
+             // If we still have tracks
+            if (mCurrentTrackIterator != playlist.end()) {
+                pathToLoad = (*mCurrentTrackIterator)->getPath();
             }
         } else {
-             // If iterator was already at end (shouldn't happen if playing, but maybe manual next at end?)
+             // If iterator was already at end
              if (!playlist.empty()) {
                   mCurrentTrackIterator = playlist.begin();
                   pathToLoad = (*mCurrentTrackIterator)->getPath();
@@ -176,6 +153,7 @@ void PlaybackControllerImpl::next() {
         // Ensure state is stopped
         if (mPlayerState) {
             mPlayerState->setPlaybackStatus(Model::PlaybackStatus::STOPPED);
+            mPlayerState->setCurrentTrackIndex(-1);
         }
     }
 }
