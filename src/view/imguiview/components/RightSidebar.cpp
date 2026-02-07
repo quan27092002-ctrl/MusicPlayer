@@ -176,7 +176,7 @@ void RightSidebar::renderConnectionPanel() {
     } else {
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
         if (ImGui::Button("Connect", ImVec2(90, 0))) {
-            if (mController) mController->connectToBoard(mPortBuffer, 115200);
+            if (mController) mController->connectToBoard(mPortBuffer, 9600);
         }
         ImGui::PopStyleColor();
     }

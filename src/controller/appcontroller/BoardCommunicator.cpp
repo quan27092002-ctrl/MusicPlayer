@@ -8,6 +8,7 @@
 #include "BoardCommunicator.h"
 #include <sstream>
 #include <algorithm>
+#include "../../utils/Logger.h"
 
 namespace Controller {
 
@@ -86,6 +87,8 @@ void BoardCommunicatorImpl::setBoardEventCallback(BoardEventCallback callback) {
 
 void BoardCommunicatorImpl::processCommand(const std::string& rawData) {
     if (!mBoardEventCallback) return;
+    
+    LOG_INFO("BoardCommunicator received: " << rawData);
 
     std::string cmd = rawData;
     // Remove trailing newline/cr if present
@@ -103,9 +106,19 @@ void BoardCommunicatorImpl::processCommand(const std::string& rawData) {
         return;
     }
     
-    // 2. CMD:<action>
+    // 2. CMD:<action> or cmd:<action>
+    bool isCmd = false;
+    std::string action;
+
     if (cmd.rfind("CMD:", 0) == 0) {
-        std::string action = cmd.substr(4);
+        action = cmd.substr(4);
+        isCmd = true;
+    } else if (cmd.rfind("cmd:", 0) == 0) {
+        action = cmd.substr(4);
+        isCmd = true;
+    }
+
+    if (isCmd) {
         std::transform(action.begin(), action.end(), action.begin(), ::toupper);
         
         if (action == "PLAY") {
