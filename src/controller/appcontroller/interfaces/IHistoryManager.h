@@ -45,6 +45,7 @@ public:
      * @param index Index into history stack (0 = oldest).
      * @return Smart pointer to MediaFile.
      */
+    virtual std::string getHistoryTrackPath(size_t index) const = 0; // New
     virtual std::shared_ptr<Model::MediaFile> getHistoryItem(size_t index) const = 0;
 };
 

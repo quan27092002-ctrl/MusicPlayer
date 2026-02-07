@@ -441,6 +441,10 @@ std::string AppController::getHistoryTrackAlbum(size_t index) const {
     return item ? item->getAlbum() : "Unknown";
 }
 
+std::string AppController::getHistoryTrackPath(size_t index) const {
+    return mHistoryManager->getHistoryTrackPath(index);
+}
+
 std::vector<uint8_t> AppController::getHistoryTrackCoverArt(size_t index) const {
     auto item = mHistoryManager->getHistoryItem(index);
     return item ? item->getCoverArt() : std::vector<uint8_t>{};

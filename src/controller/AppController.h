@@ -145,6 +145,7 @@ public:
     std::string getHistoryTrackName(size_t index) const override;
     std::string getHistoryTrackArtist(size_t index) const override;
     std::string getHistoryTrackAlbum(size_t index) const override;
+    std::string getHistoryTrackPath(size_t index) const override;
     std::vector<uint8_t> getHistoryTrackCoverArt(size_t index) const override;
     void playHistoryTrack(size_t index) override;
 

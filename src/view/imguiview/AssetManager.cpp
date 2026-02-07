@@ -41,12 +41,12 @@ SDL_Texture* AssetManager::createTextureFromMemory(const std::vector<uint8_t>& d
     return texture;
 }
 
-void AssetManager::drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int trackIndex, const std::vector<uint8_t>& data) {
+void AssetManager::drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, const std::string& cacheKey, const std::vector<uint8_t>& data) {
     bool drawn = false;
     
     // Check or load cache
     SDL_Texture* texture = nullptr;
-    auto it = mCoverCache.find(trackIndex);
+    auto it = mCoverCache.find(cacheKey);
     
     if (it != mCoverCache.end()) {
         texture = it->second;
@@ -54,7 +54,7 @@ void AssetManager::drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int tr
         if (!data.empty()) {
             texture = createTextureFromMemory(data);
             if (texture) {
-                mCoverCache[trackIndex] = texture;
+                mCoverCache[cacheKey] = texture;
             }
         }
     }
@@ -66,7 +66,9 @@ void AssetManager::drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int tr
 
     if (!drawn) {
         // Fallback placeholder pattern
-        int colorIndex = trackIndex;
+        // Generate pseudo-random index from string hash
+        std::size_t hash = std::hash<std::string>{}(cacheKey);
+        int colorIndex = (int)hash;
         // Spotify-like gradients approximation
         ImU32 colors1[] = {
             IM_COL32(180, 100, 60, 255), IM_COL32(100, 80, 180, 255),

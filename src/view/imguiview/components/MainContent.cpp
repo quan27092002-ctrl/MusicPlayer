@@ -199,7 +199,9 @@ void MainContent::renderRecentTab(float mainW, float contentH) {
             // Album cover - Get data
             std::vector<uint8_t> artData;
             if (mController) artData = mController->getTrackCoverArt(trackIdx);
-            mAssetManager->drawAlbumCover(cdl, rowPos, 40, trackIdx, artData);
+            
+            std::string tPath = mController ? mController->getTrackPath(trackIdx) : "";
+            mAssetManager->drawAlbumCover(cdl, rowPos, 40, tPath, artData);
             
             // Track info
             std::string dispName = stripExtension(tName);
@@ -293,7 +295,9 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         // Album cover
         std::vector<uint8_t> artData;
         if (mController) artData = mController->getLibraryTrackCoverArt(i);
-        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, (int)i, artData);
+        
+        std::string libPath = mController ? mController->getLibraryTrackPath((int)i) : "";
+        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, libPath, artData);
         
         // Track info
         std::string dispName = stripExtension(trackName);
@@ -397,7 +401,7 @@ void MainContent::renderPlaylistTab() {
              std::vector<uint8_t> artData;
              if (mediaFile) artData = mediaFile->getCoverArt();
              
-             mAssetManager->drawAlbumCover(dl, ImVec2(p.x + 10, p.y + 10), 60, i * 100, artData); // Use synthetic index for cache key
+             mAssetManager->drawAlbumCover(dl, ImVec2(p.x + 10, p.y + 10), 60, firstPath, artData);
         } else {
              // Fallback to Color Box if empty
             ImU32 iconCol = IM_COL32(30, 215, 96, 255);
@@ -533,7 +537,7 @@ void MainContent::renderPlaylistDetailView() {
         std::vector<uint8_t> artData;
         if (mediaFile) artData = mediaFile->getCoverArt();
         
-        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, (int)i + 1000 + mSelectedPlaylistIndex*100, artData);
+        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 10, rowPos.y), 40, path, artData);
         
         // Text
         std::string tName = mediaFile ? mediaFile->getFilename() : "Unknown";

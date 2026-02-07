@@ -100,7 +100,12 @@ void PlayerBar::render() {
         artData = mController->getTrackCoverArt(currentTrack);
     }
     
-    mAssetManager->drawAlbumCover(pdl, coverPos, 64, currentTrack >= 0 ? currentTrack : 0, artData);
+    std::string currentPath = "";
+    if (mController && currentTrack >= 0) {
+        currentPath = mController->getTrackPath(currentTrack);
+    }
+    
+    mAssetManager->drawAlbumCover(pdl, coverPos, 64, currentPath, artData);
     
     // Text Info
     float infoX = coverPos.x + 75;

@@ -11,6 +11,7 @@
 #include <SDL2/SDL.h>
 #include <map>
 #include <vector>
+#include <string>
 #include <cstdint>
 #include "../imgui/imgui.h"
 
@@ -27,11 +28,11 @@ public:
      * @brief Draw album cover at specified position.
      * Uses internal cache to avoid recreating textures.
      */
-    void drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, int trackIndex, const std::vector<uint8_t>& data);
+    void drawAlbumCover(ImDrawList* dl, ImVec2 pos, float size, const std::string& cacheKey, const std::vector<uint8_t>& data);
 
 private:
     SDL_Renderer* mRenderer;
-    std::map<int, SDL_Texture*> mCoverCache; // TrackIndex -> Texture
+    std::map<std::string, SDL_Texture*> mCoverCache; // CacheKey -> Texture
     
     SDL_Texture* createTextureFromMemory(const std::vector<uint8_t>& data);
 };

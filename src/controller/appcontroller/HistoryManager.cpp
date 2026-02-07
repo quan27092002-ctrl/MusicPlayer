@@ -48,6 +48,12 @@ std::shared_ptr<Model::MediaFile> HistoryManagerImpl::getHistoryItem(size_t inde
     return mHistoryStack[index];
 }
 
+std::string HistoryManagerImpl::getHistoryTrackPath(size_t index) const {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (index >= mHistoryStack.size()) return "";
+    return mHistoryStack[index]->getPath();
+}
+
 void HistoryManagerImpl::pushHistory(MediaFilePtr track) {
     if (!track) return;
     

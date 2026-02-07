@@ -215,7 +215,9 @@ void RightSidebar::renderNowPlaying(ImDrawList* dl) {
     std::vector<uint8_t> artData;
     if (mController && currentTrack >= 0) artData = mController->getTrackCoverArt(currentTrack);
     
-    mAssetManager->drawAlbumCover(dl, npPos, 65, currentTrack >= 0 ? currentTrack : 0, artData);
+    std::string npPath = "";
+    if (mController && currentTrack >= 0) npPath = mController->getTrackPath(currentTrack);
+    mAssetManager->drawAlbumCover(dl, npPos, 65, npPath, artData);
     
     std::string npName = "No Track Selected";
     if (currentTrack >= 0 && currentTrack < (int)mPlaylistDisplay.size()) {
@@ -239,7 +241,8 @@ void RightSidebar::renderQueue(ImDrawList* dl, float width, int currentTrack) {
         
         std::vector<uint8_t> artData;
         if (mController) artData = mController->getTrackCoverArt(i);
-        mAssetManager->drawAlbumCover(dl, tPos, 40, i, artData);
+        std::string tPath = mPlaylistDisplay[i]; // mPlaylistDisplay contains paths
+        mAssetManager->drawAlbumCover(dl, tPos, 40, tPath, artData);
         
         std::string tName = stripExtension(mPlaylistDisplay[i]);
         if (tName.length() > 20) tName = tName.substr(0, 17) + "...";
@@ -271,7 +274,8 @@ void RightSidebar::renderRecent(ImDrawList* dl, float width) {
             ImVec2 tPos = ImGui::GetCursorScreenPos();
             
             std::vector<uint8_t> artData = mController->getHistoryTrackCoverArt(i);
-            mAssetManager->drawAlbumCover(dl, tPos, 40, i + 5000, artData); // Use synthetic index + offset for cache
+            std::string hPath = mController->getHistoryTrackPath(i); // Use path
+            mAssetManager->drawAlbumCover(dl, tPos, 40, hPath, artData);
             
             std::string tName = mController->getHistoryTrackName(i);
             tName = stripExtension(tName);

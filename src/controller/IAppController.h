@@ -52,6 +52,7 @@ public:
     virtual std::string getHistoryTrackName(size_t index) const = 0;
     virtual std::string getHistoryTrackArtist(size_t index) const = 0;
     virtual std::string getHistoryTrackAlbum(size_t index) const = 0;
+    virtual std::string getHistoryTrackPath(size_t index) const = 0; // New method for caching
     virtual std::vector<uint8_t> getHistoryTrackCoverArt(size_t index) const = 0;
     virtual void playHistoryTrack(size_t index) = 0;
 

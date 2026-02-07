@@ -34,6 +34,7 @@ public:
     // IHistoryManager interface
     std::vector<int> getHistory() const override;
     size_t getHistorySize() const override;
+    std::string getHistoryTrackPath(size_t index) const override;
     std::shared_ptr<Model::MediaFile> getHistoryItem(size_t index) const override;
     
     // Additional methods for internal use
