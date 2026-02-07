@@ -16,6 +16,8 @@
 #include <mutex>
 #include <memory>
 #include <functional>
+#include <thread>
+#include <atomic>
 
 namespace Controller {
 
@@ -28,9 +30,10 @@ namespace Controller {
 class PlaylistManagerImpl : public IPlaylistManager {
 public:
     using MediaFilePtr = std::shared_ptr<Model::MediaFile>;
+    using LoadProgressCallback = std::function<void(size_t loaded, size_t total)>;
     
     PlaylistManagerImpl();
-    ~PlaylistManagerImpl() override = default;
+    ~PlaylistManagerImpl() override;
     
     // IPlaylistManager interface
     void addToPlaylist(const std::string& filePath) override;
@@ -65,12 +68,24 @@ public:
     // Callback support
     void setPlaylistUpdatedCallback(std::function<void()> callback) override;
     void notifyPlaylistUpdated() override;
+    
+    // Async loading support
+    void loadDirectoryAsync(const std::string& directoryPath, size_t batchSize = 50);
+    void stopAsyncLoading();
+    bool isLoading() const;
+    void setLoadProgressCallback(LoadProgressCallback callback);
 
 private:
     std::vector<MediaFilePtr> mMusicLibrary;
     std::list<MediaFilePtr> mPlaylist;
     mutable std::mutex mMutex;
     std::function<void()> mPlaylistUpdatedCallback;
+    
+    // Async loading members
+    std::thread mLoaderThread;
+    std::atomic<bool> mStopLoading{false};
+    std::atomic<bool> mIsLoading{false};
+    LoadProgressCallback mLoadProgressCallback;
     
     MediaFilePtr findInLibrary(const std::string& filePath) const;
     MediaFilePtr createMediaFile(const std::string& filePath);
@@ -79,3 +94,4 @@ private:
 } // namespace Controller
 
 #endif // PLAYLISTMANAGER_IMPL_H
+

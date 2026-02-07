@@ -42,19 +42,15 @@ int main(int /*argc*/, char** /*argv*/) {
         return 1;
     }
 
-    // Auto-load music directory
+    // Auto-load music directory (async for faster startup)
     std::cout << "Loading music from ./mMusic/ ..." << std::endl;
-    size_t loadedCount = appController->loadDirectory("./mMusic");
-    std::cout << "Loaded " << loadedCount << " tracks." << std::endl;
-
-    // Sync playlist to view handled automatically by ImGuiView::render()
-
-    // Load first track if available
-    if (loadedCount > 0) {
-        std::string firstPath = appController->getTrackPath(0);
-        appController->loadTrack(firstPath);
-        std::cout << "First track loaded: " << appController->getTrackName(0) << std::endl;
-    }
+    appController->setLoadProgressCallback([](size_t loaded, size_t total) {
+        std::cout << "Loaded " << loaded << "/" << total << " tracks." << std::endl;
+    });
+    appController->loadDirectoryAsync("./mMusic", 50);
+    
+    // Note: First batch (50 songs) loads sync, so UI has content immediately
+    // Remaining songs load in background
 
     std::cout << "Initialization complete. Running..." << std::endl;
 

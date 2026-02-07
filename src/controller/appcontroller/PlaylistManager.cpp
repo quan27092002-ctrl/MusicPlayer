@@ -19,6 +19,10 @@ namespace Controller {
 
 PlaylistManagerImpl::PlaylistManagerImpl() {}
 
+PlaylistManagerImpl::~PlaylistManagerImpl() {
+    stopAsyncLoading();
+}
+
 PlaylistManagerImpl::MediaFilePtr PlaylistManagerImpl::acquireMediaFile(const std::string& filePath) {
     MediaFilePtr trackPtr = findInLibrary(filePath);
     if (!trackPtr) {
@@ -254,4 +258,90 @@ void PlaylistManagerImpl::notifyPlaylistUpdated() {
     }
 }
 
+// Async loading implementation
+void PlaylistManagerImpl::loadDirectoryAsync(const std::string& directoryPath, size_t batchSize) {
+    // Stop any existing loading
+    stopAsyncLoading();
+    
+    std::cerr << "DEBUG: PlaylistManager::loadDirectoryAsync scanning: " << directoryPath << std::endl;
+    
+    // Collect all file paths first (fast operation)
+    std::vector<std::string> filePaths;
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+            if (entry.is_regular_file()) {
+                std::string ext = entry.path().extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(), 
+                    [](unsigned char c) { return std::tolower(c); });
+                
+                if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
+                    filePaths.push_back(entry.path().string());
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error scanning directory: " << e.what() << std::endl;
+        return;
+    }
+    
+    size_t total = filePaths.size();
+    std::cerr << "DEBUG: Found " << total << " audio files" << std::endl;
+    
+    // Load first batch synchronously
+    size_t firstBatch = std::min(batchSize, total);
+    for (size_t i = 0; i < firstBatch; i++) {
+        acquireMediaFile(filePaths[i]);
+    }
+    
+    std::cerr << "DEBUG: Loaded first batch of " << firstBatch << " tracks" << std::endl;
+    
+    // Notify first batch done
+    if (mLoadProgressCallback) {
+        mLoadProgressCallback(firstBatch, total);
+    }
+    
+    // Start background thread for remaining
+    if (firstBatch < total) {
+        mIsLoading = true;
+        mStopLoading = false;
+        
+        mLoaderThread = std::thread([this, filePaths, firstBatch, batchSize, total]() {
+            size_t loaded = firstBatch;
+            
+            for (size_t i = firstBatch; i < total && !mStopLoading; i++) {
+                acquireMediaFile(filePaths[i]);
+                loaded++;
+                
+                // Notify every batch or on completion
+                if (loaded % batchSize == 0 || loaded == total) {
+                    if (mLoadProgressCallback) {
+                        mLoadProgressCallback(loaded, total);
+                    }
+                    std::cerr << "DEBUG: Loaded " << loaded << "/" << total << " tracks" << std::endl;
+                }
+            }
+            
+            mIsLoading = false;
+            std::cerr << "DEBUG: Async loading complete" << std::endl;
+        });
+    }
+}
+
+void PlaylistManagerImpl::stopAsyncLoading() {
+    mStopLoading = true;
+    if (mLoaderThread.joinable()) {
+        mLoaderThread.join();
+    }
+    mIsLoading = false;
+}
+
+bool PlaylistManagerImpl::isLoading() const {
+    return mIsLoading;
+}
+
+void PlaylistManagerImpl::setLoadProgressCallback(LoadProgressCallback callback) {
+    mLoadProgressCallback = callback;
+}
+
 } // namespace Controller
+

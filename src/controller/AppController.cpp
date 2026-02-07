@@ -360,6 +360,14 @@ size_t AppController::loadDirectory(const std::string& directoryPath) {
     return count;
 }
 
+void AppController::loadDirectoryAsync(const std::string& directoryPath, size_t batchSize) {
+    mPlaylistManager->loadDirectoryAsync(directoryPath, batchSize);
+}
+
+void AppController::setLoadProgressCallback(std::function<void(size_t, size_t)> callback) {
+    mPlaylistManager->setLoadProgressCallback(callback);
+}
+
 std::string AppController::getTrackName(size_t index) const {
     return mPlaylistManager->getTrackName(index);
 }

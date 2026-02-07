@@ -121,6 +121,8 @@ public:
     void clearPlaylist() override;
     size_t getPlaylistSize() const override;
     size_t loadDirectory(const std::string& directoryPath) override;
+    void loadDirectoryAsync(const std::string& directoryPath, size_t batchSize = 50);
+    void setLoadProgressCallback(std::function<void(size_t, size_t)> callback);
     std::string getTrackName(size_t index) const override;
     std::string getTrackPath(size_t index) const override;
     std::string getTrackArtist(size_t index) const override;
