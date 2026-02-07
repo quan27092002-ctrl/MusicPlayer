@@ -287,14 +287,23 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
         
         if (playlist.empty()) {
             playlist.push_back(trackPtr);
-            mCurrentTrackIterator = playlist.begin(); // Ready to play
+            mCurrentTrackIterator = playlist.begin();
+            // Auto-play if queue was empty
+            if (mAudioPlayer) {
+                 if (mAudioPlayer->load(trackPtr->getPath())) {
+                     mAudioPlayer->play();
+                     if (mPlayerState) {
+                         mPlayerState->setPlaybackStatus(Model::PlaybackStatus::PLAYING);
+                         // CRITICAL: Update current track index for UI
+                         mPlayerState->setCurrentTrackIndex(0); 
+                     }
+                 }
+            }
         } else {
             // Insert AFTER current track
             auto insertPos = mCurrentTrackIterator;
             if (insertPos != playlist.end()) {
                 insertPos++; 
-            } else {
-                insertPos = playlist.end();
             }
             playlist.insert(insertPos, trackPtr);
             
