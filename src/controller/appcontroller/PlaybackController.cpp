@@ -137,6 +137,15 @@ void PlaybackControllerImpl::stop() {
 void PlaybackControllerImpl::next() {
     if (!mPlaylistManager) return;
     
+    // Check repeat mode - if enabled, replay current track
+    if (mPlayerState && mPlayerState->getRepeatMode() == Model::RepeatMode::ONE) {
+        if (mAudioPlayer) {
+            mAudioPlayer->seek(0);
+            mAudioPlayer->play();
+        }
+        return;
+    }
+    
     std::string pathToLoad;
     bool shouldNotify = false;
     
@@ -493,5 +502,101 @@ PlaybackControllerImpl::getCurrentIterator() {
     return mCurrentTrackIterator;
 }
 
+void PlaybackControllerImpl::toggleShuffle() {
+    if (!mPlaylistManager || !mPlayerState) return;
+    
+    bool wasShuffled = mPlayerState->isShuffleEnabled();
+    bool shouldNotify = false;
+    
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        auto& playlist = mPlaylistManager->getPlaylistRef();
+        
+        if (wasShuffled) {
+            // Restore original order
+            if (!mOriginalOrder.empty()) {
+                // Get current track path before restoring
+                std::string currentPath;
+                if (mCurrentTrackIterator != playlist.end()) {
+                    currentPath = (*mCurrentTrackIterator)->getPath();
+                }
+                
+                playlist.clear();
+                for (const auto& track : mOriginalOrder) {
+                    playlist.push_back(track);
+                }
+                mOriginalOrder.clear();
+                
+                // Find current track in restored order
+                mCurrentTrackIterator = playlist.end();
+                for (auto it = playlist.begin(); it != playlist.end(); ++it) {
+                    if ((*it)->getPath() == currentPath) {
+                        mCurrentTrackIterator = it;
+                        break;
+                    }
+                }
+            }
+            mPlayerState->setShuffleEnabled(false);
+        } else {
+            // Save original order and shuffle
+            mOriginalOrder.clear();
+            for (const auto& track : playlist) {
+                mOriginalOrder.push_back(track);
+            }
+            
+            // Get current track
+            std::string currentPath;
+            if (mCurrentTrackIterator != playlist.end()) {
+                currentPath = (*mCurrentTrackIterator)->getPath();
+            }
+            
+            // Convert to vector, shuffle, convert back
+            std::vector<MediaFilePtr> shuffled(playlist.begin(), playlist.end());
+            
+            // Random shuffle (keep current track at front)
+            if (!shuffled.empty() && !currentPath.empty()) {
+                // Find and move current track to front
+                for (size_t i = 0; i < shuffled.size(); i++) {
+                    if (shuffled[i]->getPath() == currentPath) {
+                        std::swap(shuffled[0], shuffled[i]);
+                        break;
+                    }
+                }
+                // Shuffle only the remaining tracks (after current)
+                if (shuffled.size() > 1) {
+                    std::random_shuffle(shuffled.begin() + 1, shuffled.end());
+                }
+            } else {
+                std::random_shuffle(shuffled.begin(), shuffled.end());
+            }
+            
+            playlist.clear();
+            for (const auto& track : shuffled) {
+                playlist.push_back(track);
+            }
+            
+            mCurrentTrackIterator = playlist.begin();
+            mPlayerState->setShuffleEnabled(true);
+        }
+        shouldNotify = true;
+    }
+    
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
+    }
+}
+
+void PlaybackControllerImpl::toggleRepeat() {
+    if (!mPlayerState) return;
+    
+    auto current = mPlayerState->getRepeatMode();
+    if (current == Model::RepeatMode::NONE) {
+        mPlayerState->setRepeatMode(Model::RepeatMode::ONE);
+    } else {
+        mPlayerState->setRepeatMode(Model::RepeatMode::NONE);
+    }
+}
+
 
 } // namespace Controller
+

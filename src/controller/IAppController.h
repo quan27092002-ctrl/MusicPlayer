@@ -83,6 +83,10 @@ public:
     // Storage Management
     virtual std::vector<StorageDevice> getStorageDevices() = 0;
     virtual size_t loadFromStorage(const std::string& path) = 0;
+    
+    // Shuffle & Repeat
+    virtual void toggleShuffle() = 0;
+    virtual void toggleRepeat() = 0;
 
     virtual ~IAppController() = default;
 };

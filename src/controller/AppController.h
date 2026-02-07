@@ -113,6 +113,10 @@ public:
     void setVolume(int volume) override;
     int getVolume() const override;
     void toggleMute() override;
+    
+    // Shuffle & Repeat
+    void toggleShuffle();
+    void toggleRepeat();
 
     // ========================================================================
     // IPlaylistManager Interface (delegates to mPlaylistManager)

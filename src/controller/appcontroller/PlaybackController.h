@@ -56,6 +56,10 @@ public:
     int getCurrentTrackIndex() const;
     void setStatusCallback(std::function<void()> callback);
     
+    // Shuffle & Repeat
+    void toggleShuffle();
+    void toggleRepeat();
+    
     // Access current track iterator
     typename std::list<MediaFilePtr>::iterator& getCurrentIterator();
     
@@ -68,6 +72,9 @@ private:
     typename std::list<MediaFilePtr>::iterator mCurrentTrackIterator;
     std::string mCurrentLoadedPath;
     std::function<void()> mStatusCallback;
+    
+    // For shuffle restore
+    std::vector<MediaFilePtr> mOriginalOrder;
     
     int getCurrentTrackIndexLocked() const;
     typename std::list<MediaFilePtr>::iterator getTrackIterator(int index);

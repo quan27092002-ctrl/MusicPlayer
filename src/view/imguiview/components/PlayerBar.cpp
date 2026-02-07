@@ -15,6 +15,7 @@ namespace View {
 namespace Colors {
     const ImU32 Black       = IM_COL32(0, 0, 0, 255);
     const ImU32 White       = IM_COL32(255, 255, 255, 255);
+    const ImU32 Accent      = IM_COL32(30, 215, 96, 255);  // Spotify green
     const ImU32 TextSecondary = IM_COL32(179, 179, 179, 255);
     const ImU32 TextMuted   = IM_COL32(115, 115, 115, 255);
     const ImVec4 BlackV     = ImVec4(0, 0, 0, 1);
@@ -177,6 +178,32 @@ void PlayerBar::render() {
         }
     }
     
+    // Shuffle Button (before Prev)
+    {
+        ImVec2 shufflePos = ImVec2(barPos.x + centerX - 90, barPos.y + buttonCenterY);
+        bool shuffleOn = mPlayerState ? mPlayerState->isShuffleEnabled() : false;
+        ImU32 shuffleColor = shuffleOn ? Colors::Accent : Colors::TextMuted;
+        
+        // Draw shuffle icon (two crossing arrows)
+        float s = 6.0f;
+        pdl->AddLine(ImVec2(shufflePos.x - s, shufflePos.y - s/2), ImVec2(shufflePos.x + s, shufflePos.y + s/2), shuffleColor, 1.5f);
+        pdl->AddLine(ImVec2(shufflePos.x - s, shufflePos.y + s/2), ImVec2(shufflePos.x + s, shufflePos.y - s/2), shuffleColor, 1.5f);
+        // Arrow tips
+        pdl->AddTriangleFilled(
+            ImVec2(shufflePos.x + s, shufflePos.y + s/2),
+            ImVec2(shufflePos.x + s - 4, shufflePos.y + s/2 - 2),
+            ImVec2(shufflePos.x + s - 4, shufflePos.y + s/2 + 2), shuffleColor);
+        pdl->AddTriangleFilled(
+            ImVec2(shufflePos.x + s, shufflePos.y - s/2),
+            ImVec2(shufflePos.x + s - 4, shufflePos.y - s/2 - 2),
+            ImVec2(shufflePos.x + s - 4, shufflePos.y - s/2 + 2), shuffleColor);
+        
+        ImGui::SetCursorPos(ImVec2(centerX - 105, controlsY));
+        if (ImGui::InvisibleButton("##shuffle", ImVec2(30, 30)) && mController) {
+            mController->toggleShuffle();
+        }
+    }
+    
     // Prev Button
     {
         ImVec2 prevPos = ImVec2(barPos.x + centerX - 50, barPos.y + buttonCenterY);
@@ -203,6 +230,34 @@ void PlayerBar::render() {
                            
          ImGui::SetCursorPos(ImVec2(centerX + 35, controlsY)); // 50 - 15 = 35
          if (ImGui::InvisibleButton("##next", ImVec2(30, 30)) && mController) mController->next();
+    }
+    
+    // Repeat Button (after Next)
+    {
+        ImVec2 repeatPos = ImVec2(barPos.x + centerX + 90, barPos.y + buttonCenterY);
+        bool repeatOn = mPlayerState && mPlayerState->getRepeatMode() == Model::RepeatMode::ONE;
+        ImU32 repeatColor = repeatOn ? Colors::Accent : Colors::TextMuted;
+        
+        // Draw repeat icon (circular arrows)
+        float r = 6.0f;
+        pdl->AddBezierQuadratic(
+            ImVec2(repeatPos.x - r, repeatPos.y + 2),
+            ImVec2(repeatPos.x - r, repeatPos.y - r),
+            ImVec2(repeatPos.x + r - 2, repeatPos.y - r + 2), repeatColor, 1.5f);
+        pdl->AddBezierQuadratic(
+            ImVec2(repeatPos.x + r, repeatPos.y - 2),
+            ImVec2(repeatPos.x + r, repeatPos.y + r),
+            ImVec2(repeatPos.x - r + 2, repeatPos.y + r - 2), repeatColor, 1.5f);
+        // Arrow tips
+        pdl->AddTriangleFilled(
+            ImVec2(repeatPos.x + r - 2, repeatPos.y - r + 2),
+            ImVec2(repeatPos.x + r - 5, repeatPos.y - r - 1),
+            ImVec2(repeatPos.x + r + 1, repeatPos.y - r + 5), repeatColor);
+        
+        ImGui::SetCursorPos(ImVec2(centerX + 75, controlsY));
+        if (ImGui::InvisibleButton("##repeat", ImVec2(30, 30)) && mController) {
+            mController->toggleRepeat();
+        }
     }
     
     // Progress Bar

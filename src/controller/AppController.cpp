@@ -314,6 +314,14 @@ void AppController::toggleMute() {
     mBoardCommunicator->sendStatusToBoard();
 }
 
+void AppController::toggleShuffle() {
+    mPlaybackController->toggleShuffle();
+}
+
+void AppController::toggleRepeat() {
+    mPlaybackController->toggleRepeat();
+}
+
 // ============================================================================
 // IPlaylistManager Delegation
 // ============================================================================
