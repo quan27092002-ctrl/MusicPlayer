@@ -310,7 +310,8 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         ImGui::PopStyleColor();
         
         // Add to playlist button
-        ImGui::SameLine(mainW - 60);
+        // Add to playlist button
+        ImGui::SetCursorScreenPos(ImVec2(mainW - 60, rowPos.y + 10)); // Center vertically (45 - 25) / 2
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
         if (ImGui::Button("+##add", ImVec2(25, 25))) {
@@ -555,7 +556,7 @@ void MainContent::renderPlaylistDetailView() {
         ImGui::PopStyleColor();
         
         // Delete Button
-        ImGui::SetCursorPosX(mainW - 50);
+        ImGui::SetCursorScreenPos(ImVec2(mainW - 50, rowPos.y + 7)); // Center vertically (45 - 30) / 2
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
         if (ImGui::Button("X", ImVec2(30, 30))) {
             // Remove from vector
