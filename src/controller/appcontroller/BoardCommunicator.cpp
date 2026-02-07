@@ -97,12 +97,24 @@ void BoardCommunicatorImpl::processCommand(const std::string& rawData) {
     
     // Parse Protocol
     // 1. RV:<adc_value> (0-4095)
-    if (cmd.rfind("RV:", 0) == 0) {
+    // 1. RV:<adc_value> (0-4095) or VR:<adc_value>
+    bool isRv = false;
+    if (cmd.rfind("RV:", 0) == 0) isRv = true;
+    else if (cmd.rfind("VR:", 0) == 0) isRv = true;
+
+    if (isRv) {
         try {
-            int adc = std::stoi(cmd.substr(3));
+            std::string valStr = cmd.substr(3);
+            LOG_INFO("Parsing RV value: " << valStr);
+            int adc = std::stoi(valStr);
             int vol = parseVolumeFromADC(adc);
+            LOG_INFO("Calculated Volume: " << vol);
             mBoardEventCallback(BoardEvent::SET_VOLUME, vol);
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            LOG_ERROR("Failed to parse RV: " << e.what());
+        } catch (...) {
+            LOG_ERROR("Unknown error parsing RV");
+        }
         return;
     }
     
