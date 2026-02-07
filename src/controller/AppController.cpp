@@ -9,6 +9,10 @@
 #include "AppController.h"
 #include <algorithm>
 #include <sstream>
+#include <filesystem>
+#include <iostream>
+
+namespace fs = std::filesystem;
 
 namespace Controller {
 
@@ -472,11 +476,99 @@ std::vector<StorageDevice> AppController::getStorageDevices() {
 
 size_t AppController::loadFromStorage(const std::string& path) {
     // Forward to PlaylistManager via loadDirectory
-    // But first clear old playlist? 
-    // User probably wants to switch source.
-    // Let's clear playlist first for a "Switch Source" behavior.
-    clearPlaylist();
-    return loadDirectory(path);
+    // User wants to APPEND to existing library (mMusic + USBs)
+    // So we do NOT clearPlaylist().
+    
+    // Potential improvement: Check if this path was already loaded?
+    // For now, relies on PlaylistManager to handle or just append.
+    // If PlaylistManager::loadDirectory just scans and calls acquireMediaFile,
+    // and if acquireMediaFile is idempotent for library but NOT for playlist...
+    
+    // Wait, PlaylistManager::loadDirectory currently calls acquireMediaFile but DOES NOT add to playlist queue automatically?
+    // Let's check PlaylistManager::loadDirectory implementation.
+    // It calls acquireMediaFile. acquireMediaFile adds to mMusicLibrary if new.
+    // It DOES NOT add to mPlaylist.
+    
+    // Wait, if it doesn't add to playlist, how does music play?
+    // Ah, `AppController::loadDirectory` logic:
+    /*
+    size_t count = mPlaylistManager->loadDirectory(directoryPath);
+    // Update playback controller iterator if tracks were added
+    */
+   
+    // Actually, `PlaylistManager::loadDirectory` returns count of found files.
+    // But it does NOT add them to `mPlaylist` (the playback queue).
+    // It only adds to `mMusicLibrary`.
+    // We need to add them to `mPlaylist` if we want them playable in the queue.
+    
+    // Let's verify `PlaylistManager::loadDirectory`.
+    // It iterates and calls `acquireMediaFile`. 
+    // `acquireMediaFile` adds to `mMusicLibrary` if not exists.
+    // It returns the pointer.
+    // BUT `loadDirectory` discards the pointer!
+    
+    // So `loadDirectory` ONLY populates the Library, not the Queue.
+    // If we want to play them, we need to add them to the queue.
+    
+    // Implementation in AppController::loadDirectory:
+    // It calls mPlaylistManager->loadDirectory.
+    // Then checks mPlaybackController->getCurrentTrackIndex().
+
+    // NOTE: The separate `AppController::loadDirectory` implementation:
+    /*
+    size_t AppController::loadDirectory(const std::string& directoryPath) {
+        size_t count = mPlaylistManager->loadDirectory(directoryPath);
+        ...
+    }
+    */
+
+    // Conclusion: The current `loadDirectory` implementation in AppController matches `mPlaylistManager->loadDirectory`.
+    // NEITHER adds to the queue.
+    // This explains why the user might see "Loaded" but not see them in the queue?
+    // Wait, `mMusic` loading at startup works. Why?
+    // Maybe `MainContent` or `PlayerBar` displays the *Library*?
+    // `RightSidebar` displays `mPlaylist`.
+    
+    // I need to change `AppController::loadDirectory` (or create a new method) to ALSO add found files to the Playlist.
+    // OR change `PlaylistManager::loadDirectory` to add to playlist.
+    
+    // Let's modify `AppController::loadFromStorage` to:
+    // 1. Call `loadDirectory` (populates library)
+    // 2. Scan directory again to add to Playlist? Or make `PlaylistManager` return the added files?
+    
+    // Ideally, `loadDirectory` should optionally add to playlist.
+    // Or I iterate the library and add everything?
+    
+    // Let's modify `PlaylistManager` to have `loadDirectoryToPlaylist`?
+    // Or just `loadFromStorage` calls `addToPlaylist` for every file found?
+    
+    // Better approach:
+    // `mPlaylistManager->loadDirectory` returns count. 
+    // But we need the files.
+    
+    // Let's change `loadFromStorage` to iterate the directory and call `addToPlaylist`.
+    // `addToPlaylist` adds to both Library (via acquire) and Queue.
+
+    size_t count = 0;
+    namespace fs = std::filesystem;
+    if (fs::exists(path) && fs::is_directory(path)) {
+        for (const auto& entry : fs::recursive_directory_iterator(path)) {
+            if (entry.is_regular_file()) {
+                std::string ext = entry.path().extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
+                    addToPlaylist(entry.path().string());
+                    count++;
+                }
+            }
+        }
+    }
+    
+    if (count > 0) {
+        notifyPlaylistUpdated();
+    }
+
+    return count;
 }
 
 } // namespace Controller
