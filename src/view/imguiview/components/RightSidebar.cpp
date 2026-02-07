@@ -152,11 +152,6 @@ void RightSidebar::renderConnectionPanel() {
                 snprintf(mPortBuffer, sizeof(mPortBuffer), "%s", mAvailablePorts[mSelectedPortIndex].c_str());
             }
         }
-        
-        ImGui::SameLine();
-        if (ImGui::Button("Scan")) {
-            refreshPorts();
-        }
     } else {
         // Just show the port name when connected
         ImGui::TextColored(Colors::GreenV, "%s", mPortBuffer);
