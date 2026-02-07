@@ -561,16 +561,18 @@ size_t AppController::loadFromStorage(const std::string& path) {
                 std::string ext = entry.path().extension().string();
                 std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
                 if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac") {
-                    addToPlaylist(entry.path().string());
+                    // Only add to Library, not Queue
+                    acquireMediaFile(entry.path().string());
                     count++;
                 }
             }
         }
     }
     
-    if (count > 0) {
-        notifyPlaylistUpdated();
-    }
+    // Do not notify playlist update as queue hasn't changed
+    // if (count > 0) {
+    //     notifyPlaylistUpdated();
+    // }
 
     return count;
 }
