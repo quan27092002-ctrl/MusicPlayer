@@ -29,11 +29,10 @@ std::string StorageManager::getUsername() {
 std::vector<StorageDevice> StorageManager::getAvailableStorage() {
     std::vector<StorageDevice> devices;
 
-    // 1. Internal Storage (Default)
-    // Check if ./mMusic exists, if so add it
-    if (fs::exists("./mMusic") && fs::is_directory("./mMusic")) {
-        devices.push_back({"Internal Storage (mMusic)", "./mMusic"});
-    }
+    // 1. Internal Storage (Default) - REMOVED as per user request (it is auto-loaded)
+    // if (fs::exists("./mMusic") && fs::is_directory("./mMusic")) {
+    //     devices.push_back({"Internal Storage (mMusic)", "./mMusic"});
+    // }
 
     // 2. Scan /media/[username]/
     std::string username = getUsername();
