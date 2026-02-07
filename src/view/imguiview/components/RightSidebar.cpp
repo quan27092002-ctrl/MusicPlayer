@@ -322,10 +322,6 @@ void RightSidebar::refreshStorage() {
 }
 
 void RightSidebar::renderStoragePanel() {
-    ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
-    ImGui::Text("Music Source");
-    ImGui::PopStyleColor();
-
     if (mStorageDevices.empty() && mController) {
         refreshStorage();
     }
@@ -338,16 +334,31 @@ void RightSidebar::renderStoragePanel() {
     }
 
     ImGui::SameLine();
-    ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
     if (ImGui::Button("Load")) {
         if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
              if (mController) {
-                 mController->loadFromStorage(mStorageDevices[mSelectedStorageIndex].path);
+                 int count = mController->loadFromStorage(mStorageDevices[mSelectedStorageIndex].path);
+                 mLoadMessage = "Upload done " + std::to_string(count) + " songs";
+                 mShowLoadPopup = true;
+                 mPopupTimer = 3.0f; // Show for 3 seconds
              }
         }
     }
     ImGui::PopStyleColor();
+    
+    // Inline Status Message
+    if (mShowLoadPopup) {
+        mPopupTimer -= ImGui::GetIO().DeltaTime;
+        if (mPopupTimer <= 0.0f) {
+            mShowLoadPopup = false;
+        } else {
+            ImGui::SameLine();
+            ImGui::TextColored(Colors::GreenV, "%s", mLoadMessage.c_str());
+        }
+    }
 }
+
+
 
 } // namespace View

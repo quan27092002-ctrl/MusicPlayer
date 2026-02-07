@@ -56,6 +56,13 @@ private:
     std::vector<Controller::StorageDevice> mStorageDevices;
     int mSelectedStorageIndex = -1;
     char mStorageBuffer[128] = "Scanning..."; // Buffer for combo
+    
+    // Popup State
+    bool mShowLoadPopup = false;
+    std::string mLoadMessage;
+    float mPopupTimer = 0.0f;
+
+
 };
 
 } // namespace View
