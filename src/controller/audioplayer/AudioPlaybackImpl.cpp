@@ -42,8 +42,9 @@ void AudioPlaybackImpl::play() {
     
     if (currentState == AudioState::PAUSED) {
         Mix_ResumeMusic();
-    } else if (currentState == AudioState::LOADED || currentState == AudioState::PLAYING) {
-        Mix_PlayMusic(music, 1); // Play 1 time (arguments: music, loops). 0 might mean 0 times in some versions, 1 is safer for "play once".
+    } else if (currentState == AudioState::LOADED || currentState == AudioState::PLAYING || currentState == AudioState::FINISHED) {
+        // FINISHED state needs to restart playback (e.g., repeat mode)
+        Mix_PlayMusic(music, 1);
     }
 
     mLifecycle->setState(AudioState::PLAYING);
