@@ -235,7 +235,7 @@ void RightSidebar::renderNowPlaying(ImDrawList* dl) {
 void RightSidebar::renderQueue(ImDrawList* dl, float width, int currentTrack) {
     if (currentTrack < 0) return;
     
-    for (int i = currentTrack + 1; i < (int)mPlaylistDisplay.size() && i < currentTrack + 10; i++) {
+    for (int i = currentTrack + 1; i < (int)mPlaylistDisplay.size(); i++) {
         ImGui::PushID(4000 + i);
         ImVec2 tPos = ImGui::GetCursorScreenPos();
         
@@ -269,7 +269,7 @@ void RightSidebar::renderRecent(ImDrawList* dl, float width) {
         // So iterate from size-1 down to max(0, size-10)
         
         int count = 0;
-        for (int i = (int)historyCount - 1; i >= 0 && count < 10; i--, count++) {
+        for (int i = (int)historyCount - 1; i >= 0; i--, count++) {
             ImGui::PushID(5000 + i);
             ImVec2 tPos = ImGui::GetCursorScreenPos();
             
