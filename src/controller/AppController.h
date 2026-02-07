@@ -25,7 +25,10 @@
 
 #include <memory>
 #include <atomic>
+#include <memory>
+#include <atomic>
 #include <mutex>
+#include <vector>
 
 namespace Controller {
 
@@ -79,6 +82,12 @@ public:
     bool connectToBoard(const std::string& portName, uint32_t baudRate = 115200) override;
     void disconnectFromBoard() override;
     bool isConnectedToBoard() const override;
+
+    /**
+     * @brief Get a list of available serial ports.
+     * @return Vector of port names.
+     */
+    std::vector<std::string> getAvailablePorts() const override;
 
     // ========================================================================
     // IPlaybackController Interface (delegates to mPlaybackController)
@@ -174,7 +183,10 @@ private:
     void onSerialDataReceived(const std::string& data);
     void onSerialStateChanged(SerialState state);
     void onAudioStateChanged(AudioState state, uint32_t position);
-    void processCommand(const std::string& command);
+    void onBoardEventReceived(BoardEvent event, int value);
+    
+    // Legacy support removed (processCommand)
+    // void processCommand(const std::string& command);
 };
 
 } // namespace Controller

@@ -42,6 +42,12 @@ public:
     void setStateCallback(SerialStateCallback callback) override;
     std::string getPortName() const override;
     uint32_t getBaudRate() const override;
+    
+    /**
+     * @brief Get a list of available serial ports (facade).
+     * @return Vector of port names.
+     */
+    std::vector<std::string> getAvailablePorts() const override;
 
     // ========================================================================
     // ISerialIO (delegates to mIO)

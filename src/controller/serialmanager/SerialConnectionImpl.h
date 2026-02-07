@@ -10,6 +10,7 @@
 
 #include "interfaces/ISerialConnection.h"
 #include <string>
+#include <vector>
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -35,6 +36,12 @@ public:
     void setStateCallback(SerialStateCallback callback) override;
     std::string getPortName() const override;
     uint32_t getBaudRate() const override;
+    
+    /**
+     * @brief Get a list of available serial ports.
+     * @return Vector of port names (e.g., "/dev/ttyUSB0")
+     */
+    std::vector<std::string> getAvailablePorts() const override;
     
     // Additional methods
     int getFileDescriptor() const;

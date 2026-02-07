@@ -10,6 +10,7 @@
 #define ISERIALCONNECTION_H
 
 #include <string>
+#include <vector>
 #include <cstdint>
 #include <functional>
 
@@ -81,6 +82,12 @@ public:
      * @param callback Function to call when connection state changes
      */
     virtual void setStateCallback(SerialStateCallback callback) = 0;
+
+    /**
+     * @brief Get a list of available serial ports.
+     * @return Vector of port names (e.g., "/dev/ttyUSB0")
+     */
+    virtual std::vector<std::string> getAvailablePorts() const = 0;
 };
 
 } // namespace Controller

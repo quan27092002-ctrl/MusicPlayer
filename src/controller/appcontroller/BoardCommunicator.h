@@ -17,13 +17,25 @@
 
 namespace Controller {
 
-// Forward declaration for command callback
-using CommandCallback = std::function<void(const std::string&)>;
+// Event types from board
+enum class BoardEvent {
+    PLAY,
+    PAUSE,
+    STOP,
+    NEXT,
+    PREV,
+    SET_VOLUME,
+    UNKNOWN
+};
+
+// Callback for board events: Event Type, Optional Value (e.g. volume)
+using BoardEventCallback = std::function<void(BoardEvent, int)>;
 
 /**
  * @brief Concrete implementation of IBoardCommunicator.
  * 
  * Manages communication with S32K board via serial port.
+ * Responsible for parsing the S32K protocol (SRP).
  */
 class BoardCommunicatorImpl : public IBoardCommunicator {
 public:
@@ -38,10 +50,26 @@ public:
     void disconnectFromBoard() override;
     bool isConnectedToBoard() const override;
     
+    /**
+     * @brief Get a list of available serial ports.
+     * @return Vector of port names.
+     */
+    std::vector<std::string> getAvailablePorts() const override;
+    
     // Additional methods
     void sendStatusToBoard();
-    void setCommandCallback(CommandCallback callback);
-    void processCommand(const std::string& command);
+    
+    /**
+     * @brief Set callback for high-level board events.
+     * @param callback Function to handle BoardEvents
+     */
+    void setBoardEventCallback(BoardEventCallback callback);
+    
+    /**
+     * @brief Process raw string data from SerialManager.
+     * Parses protocol (RV:..., CMD:...) and triggers events.
+     */
+    void processCommand(const std::string& rawData);
     
     // Get current track index callback
     void setCurrentTrackIndexGetter(std::function<int()> getter);
@@ -49,8 +77,11 @@ public:
 private:
     std::shared_ptr<ISerialManager> mSerialManager;
     std::shared_ptr<Model::IPlayerState> mPlayerState;
-    CommandCallback mCommandCallback;
+    BoardEventCallback mBoardEventCallback;
     std::function<int()> mGetCurrentTrackIndex;
+    
+    // Helper to parse ADC value
+    int parseVolumeFromADC(int adcValue);
 };
 
 } // namespace Controller

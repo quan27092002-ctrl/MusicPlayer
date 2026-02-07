@@ -69,9 +69,10 @@ void AppController::notifyStateChange(AppState newState) {
     }
 }
 
-void AppController::onSerialDataReceived(const std::string& data) {
-    processCommand(data);
-}
+// Redefinition removed - see bottom of file
+// void AppController::onSerialDataReceived(const std::string& data) {
+//    processCommand(data);
+// }
 
 void AppController::onSerialStateChanged(SerialState state) {
     if (state == SerialState::CONNECTED) {
@@ -110,38 +111,39 @@ void AppController::onAudioStateChanged(AudioState state, uint32_t position) {
     mBoardCommunicator->sendStatusToBoard();
 }
 
-void AppController::processCommand(const std::string& command) {
-    std::string cmd = command;
-    std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+// ============================================================================
+// Board Event Handling
+// ============================================================================
 
-    if (cmd == "PLAY") {
-        play();
-    } else if (cmd == "PAUSE") {
-        pause();
-    } else if (cmd == "STOP") {
-        stop();
-    } else if (cmd == "NEXT") {
-        next();
-    } else if (cmd == "PREV" || cmd == "PREVIOUS") {
-        previous();
-    } else if (cmd == "MUTE") {
-        toggleMute();
-    } else if (cmd.rfind("VOL:", 0) == 0) {
-        try {
-            int vol = std::stoi(cmd.substr(4));
-            setVolume(vol);
-        } catch (...) {}
-    } else if (cmd.rfind("TRACK:", 0) == 0) {
-        try {
-            int index = std::stoi(cmd.substr(6));
-            playTrack(index);
-        } catch (...) {}
-    } else if (cmd.rfind("LOAD:", 0) == 0) {
-        std::string path = command.substr(5);
-        loadTrack(path);
-    } else if (cmd == "STATUS") {
-        mBoardCommunicator->sendStatusToBoard();
+void AppController::onBoardEventReceived(BoardEvent event, int value) {
+    switch (event) {
+        case BoardEvent::PLAY:
+            play();
+            break;
+        case BoardEvent::PAUSE:
+            pause();
+            break;
+        case BoardEvent::STOP:
+            stop();
+            break;
+        case BoardEvent::NEXT:
+            next();
+            break;
+        case BoardEvent::PREV:
+            previous();
+            break;
+        case BoardEvent::SET_VOLUME:
+            setVolume(value);
+            break;
+        default:
+            break;
     }
+}
+
+void AppController::onSerialDataReceived(const std::string& data) {
+    // Forward raw data to BoardCommunicator for parsing (SRP)
+    // BoardCommunicator will callback onBoardEventReceived with structured events
+    mBoardCommunicator->processCommand(data);
 }
 
 // ============================================================================
@@ -172,6 +174,11 @@ bool AppController::initialize() {
             onSerialStateChanged(state);
         });
     }
+
+    // Setup BoardCommunicator callback
+    mBoardCommunicator->setBoardEventCallback([this](BoardEvent event, int value) {
+        onBoardEventReceived(event, value);
+    });
 
     if (mPlayerState && mAudioPlayer) {
         mAudioPlayer->setVolume(mPlayerState->getVolume());
@@ -222,6 +229,10 @@ void AppController::disconnectFromBoard() {
 
 bool AppController::isConnectedToBoard() const {
     return mBoardCommunicator->isConnectedToBoard();
+}
+
+std::vector<std::string> AppController::getAvailablePorts() const {
+    return mBoardCommunicator->getAvailablePorts();
 }
 
 // ============================================================================

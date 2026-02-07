@@ -84,8 +84,12 @@ void RightSidebar::render() {
     ImGui::Text(mRightTabIndex == 0 ? "Next up" : "Recently played");
     ImGui::PopStyleColor();
     
+    // Device Connection Panel at Bottom (Height ~80px)
+    float connectionPanelH = 80.0f;
+    float listHeight = contentH - 205 - connectionPanelH;
+    
     ImGui::SetCursorPos(ImVec2(10, 185));
-    ImGui::BeginChild("QueueList", ImVec2(rightSidebarW - 20, contentH - 205), false);
+    ImGui::BeginChild("QueueList", ImVec2(rightSidebarW - 20, listHeight), false);
     
     int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
     
@@ -93,8 +97,96 @@ void RightSidebar::render() {
     else renderRecent(dl, rightSidebarW);
     
     ImGui::EndChild();
+    
+    // Connection Panel
+    ImGui::SetCursorPos(ImVec2(10, 185 + listHeight + 10));
+    renderConnectionPanel();
+    
     ImGui::End();
     ImGui::PopStyleColor();
+}
+
+// Helper for Combo
+static bool VectorGetter(void* data, int n, const char** out_text) {
+    const std::vector<std::string>* v = (const std::vector<std::string>*)data;
+    *out_text = v->at(n).c_str();
+    return true;
+}
+
+void RightSidebar::refreshPorts() {
+    if (mController) {
+        mAvailablePorts = mController->getAvailablePorts();
+        
+        // Try to keep selection or select first
+        if (!mAvailablePorts.empty()) {
+            if (mSelectedPortIndex < 0 || mSelectedPortIndex >= (int)mAvailablePorts.size()) {
+                mSelectedPortIndex = 0;
+            }
+        } else {
+            mSelectedPortIndex = -1;
+        }
+        
+        // Update buffer for connecting
+        if (mSelectedPortIndex >= 0 && mSelectedPortIndex < (int)mAvailablePorts.size()) {
+            snprintf(mPortBuffer, sizeof(mPortBuffer), "%s", mAvailablePorts[mSelectedPortIndex].c_str());
+        }
+    }
+}
+
+void RightSidebar::renderConnectionPanel() {
+    bool isConnected = mController && mController->isConnectedToBoard();
+    
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
+    ImGui::Text("Device Connection");
+    ImGui::PopStyleColor();
+    
+    // Refresh Button (Small, next to label?)
+    ImGui::SameLine();
+    if (ImGui::Button("R", ImVec2(20, 0))) { // R for Refresh
+        refreshPorts();
+    }
+    
+    // Port Selection Dropdown
+    if (!isConnected) {
+        // Initial refresh if empty
+        if (mAvailablePorts.empty() && mController) {
+            refreshPorts();
+        }
+    
+        ImGui::SetNextItemWidth(120);
+        if (ImGui::Combo("##port", &mSelectedPortIndex, VectorGetter, (void*)&mAvailablePorts, mAvailablePorts.size())) {
+            // Update buffer on selection
+            if (mSelectedPortIndex >= 0 && mSelectedPortIndex < (int)mAvailablePorts.size()) {
+                snprintf(mPortBuffer, sizeof(mPortBuffer), "%s", mAvailablePorts[mSelectedPortIndex].c_str());
+            }
+        }
+    } else {
+        // Just show the port name when connected
+        ImGui::TextColored(Colors::GreenV, "%s", mPortBuffer);
+    }
+    
+    ImGui::SameLine();
+    
+    if (isConnected) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1));
+        if (ImGui::Button("Disconnect", ImVec2(90, 0))) {
+            if (mController) mController->disconnectFromBoard();
+        }
+        ImGui::PopStyleColor();
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
+        if (ImGui::Button("Connect", ImVec2(90, 0))) {
+            if (mController) mController->connectToBoard(mPortBuffer, 115200);
+        }
+        ImGui::PopStyleColor();
+    }
+    
+    ImGui::Dummy(ImVec2(0, 5));
+    if (isConnected) {
+        ImGui::TextColored(Colors::GreenV, "Status: Connected");
+    } else {
+        ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1), "Status: Disconnected");
+    }
 }
 
 void RightSidebar::renderTabs() {

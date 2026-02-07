@@ -154,4 +154,33 @@ bool SerialConnectionImpl::configureBaudRate(int fd, uint32_t baudRate) {
     return true;
 }
 
+std::vector<std::string> SerialConnectionImpl::getAvailablePorts() const {
+    std::vector<std::string> ports;
+    
+    // Scan for ttyACM*
+    system("ls /dev/ttyACM* > /tmp/serial_ports 2>/dev/null");
+    system("ls /dev/ttyUSB* >> /tmp/serial_ports 2>/dev/null");
+    
+    FILE* fp = fopen("/tmp/serial_ports", "r");
+    if (fp) {
+        char path[1024];
+        while (fgets(path, sizeof(path), fp) != NULL) {
+            std::string p(path);
+            // removing newline
+            p.erase(std::remove(p.begin(), p.end(), '\n'), p.end());
+            if (!p.empty()) {
+                ports.push_back(p);
+            }
+        }
+        fclose(fp);
+    }
+    
+    // Fallback if empty (for testing/safety)
+    if (ports.empty()) {
+        // ports.push_back("/dev/ttyACM0"); 
+    }
+    
+    return ports;
+}
+
 } // namespace Controller

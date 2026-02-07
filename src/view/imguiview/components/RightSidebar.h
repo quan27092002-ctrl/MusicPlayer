@@ -42,6 +42,12 @@ private:
     void renderTabs();
     void renderQueue(ImDrawList* dl, float width, int currentTrack);
     void renderRecent(ImDrawList* dl, float width);
+    void renderConnectionPanel();
+
+    char mPortBuffer[64] = "/dev/ttyUSB0"; // Default/Fallback
+    std::vector<std::string> mAvailablePorts;
+    int mSelectedPortIndex = -1;
+    void refreshPorts();
 };
 
 } // namespace View

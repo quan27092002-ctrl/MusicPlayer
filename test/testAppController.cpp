@@ -378,13 +378,18 @@ TEST_F(AppControllerTest, FirstTrackSetsIndex) {
 // Command Processing Tests (via Mock Serial)
 // ============================================================================
 
+// ============================================================================
+// Command Processing Tests (via Mock Serial)
+// ============================================================================
+
 TEST_F(AppControllerTest, CommandPlay) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
     controller->addToPlaylist("/path/song.mp3");
     controller->loadTrack("/path/song.mp3");
     
-    mockSerial->simulateReceive("PLAY");
+    // Simulate "CMD:PLAY" (New Protocol)
+    mockSerial->simulateReceive("CMD:PLAY");
     EXPECT_TRUE(mockAudio->playingState);
 }
 
@@ -394,36 +399,42 @@ TEST_F(AppControllerTest, CommandPause) {
     controller->loadTrack("/path/song.mp3");
     controller->play();
     
-    mockSerial->simulateReceive("PAUSE");
+    // Simulate "CMD:PAUSE" (New Protocol)
+    mockSerial->simulateReceive("CMD:PAUSE");
     EXPECT_TRUE(mockAudio->pausedState);
 }
 
-TEST_F(AppControllerTest, CommandVolume) {
+TEST_F(AppControllerTest, CommandVolumeFromADC) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
     
-    mockSerial->simulateReceive("VOL:65");
-    EXPECT_EQ(playerState->getVolume(), 65);
+    // Simulate "RV:2047" (Approx 50%)
+    // 2047 * 100 / 4095 = 49.98 -> 49
+    mockSerial->simulateReceive("RV:2047");
+    
+    int vol = playerState->getVolume();
+    EXPECT_NEAR(vol, 49, 1);
 }
 
-TEST_F(AppControllerTest, CommandMute) {
+TEST_F(AppControllerTest, CommandVolumeMax) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
-    controller->setVolume(80);
     
-    mockSerial->simulateReceive("MUTE");
-    EXPECT_TRUE(playerState->isMuted());
+    mockSerial->simulateReceive("RV:4095");
+    EXPECT_EQ(playerState->getVolume(), 100);
 }
 
-TEST_F(AppControllerTest, CommandCaseInsensitive) {
+TEST_F(AppControllerTest, CommandVolumeMin) {
     controller->initialize();
     controller->connectToBoard("/dev/ttyUSB0");
-    controller->addToPlaylist("/path/song.mp3");
-    controller->loadTrack("/path/song.mp3");
     
-    mockSerial->simulateReceive("play");  // lowercase
-    EXPECT_TRUE(mockAudio->playingState);
+    mockSerial->simulateReceive("RV:0");
+    EXPECT_EQ(playerState->getVolume(), 0);
 }
+
+// Legacy tests removed or updated as protocol changed
+// Old protocol: "VOL:65", "MUTE" -> Now handled via RV or specific CMDs if added
+// We only support RV:<val> and CMD:<action> now as per user request.
 
 // ============================================================================
 // Status Reporting Tests

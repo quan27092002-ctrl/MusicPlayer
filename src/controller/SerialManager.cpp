@@ -60,6 +60,10 @@ uint32_t SerialManager::getBaudRate() const {
     return mConnection->getBaudRate();
 }
 
+std::vector<std::string> SerialManager::getAvailablePorts() const {
+    return mConnection->getAvailablePorts();
+}
+
 // ============================================================================
 // ISerialIO Delegation
 // ============================================================================

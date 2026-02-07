@@ -10,6 +10,7 @@
 #define IBOARDCOMMUNICATOR_H
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 namespace Controller {
@@ -42,6 +43,12 @@ public:
      * @return true if connected
      */
     virtual bool isConnectedToBoard() const = 0;
+    
+    /**
+     * @brief Get a list of available serial ports.
+     * @return Vector of port names.
+     */
+    virtual std::vector<std::string> getAvailablePorts() const = 0;
 };
 
 } // namespace Controller

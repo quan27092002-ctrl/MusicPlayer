@@ -17,7 +17,7 @@ BoardCommunicatorImpl::BoardCommunicatorImpl(
 )
     : mSerialManager(serialManager)
     , mPlayerState(playerState)
-    , mCommandCallback(nullptr)
+    , mBoardEventCallback(nullptr)
     , mGetCurrentTrackIndex(nullptr)
 {}
 
@@ -36,6 +36,13 @@ void BoardCommunicatorImpl::disconnectFromBoard() {
 
 bool BoardCommunicatorImpl::isConnectedToBoard() const {
     return mSerialManager && mSerialManager->isConnected();
+}
+
+std::vector<std::string> BoardCommunicatorImpl::getAvailablePorts() const {
+    if (mSerialManager) {
+        return mSerialManager->getAvailablePorts();
+    }
+    return {};
 }
 
 void BoardCommunicatorImpl::sendStatusToBoard() {
@@ -72,14 +79,58 @@ void BoardCommunicatorImpl::sendStatusToBoard() {
     mSerialManager->send(ss.str());
 }
 
-void BoardCommunicatorImpl::setCommandCallback(CommandCallback callback) {
-    mCommandCallback = callback;
+void BoardCommunicatorImpl::setBoardEventCallback(BoardEventCallback callback) {
+    // mCommandCallback = nullptr; // Legacy removed
+    mBoardEventCallback = callback;
 }
 
-void BoardCommunicatorImpl::processCommand(const std::string& command) {
-    if (mCommandCallback) {
-        mCommandCallback(command);
+void BoardCommunicatorImpl::processCommand(const std::string& rawData) {
+    if (!mBoardEventCallback) return;
+
+    std::string cmd = rawData;
+    // Remove trailing newline/cr if present
+    cmd.erase(std::remove(cmd.begin(), cmd.end(), '\n'), cmd.end());
+    cmd.erase(std::remove(cmd.begin(), cmd.end(), '\r'), cmd.end());
+    
+    // Parse Protocol
+    // 1. RV:<adc_value> (0-4095)
+    if (cmd.rfind("RV:", 0) == 0) {
+        try {
+            int adc = std::stoi(cmd.substr(3));
+            int vol = parseVolumeFromADC(adc);
+            mBoardEventCallback(BoardEvent::SET_VOLUME, vol);
+        } catch (...) {}
+        return;
     }
+    
+    // 2. CMD:<action>
+    if (cmd.rfind("CMD:", 0) == 0) {
+        std::string action = cmd.substr(4);
+        std::transform(action.begin(), action.end(), action.begin(), ::toupper);
+        
+        if (action == "PLAY") {
+            mBoardEventCallback(BoardEvent::PLAY, 0);
+        } else if (action == "PAUSE") {
+            mBoardEventCallback(BoardEvent::PAUSE, 0);
+        } else if (action == "STOP") {
+            mBoardEventCallback(BoardEvent::STOP, 0);
+        } else if (action == "NEXT") {
+            mBoardEventCallback(BoardEvent::NEXT, 0);
+        } else if (action == "PREV") {
+            mBoardEventCallback(BoardEvent::PREV, 0);
+        }
+        return;
+    }
+}
+
+int BoardCommunicatorImpl::parseVolumeFromADC(int adcValue) {
+    // Clamp ADC to 0-4095
+    if (adcValue < 0) adcValue = 0;
+    if (adcValue > 4095) adcValue = 4095;
+    
+    // Scale 0-4095 to 0-100
+    // vol = (adc * 100) / 4095
+    return (adcValue * 100) / 4095;
 }
 
 void BoardCommunicatorImpl::setCurrentTrackIndexGetter(std::function<int()> getter) {
