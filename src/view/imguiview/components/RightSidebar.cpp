@@ -338,6 +338,8 @@ void RightSidebar::renderStoragePanel() {
     }
 
     ImGui::SameLine();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
     if (ImGui::Button("Load")) {
         if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
              if (mController) {
@@ -345,6 +347,7 @@ void RightSidebar::renderStoragePanel() {
              }
         }
     }
+    ImGui::PopStyleColor();
 }
 
 } // namespace View

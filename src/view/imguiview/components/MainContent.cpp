@@ -33,7 +33,7 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
     : mController(controller)
     , mPlayerState(playerState)
     , mAssetManager(assetManager)
-    , mMainTabIndex(1)
+    , mMainTabIndex(0)
 {
     mSearchQuery[0] = '\0';
     mShowPlaylistDetail = false;
@@ -118,9 +118,8 @@ void MainContent::render() {
     ImGui::SetCursorPos(ImVec2(10, 60));
     ImGui::BeginChild("TabContent", ImVec2(mainW - 20, contentH - 70), false);
     
-    if (mMainTabIndex == 0) renderRecentTab(mainW, contentH);
-    else if (mMainTabIndex == 1) renderMusicTab(mainW, contentH);
-    else if (mMainTabIndex == 2) {
+    if (mMainTabIndex == 0) renderMusicTab(mainW, contentH);
+    else if (mMainTabIndex == 1) {
         if (mShowPlaylistDetail) renderPlaylistDetailView();
         else renderPlaylistTab();
     }
@@ -150,8 +149,8 @@ void MainContent::renderTabs() {
     ImGui::SetCursorPos(ImVec2(340, 15));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 16.0f);
     
-    const char* tabs[] = {"All", "Music", "Playlists"};
-    for (int i = 0; i < 3; i++) {
+    const char* tabs[] = {"Music", "Playlists"};
+    for (int i = 0; i < 2; i++) {
         if (i > 0) ImGui::SameLine();
         
         bool selected = (mMainTabIndex == i);
