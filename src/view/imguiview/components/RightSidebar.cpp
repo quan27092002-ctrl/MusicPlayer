@@ -93,8 +93,10 @@ void RightSidebar::render() {
     
     int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
     
-    if (mRightTabIndex == 0) renderQueue(dl, rightSidebarW, currentTrack);
-    else renderRecent(dl, rightSidebarW);
+    // Use Child DrawList for correct clipping
+    ImDrawList* childDl = ImGui::GetWindowDrawList();
+    if (mRightTabIndex == 0) renderQueue(childDl, rightSidebarW, currentTrack);
+    else renderRecent(childDl, rightSidebarW);
     
     ImGui::EndChild();
     
@@ -136,16 +138,6 @@ void RightSidebar::refreshPorts() {
 void RightSidebar::renderConnectionPanel() {
     bool isConnected = mController && mController->isConnectedToBoard();
     
-    ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
-    ImGui::Text("Device Connection");
-    ImGui::PopStyleColor();
-    
-    // Refresh Button (Small, next to label?)
-    ImGui::SameLine();
-    if (ImGui::Button("R", ImVec2(20, 0))) { // R for Refresh
-        refreshPorts();
-    }
-    
     // Port Selection Dropdown
     if (!isConnected) {
         // Initial refresh if empty
@@ -159,6 +151,11 @@ void RightSidebar::renderConnectionPanel() {
             if (mSelectedPortIndex >= 0 && mSelectedPortIndex < (int)mAvailablePorts.size()) {
                 snprintf(mPortBuffer, sizeof(mPortBuffer), "%s", mAvailablePorts[mSelectedPortIndex].c_str());
             }
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Scan")) {
+            refreshPorts();
         }
     } else {
         // Just show the port name when connected
