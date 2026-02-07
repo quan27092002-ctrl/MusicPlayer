@@ -40,6 +40,7 @@ private:
     std::string mLastTrackPath;
     int mLastTrack;
     bool mIsDraggingSlider;
+    uint32_t mLastPlaybackVersion;
     
     std::string stripExtension(const std::string& name);
 };

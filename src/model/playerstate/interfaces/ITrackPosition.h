@@ -35,6 +35,17 @@ public:
      * @param position Position in seconds
      */
     virtual void setCurrentPosition(uint32_t position) = 0;
+    
+    /**
+     * @brief Get playback version (increments on repeat restart).
+     * @return Current version number
+     */
+    virtual uint32_t getPlaybackVersion() const = 0;
+    
+    /**
+     * @brief Increment playback version (call on repeat restart).
+     */
+    virtual void incrementPlaybackVersion() = 0;
 };
 
 } // namespace Model

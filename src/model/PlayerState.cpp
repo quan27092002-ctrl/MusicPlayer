@@ -76,6 +76,14 @@ void PlayerState::setCurrentPosition(uint32_t position) {
     mTrackPosition.setCurrentPosition(position);
 }
 
+uint32_t PlayerState::getPlaybackVersion() const {
+    return mTrackPosition.getPlaybackVersion();
+}
+
+void PlayerState::incrementPlaybackVersion() {
+    mTrackPosition.incrementPlaybackVersion();
+}
+
 // ============================================================================
 // IPlaylistNavigation Interface Implementation (delegated)
 // ============================================================================

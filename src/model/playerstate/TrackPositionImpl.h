@@ -23,6 +23,7 @@ namespace Model {
 class TrackPositionImpl : public ITrackPosition {
 private:
     std::atomic<uint32_t> mPosition;  ///< Current position in seconds
+    std::atomic<uint32_t> mPlaybackVersion;  ///< Increments on repeat restart
 
 public:
     /**
@@ -51,6 +52,8 @@ public:
 
     uint32_t getCurrentPosition() const override;
     void setCurrentPosition(uint32_t position) override;
+    uint32_t getPlaybackVersion() const override;
+    void incrementPlaybackVersion() override;
 
     /**
      * @brief Reset to default state (position 0).

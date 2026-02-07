@@ -34,6 +34,7 @@ PlayerBar::PlayerBar(std::shared_ptr<Controller::IAppController> controller,
     , mPlayStartPos(0)
     , mLastTrack(-1)
     , mIsDraggingSlider(false)
+    , mLastPlaybackVersion(0)
 {}
 
 std::string PlayerBar::stripExtension(const std::string& name) {
@@ -54,6 +55,14 @@ void PlayerBar::update(float windowWidth, float windowHeight) {
         currentPath = mController->getTrackPath(currentTrack);
     }
     bool isPlaying = mPlayerState ? mPlayerState->isPlaying() : false;
+    
+    // Check for playback version change (e.g., repeat mode restarted same track)
+    uint32_t currentVersion = mPlayerState ? mPlayerState->getPlaybackVersion() : 0;
+    if (currentVersion != mLastPlaybackVersion) {
+        mPlayStartTime = std::chrono::steady_clock::now();
+        mPlayStartPos = 0;
+        mLastPlaybackVersion = currentVersion;
+    }
 
     if (currentTrack != mLastTrack || currentPath != mLastTrackPath) {
         mPlayStartTime = std::chrono::steady_clock::now();

@@ -143,6 +143,11 @@ void PlaybackControllerImpl::next() {
             mAudioPlayer->seek(0);
             mAudioPlayer->play();
         }
+        // Signal UI to reset position tracking
+        if (mPlayerState) {
+            mPlayerState->setCurrentPosition(0);
+            mPlayerState->incrementPlaybackVersion();
+        }
         return;
     }
     

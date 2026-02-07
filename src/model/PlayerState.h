@@ -75,6 +75,8 @@ public:
 
     uint32_t getCurrentPosition() const override;
     void setCurrentPosition(uint32_t position) override;
+    uint32_t getPlaybackVersion() const override;
+    void incrementPlaybackVersion() override;
 
     // ========================================================================
     // IPlaylistNavigation Interface Implementation (delegated)
