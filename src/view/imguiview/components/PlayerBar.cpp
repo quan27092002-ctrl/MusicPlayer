@@ -48,12 +48,17 @@ void PlayerBar::update(float windowWidth, float windowHeight) {
     (void)windowHeight;
     // Logic updates if needed per frame before render
     int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
+    std::string currentPath = "";
+    if (mController && currentTrack >= 0) {
+        currentPath = mController->getTrackPath(currentTrack);
+    }
     bool isPlaying = mPlayerState ? mPlayerState->isPlaying() : false;
 
-    if (currentTrack != mLastTrack) {
+    if (currentTrack != mLastTrack || currentPath != mLastTrackPath) {
         mPlayStartTime = std::chrono::steady_clock::now();
         mPlayStartPos = 0;
         mLastTrack = currentTrack;
+        mLastTrackPath = currentPath;
     }
 
     if (!isPlaying && mWasPlaying) {

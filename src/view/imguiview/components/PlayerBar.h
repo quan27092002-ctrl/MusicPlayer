@@ -37,6 +37,7 @@ private:
     bool mWasPlaying;
     std::chrono::time_point<std::chrono::steady_clock> mPlayStartTime;
     uint32_t mPlayStartPos;
+    std::string mLastTrackPath;
     int mLastTrack;
     bool mIsDraggingSlider;
     
