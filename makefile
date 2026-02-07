@@ -37,6 +37,7 @@ MODEL_SRCS = $(SRC_DIR)/model/MediaFile.cpp \
 # Controller component sources (SOLID refactored)
 CONTROLLER_SRCS = $(SRC_DIR)/controller/AudioPlayer.cpp \
                   $(SRC_DIR)/controller/SerialManager.cpp \
+                  $(SRC_DIR)/controller/StorageManager.cpp \
                   $(SRC_DIR)/controller/AppController.cpp \
                   $(SRC_DIR)/controller/appcontroller/PlaylistManager.cpp \
                   $(SRC_DIR)/controller/appcontroller/VolumeController.cpp \

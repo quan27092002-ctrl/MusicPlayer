@@ -15,6 +15,7 @@
 #include "appcontroller/interfaces/IPlaylistManager.h"
 #include "appcontroller/interfaces/IHistoryManager.h"
 #include "appcontroller/interfaces/IBoardCommunicator.h"
+#include "StorageManager.h"
 
 namespace Controller {
 
@@ -71,6 +72,10 @@ public:
      * @param filePath Path to file
      */
     virtual void queueNext(const std::string& filePath) = 0;
+
+    // Storage Management
+    virtual std::vector<StorageDevice> getStorageDevices() = 0;
+    virtual size_t loadFromStorage(const std::string& path) = 0;
 
     virtual ~IAppController() = default;
 };

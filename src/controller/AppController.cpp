@@ -32,6 +32,7 @@ AppController::AppController(
     mVolumeController = std::make_unique<VolumeControllerImpl>(audioPlayer, playerState);
     mHistoryManager = std::make_unique<HistoryManagerImpl>();
     mBoardCommunicator = std::make_unique<BoardCommunicatorImpl>(serialManager, playerState);
+    mStorageManager = std::make_unique<StorageManager>(); // Init StorageManager
     mPlaybackController = std::make_unique<PlaybackControllerImpl>(
         audioPlayer, playerState, mPlaylistManager.get(), mHistoryManager.get()
     );
@@ -456,6 +457,26 @@ void AppController::setPlaylistUpdatedCallback(std::function<void()> callback) {
 
 void AppController::notifyPlaylistUpdated() {
     mPlaylistManager->notifyPlaylistUpdated();
+}
+
+// ============================================================================
+// Storage Management
+// ============================================================================
+
+std::vector<StorageDevice> AppController::getStorageDevices() {
+    if (mStorageManager) {
+        return mStorageManager->getAvailableStorage();
+    }
+    return {};
+}
+
+size_t AppController::loadFromStorage(const std::string& path) {
+    // Forward to PlaylistManager via loadDirectory
+    // But first clear old playlist? 
+    // User probably wants to switch source.
+    // Let's clear playlist first for a "Switch Source" behavior.
+    clearPlaylist();
+    return loadDirectory(path);
 }
 
 } // namespace Controller

@@ -84,8 +84,8 @@ void RightSidebar::render() {
     ImGui::Text(mRightTabIndex == 0 ? "Next up" : "Recently played");
     ImGui::PopStyleColor();
     
-    // Device Connection Panel at Bottom (Height ~80px)
-    float connectionPanelH = 80.0f;
+    // Device Connection Panel at Bottom (Height ~80px) + Storage Panel (~60px)
+    float connectionPanelH = 140.0f; // Increased height
     float listHeight = contentH - 205 - connectionPanelH;
     
     ImGui::SetCursorPos(ImVec2(10, 185));
@@ -102,6 +102,8 @@ void RightSidebar::render() {
     
     // Connection Panel
     ImGui::SetCursorPos(ImVec2(10, 185 + listHeight + 10));
+    renderStoragePanel();
+    ImGui::Dummy(ImVec2(0, 10)); // Gap
     renderConnectionPanel();
     
     ImGui::End();
@@ -287,6 +289,60 @@ void RightSidebar::renderRecent(ImDrawList* dl, float width) {
             }
             ImGui::PopID();
             ImGui::Dummy(ImVec2(0, 5));
+        }
+    }
+}
+
+// Helper for Storage Combo
+static bool StorageGetter(void* data, int n, const char** out_text) {
+    const std::vector<Controller::StorageDevice>* v = (const std::vector<Controller::StorageDevice>*)data;
+    *out_text = v->at(n).name.c_str();
+    return true;
+}
+
+void RightSidebar::refreshStorage() {
+    if (mController) {
+        mStorageDevices = mController->getStorageDevices();
+        
+        // Select first by default if available
+        if (!mStorageDevices.empty()) {
+            if (mSelectedStorageIndex < 0 || mSelectedStorageIndex >= (int)mStorageDevices.size()) {
+                mSelectedStorageIndex = 0;
+            }
+        } else {
+            mSelectedStorageIndex = -1;
+        }
+
+        if (mSelectedStorageIndex >= 0) {
+            snprintf(mStorageBuffer, sizeof(mStorageBuffer), "%s", mStorageDevices[mSelectedStorageIndex].name.c_str());
+        } else {
+            snprintf(mStorageBuffer, sizeof(mStorageBuffer), "No drives found");
+        }
+    }
+}
+
+void RightSidebar::renderStoragePanel() {
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
+    ImGui::Text("Music Source");
+    ImGui::PopStyleColor();
+
+    if (mStorageDevices.empty() && mController) {
+        refreshStorage();
+    }
+
+    ImGui::SetNextItemWidth(120);
+    if (ImGui::Combo("##storage", &mSelectedStorageIndex, StorageGetter, (void*)&mStorageDevices, mStorageDevices.size())) {
+        if (mSelectedStorageIndex >= 0) {
+             snprintf(mStorageBuffer, sizeof(mStorageBuffer), "%s", mStorageDevices[mSelectedStorageIndex].name.c_str());
+        }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Load")) {
+        if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
+             if (mController) {
+                 mController->loadFromStorage(mStorageDevices[mSelectedStorageIndex].path);
+             }
         }
     }
 }

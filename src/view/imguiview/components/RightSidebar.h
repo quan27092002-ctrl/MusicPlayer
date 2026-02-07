@@ -15,6 +15,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include "../../controller/StorageManager.h"
 
 namespace View {
 
@@ -48,6 +49,13 @@ private:
     std::vector<std::string> mAvailablePorts;
     int mSelectedPortIndex = -1;
     void refreshPorts();
+
+    // Storage UI
+    void renderStoragePanel();
+    void refreshStorage();
+    std::vector<Controller::StorageDevice> mStorageDevices;
+    int mSelectedStorageIndex = -1;
+    char mStorageBuffer[128] = "Scanning..."; // Buffer for combo
 };
 
 } // namespace View

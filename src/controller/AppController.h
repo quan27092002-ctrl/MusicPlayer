@@ -22,6 +22,7 @@
 #include "appcontroller/HistoryManager.h"
 #include "appcontroller/BoardCommunicator.h"
 #include "appcontroller/PlaybackController.h"
+#include "StorageManager.h"
 
 #include <memory>
 #include <atomic>
@@ -147,6 +148,12 @@ public:
     void playHistoryTrack(size_t index) override;
 
     // ========================================================================
+    // Storage Management (IAppController)
+    // ========================================================================
+    std::vector<StorageDevice> getStorageDevices() override; // Note: return type matches now
+    size_t loadFromStorage(const std::string& path) override;
+
+    // ========================================================================
     // IHistoryManager Interface (delegates to mHistoryManager)
     // ========================================================================
     std::vector<int> getHistory() const override;
@@ -167,6 +174,7 @@ private:
     std::unique_ptr<VolumeControllerImpl> mVolumeController;
     std::unique_ptr<HistoryManagerImpl> mHistoryManager;
     std::unique_ptr<BoardCommunicatorImpl> mBoardCommunicator;
+    std::unique_ptr<StorageManager> mStorageManager; // New component
     std::unique_ptr<PlaybackControllerImpl> mPlaybackController;
 
     // ========================================================================
