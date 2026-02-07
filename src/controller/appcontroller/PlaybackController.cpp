@@ -393,6 +393,53 @@ void PlaybackControllerImpl::queuePlaylist(const std::vector<std::string>& fileP
     }
 }
 
+void PlaybackControllerImpl::playLibrary(int startIndex) {
+    if (!mPlaylistManager) return;
+    
+    bool shouldNotify = false;
+    std::string pathToLoad;
+
+    {
+        std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
+        
+        // 1. Copy Library to Playlist
+        auto& library = mPlaylistManager->getMusicLibraryRef();
+        auto& playlist = mPlaylistManager->getPlaylistRef();
+        
+        playlist.clear();
+        for (const auto& track : library) {
+            playlist.push_back(track);
+        }
+        
+        // 2. Set Iterator
+        if (!playlist.empty()) {
+            if (startIndex >= 0 && startIndex < (int)playlist.size()) {
+                mCurrentTrackIterator = playlist.begin();
+                std::advance(mCurrentTrackIterator, startIndex);
+                pathToLoad = (*mCurrentTrackIterator)->getPath();
+            } else {
+                mCurrentTrackIterator = playlist.begin();
+                pathToLoad = (*mCurrentTrackIterator)->getPath();
+            }
+        } else {
+            mCurrentTrackIterator = playlist.end();
+        }
+        
+        shouldNotify = true;
+    }
+    
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
+    }
+    
+    if (!pathToLoad.empty()) {
+        loadTrack(pathToLoad);
+        play();
+    } else {
+        stop();
+    }
+}
+
 int PlaybackControllerImpl::getCurrentTrackIndex() const {
     if (!mPlaylistManager) return -1;
     std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());

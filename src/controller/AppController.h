@@ -101,6 +101,7 @@ public:
     void previous() override;
     void playTrack(int index) override;
     void playPlaylist(const std::vector<std::string>& filePaths) override;
+    void playLibrary(int startIndex) override; // New method
     void queuePlaylist(const std::vector<std::string>& filePaths) override;
     void replaceQueue(const std::vector<std::string>& filePaths) override;
     void queueNext(const std::string& filePath) override;

@@ -50,6 +50,7 @@ public:
     void queueNext(const std::string& filePath) override;
     void replaceQueue(const std::vector<std::string>& filePaths) override;
     void queuePlaylist(const std::vector<std::string>& filePaths) override;
+    void playLibrary(int startIndex) override;
     
     // Additional methods
     int getCurrentTrackIndex() const;

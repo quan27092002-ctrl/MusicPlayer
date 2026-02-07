@@ -68,6 +68,12 @@ public:
     virtual void playPlaylist(const std::vector<std::string>& filePaths) = 0;
     
     /**
+     * @brief Play library starting from index.
+     * @param startIndex Start index in library
+     */
+    virtual void playLibrary(int startIndex) = 0;
+    
+    /**
      * @brief Queue a track to play next.
      * @param filePath Path to file
      */

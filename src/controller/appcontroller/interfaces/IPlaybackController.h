@@ -88,6 +88,12 @@ public:
      * @param filePaths Vector of file paths
      */
     virtual void queuePlaylist(const std::vector<std::string>& filePaths) = 0;
+
+    /**
+     * @brief Replace queue with library and play from index.
+     * @param startIndex Start index
+     */
+    virtual void playLibrary(int startIndex) = 0;
 };
 
 } // namespace Controller

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstring>
 
+
 namespace View {
 
 // Minimal Color Palette Reuse
@@ -322,17 +323,11 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
         // Full row clickable -> Play Library Track
         ImGui::SetCursorScreenPos(rowPos);
         if (ImGui::InvisibleButton("##track", ImVec2(mainW - 80, 45)) && mController) {
-            // Play specifically this track from library
-            // This usually means: Replace queue with this track? Or play from library context?
-            // Given "Play All" exists, maybe clicking one just plays it (replaces queue with 1 item)?
-            // Or maybe it effectively does "Play All" but starts at index i?
-            // Users usually expect "Play this song" to play it.
-            // Let's use the explicit playLibraryTrack we defined in interface?
-             // Actually we removed playLibraryTrack in favor of playPlaylist.
-             // To play a specific library track, we can just replace queue with it.
              std::string p = mController->getLibraryTrackPath(i);
              if (!p.empty()) {
-                  mController->playPlaylist({p});
+                  // User requested: Keep playlist, insert NEXT, do NOT play immediately (wait for Next button)
+                  // Also allows duplicates.
+                  mController->queueNext(p);
              }
         }
         
