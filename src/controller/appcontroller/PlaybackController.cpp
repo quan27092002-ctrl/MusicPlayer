@@ -168,8 +168,22 @@ void PlaybackControllerImpl::next() {
         // Safety: ensure iterator is valid
         if (mCurrentTrackIterator != playlist.end()) {
             
+            // Store the path before the track is erased
+            std::string consumedPath = (*mCurrentTrackIterator)->getPath();
+            
             if (mHistoryManager) {
                 mHistoryManager->pushHistory(*mCurrentTrackIterator);
+            }
+            
+            // Also remove from original order if shuffle is enabled
+            // so restore doesn't bring back already-played songs
+            if (mPlayerState && mPlayerState->isShuffleEnabled() && !mOriginalOrder.empty()) {
+                mOriginalOrder.erase(
+                    std::remove_if(mOriginalOrder.begin(), mOriginalOrder.end(),
+                        [&consumedPath](const MediaFilePtr& track) {
+                            return track->getPath() == consumedPath;
+                        }),
+                    mOriginalOrder.end());
             }
             
             // Advance iterator by erasing current
@@ -518,69 +532,58 @@ void PlaybackControllerImpl::toggleShuffle() {
         auto& playlist = mPlaylistManager->getPlaylistRef();
         
         if (wasShuffled) {
-            // Restore original order
-            if (!mOriginalOrder.empty()) {
-                // Get current track path before restoring
-                std::string currentPath;
+            // Restore original order of remaining songs (after current)
+            if (!mOriginalOrder.empty() && !playlist.empty()) {
+                // Keep the current track (first in queue)
+                MediaFilePtr currentTrack = nullptr;
                 if (mCurrentTrackIterator != playlist.end()) {
-                    currentPath = (*mCurrentTrackIterator)->getPath();
+                    currentTrack = *mCurrentTrackIterator;
                 }
                 
-                playlist.clear();
-                for (const auto& track : mOriginalOrder) {
-                    playlist.push_back(track);
-                }
-                mOriginalOrder.clear();
-                
-                // Find current track in restored order
-                mCurrentTrackIterator = playlist.end();
-                for (auto it = playlist.begin(); it != playlist.end(); ++it) {
-                    if ((*it)->getPath() == currentPath) {
-                        mCurrentTrackIterator = it;
-                        break;
+                // Clear everything after current
+                if (currentTrack) {
+                    playlist.clear();
+                    playlist.push_back(currentTrack);
+                    
+                    // Add remaining songs from original order
+                    for (const auto& track : mOriginalOrder) {
+                        playlist.push_back(track);
                     }
+                    mOriginalOrder.clear();
+                    
+                    // Current is still at the front
+                    mCurrentTrackIterator = playlist.begin();
                 }
             }
             mPlayerState->setShuffleEnabled(false);
         } else {
-            // Save original order and shuffle
+            // Save original order of songs AFTER current (not including current)
             mOriginalOrder.clear();
-            for (const auto& track : playlist) {
-                mOriginalOrder.push_back(track);
-            }
             
-            // Get current track
-            std::string currentPath;
-            if (mCurrentTrackIterator != playlist.end()) {
-                currentPath = (*mCurrentTrackIterator)->getPath();
-            }
-            
-            // Convert to vector, shuffle, convert back
-            std::vector<MediaFilePtr> shuffled(playlist.begin(), playlist.end());
-            
-            // Random shuffle (keep current track at front)
-            if (!shuffled.empty() && !currentPath.empty()) {
-                // Find and move current track to front
-                for (size_t i = 0; i < shuffled.size(); i++) {
-                    if (shuffled[i]->getPath() == currentPath) {
-                        std::swap(shuffled[0], shuffled[i]);
-                        break;
+            if (!playlist.empty() && mCurrentTrackIterator != playlist.end()) {
+                // Save songs after current in their original order
+                auto it = mCurrentTrackIterator;
+                ++it; // Skip current track
+                for (; it != playlist.end(); ++it) {
+                    mOriginalOrder.push_back(*it);
+                }
+                
+                // Shuffle only the songs after current
+                if (!mOriginalOrder.empty()) {
+                    std::vector<MediaFilePtr> toShuffle(mOriginalOrder.begin(), mOriginalOrder.end());
+                    std::random_shuffle(toShuffle.begin(), toShuffle.end());
+                    
+                    // Rebuild playlist: current track + shuffled remaining
+                    MediaFilePtr currentTrack = *mCurrentTrackIterator;
+                    playlist.clear();
+                    playlist.push_back(currentTrack);
+                    for (const auto& track : toShuffle) {
+                        playlist.push_back(track);
                     }
+                    
+                    mCurrentTrackIterator = playlist.begin();
                 }
-                // Shuffle only the remaining tracks (after current)
-                if (shuffled.size() > 1) {
-                    std::random_shuffle(shuffled.begin() + 1, shuffled.end());
-                }
-            } else {
-                std::random_shuffle(shuffled.begin(), shuffled.end());
             }
-            
-            playlist.clear();
-            for (const auto& track : shuffled) {
-                playlist.push_back(track);
-            }
-            
-            mCurrentTrackIterator = playlist.begin();
             mPlayerState->setShuffleEnabled(true);
         }
         shouldNotify = true;
