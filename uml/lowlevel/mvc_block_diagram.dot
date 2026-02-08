@@ -51,11 +51,25 @@ digraph Architecture {
                 // Anchor
                 ViewMgrAnchor [style=invis, shape=point, width=0];
 
-                { rank=same; LifecycleManager; AssetManager; ViewMgrAnchor; }
+                { rank=same; LifecycleManager; AssetManager; PlaylistManager_View [label="PlaylistManager"]; ViewMgrAnchor; }
+            }
+            
+            // Nested Block 3: Sidebar Helpers (new from SOLID)
+            subgraph cluster_view_helpers {
+                label="Sidebar Helpers";
+                style=filled;
+                color="#64B5F6";
+                fillcolor="#BBDEFB";
+                node [group="", shape=rect, fillcolor=white];
+                
+                ViewHelpAnchor [style=invis, shape=point, width=0];
+
+                { rank=same; StoragePanelHelper; ConnectionPanelHelper; ViewHelpAnchor; }
             }
             
             // Stack View Internals
             ViewUiAnchor -> ViewMgrAnchor [weight=100];
+            ViewMgrAnchor -> ViewHelpAnchor [weight=100];
         }
 
         // ================= CONTROLLER LAYER =================
@@ -96,9 +110,17 @@ digraph Architecture {
                 }
             }
             
+            // Nested Block 3: Storage Sub-system (new from SOLID)
+            subgraph cluster_storage {
+                label="Storage Sub-system";
+                style=filled; color="#AED581"; fillcolor="#DCEDC8";
+                { rank=same; IStorageManager [label="«interface»\nIStorageManager", shape=rect, style="filled,rounded"]; StorageManager; }
+            }
+            
             // Stack Controller Internals
             CtrlAppAnchor -> AudioLifecycle [weight=100];
             AudioLifecycle -> SerialConnection [weight=10];
+            SerialConnection -> IStorageManager [weight=10];
         }
 
         // ================= MODEL LAYER =================
@@ -153,7 +175,7 @@ digraph Architecture {
     }
 
     // FORCE MAIN STACKING
-    ViewMgrAnchor -> CtrlAppAnchor;
-    SerialConnection -> ModelPlayerAnchor;
+    ViewHelpAnchor -> CtrlAppAnchor;
+    IStorageManager -> ModelPlayerAnchor;
     ModelMediaAnchor -> S32K_Board;
 }
