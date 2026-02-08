@@ -1,227 +1,206 @@
 @startuml class_diagram_model
-' ============================================================================
-' S32K_MediaPlayer - Model Layer Class Diagram
-' ============================================================================
 skinparam classAttributeIconSize 0
-skinparam linetype ortho
-skinparam groupInheritance 2
+skinparam dpi 150
+skinparam packageStyle rectangle
 
-' ============================================================================
-' PACKAGE: PlayerState
-' ============================================================================
-package "playerstate" {
-    ' ---- Enums ----
+title MODEL LAYER - Class Diagram
+
+package "Model" {
+    package "Player State" {
     enum PlaybackStatus {
         STOPPED
         PLAYING
         PAUSED
     }
-
+    
     enum RepeatMode {
         NONE
         ONE
         ALL
     }
-
-    ' ---- Interfaces ----
-    interface IPlaybackState <<interface>> {
+    
+    interface IPlaybackState {
         +getPlaybackStatus() : PlaybackStatus
-        +setPlaybackStatus(status : PlaybackStatus) : void
+        +setPlaybackStatus(status) : void
         +isPlaying() : bool
         +togglePlayPause() : PlaybackStatus
     }
-
-    interface IVolumeState <<interface>> {
+    
+    interface IVolumeState {
         +getVolume() : int
-        +setVolume(volume : int) : void
+        +setVolume(volume) : void
         +isMuted() : bool
-        +setMuted(muted : bool) : void
+        +setMuted(muted) : void
         +toggleMute() : bool
     }
-
-    interface ITrackPosition <<interface>> {
-        +getCurrentPosition() : uint32_t
-        +setCurrentPosition(position : uint32_t) : void
+    
+    interface ITrackPosition {
+        +getCurrentPosition() : uint32
+        +setCurrentPosition(position) : void
+        +getPlaybackVersion() : uint32
+        +incrementPlaybackVersion() : void
     }
-
-    interface IPlaylistNavigation <<interface>> {
+    
+    interface IPlaylistNavigation {
         +getCurrentTrackIndex() : int
-        +setCurrentTrackIndex(index : int) : void
+        +setCurrentTrackIndex(index) : void
         +getRepeatMode() : RepeatMode
-        +setRepeatMode(mode : RepeatMode) : void
+        +setRepeatMode(mode) : void
         +cycleRepeatMode() : RepeatMode
         +isShuffleEnabled() : bool
-        +setShuffleEnabled(enabled : bool) : void
+        +setShuffleEnabled(enabled) : void
         +toggleShuffle() : bool
     }
-
-    ' ---- Aggregate Interface ----
-    interface IPlayerState <<interface>>
-    IPlayerState --|> IPlaybackState
-    IPlayerState --|> IVolumeState
-    IPlayerState --|> ITrackPosition
-    IPlayerState --|> IPlaylistNavigation
-
-    ' ---- Implementation Classes ----
+    
+    interface IPlayerState {
+        +getPlaybackState() : PlaybackStatus
+        +setPlaybackState(state) : void
+    }
+    
     class PlaybackStateImpl {
-        -mStatus : atomic<PlaybackStatus>
-        --
+        -mStatus : atomic_int
         +getPlaybackStatus() : PlaybackStatus
-        +setPlaybackStatus(status : PlaybackStatus) : void
+        +setPlaybackStatus(status) : void
         +isPlaying() : bool
         +togglePlayPause() : PlaybackStatus
     }
-
+    
     class VolumeStateImpl {
-        -mVolume : atomic<int>
-        -mMuted : atomic<bool>
-        --
+        -mVolume : atomic_int
+        -mMuted : atomic_bool
         +getVolume() : int
-        +setVolume(volume : int) : void
+        +setVolume(volume) : void
         +isMuted() : bool
-        +setMuted(muted : bool) : void
+        +setMuted(muted) : void
         +toggleMute() : bool
     }
-
+    
     class TrackPositionImpl {
-        -mPosition : atomic<uint32_t>
-        --
-        +getCurrentPosition() : uint32_t
-        +setCurrentPosition(position : uint32_t) : void
+        -mPosition : atomic_uint32
+        -mVersion : atomic_uint32
+        +getCurrentPosition() : uint32
+        +setCurrentPosition(position) : void
+        +getPlaybackVersion() : uint32
+        +incrementPlaybackVersion() : void
     }
-
+    
     class PlaylistNavigationImpl {
-        -mCurrentTrackIndex : atomic<int>
-        -mRepeatMode : atomic<RepeatMode>
-        -mShuffleEnabled : atomic<bool>
-        --
+        -mTrackIndex : atomic_int
+        -mRepeatMode : atomic_int
+        -mShuffle : atomic_bool
         +getCurrentTrackIndex() : int
-        +setCurrentTrackIndex(index : int) : void
+        +setCurrentTrackIndex(index) : void
         +getRepeatMode() : RepeatMode
-        +setRepeatMode(mode : RepeatMode) : void
+        +setRepeatMode(mode) : void
         +cycleRepeatMode() : RepeatMode
         +isShuffleEnabled() : bool
-        +setShuffleEnabled(enabled : bool) : void
+        +setShuffleEnabled(enabled) : void
         +toggleShuffle() : bool
     }
-
-    PlaybackStateImpl ..|> IPlaybackState
-    VolumeStateImpl ..|> IVolumeState
-    TrackPositionImpl ..|> ITrackPosition
-    PlaylistNavigationImpl ..|> IPlaylistNavigation
-
-    ' ---- Main Facade ----
-    class PlayerState {
+    
+    class PlayerState <<facade>> {
         -mPlaybackState : PlaybackStateImpl
         -mVolumeState : VolumeStateImpl
         -mTrackPosition : TrackPositionImpl
         -mNavigation : PlaylistNavigationImpl
-        ==
         +PlayerState()
-        +~PlayerState()
-        --
         +reset() : void
-        +getPlaybackStateComponent() : IPlaybackState&
-        +getVolumeStateComponent() : IVolumeState&
-        +getTrackPositionComponent() : ITrackPosition&
-        +getNavigationComponent() : IPlaylistNavigation&
+        +getPlaybackStateComponent() : IPlaybackState
+        +getVolumeStateComponent() : IVolumeState
+        +getTrackPositionComponent() : ITrackPosition
+        +getNavigationComponent() : IPlaylistNavigation
     }
-
+    }
+    package "Media File" {
+    interface IMediaFileInfo {
+        +getFilename() : string
+        +setFilename(filename) : void
+        +getPath() : string
+        +setPath(path) : void
+        +isValid() : bool
+    }
+    
+    interface IMediaMetadata {
+        +getDuration() : uint32
+        +setDuration(duration) : void
+        +getArtist() : string
+        +setArtist(artist) : void
+        +getAlbum() : string
+        +setAlbum(album) : void
+    }
+    
+    interface ICoverArt {
+        +getCoverArt() : vector_uint8
+        +setCoverArt(data) : void
+        +hasCoverArt() : bool
+    }
+    
+    interface IMediaFile {
+    }
+    
+    class MediaFileInfo {
+        -mFilename : string
+        -mPath : string
+        +getFilename() : string
+        +setFilename(filename) : void
+        +getPath() : string
+        +setPath(path) : void
+        +isValid() : bool
+    }
+    
+    class MediaMetadata {
+        -mDuration : uint32
+        -mArtist : string
+        -mAlbum : string
+        +getDuration() : uint32
+        +setDuration(duration) : void
+        +getArtist() : string
+        +setArtist(artist) : void
+        +getAlbum() : string
+        +setAlbum(album) : void
+    }
+    
+    class CoverArt {
+        -mData : vector_uint8
+        +getCoverArt() : vector_uint8
+        +setCoverArt(data) : void
+        +hasCoverArt() : bool
+    }
+    
+    class MediaFile <<facade>> {
+        -mFileInfo : MediaFileInfo
+        -mMetadata : MediaMetadata
+        -mCoverArt : CoverArt
+        +MediaFile()
+        +getFileInfoComponent() : MediaFileInfo
+        +getMetadataComponent() : MediaMetadata
+        +getCoverArtComponent() : CoverArt
+    }
+    }
+    IPlayerState --|> IPlaybackState
+    IPlayerState --|> IVolumeState
+    IPlayerState --|> ITrackPosition
+    IPlayerState --|> IPlaylistNavigation
+    
+    PlaybackStateImpl ..|> IPlaybackState
+    VolumeStateImpl ..|> IVolumeState
+    TrackPositionImpl ..|> ITrackPosition
+    PlaylistNavigationImpl ..|> IPlaylistNavigation
+    
     PlayerState ..|> IPlayerState
     PlayerState *-- PlaybackStateImpl
     PlayerState *-- VolumeStateImpl
     PlayerState *-- TrackPositionImpl
     PlayerState *-- PlaylistNavigationImpl
-}
-
-' ============================================================================
-' PACKAGE: MediaFile
-' ============================================================================
-package "mediafile" {
-    ' ---- Interfaces ----
-    interface IMediaFileInfo <<interface>> {
-        +getFilename() : string
-        +setFilename(filename : string) : void
-        +getPath() : string
-        +setPath(path : string) : void
-        +isValid() : bool
-    }
-
-    interface IMediaMetadata <<interface>> {
-        +getDuration() : uint32_t
-        +setDuration(duration : uint32_t) : void
-        +getArtist() : string
-        +setArtist(artist : string) : void
-        +getAlbum() : string
-        +setAlbum(album : string) : void
-    }
-
-    interface ICoverArt <<interface>> {
-        +getCoverArt() : vector<uint8_t>&
-        +setCoverArt(data : vector<uint8_t>) : void
-        +hasCoverArt() : bool
-    }
-
-    ' ---- Aggregate Interface ----
-    interface IMediaFile <<interface>>
+    
     IMediaFile --|> IMediaFileInfo
     IMediaFile --|> IMediaMetadata
     IMediaFile --|> ICoverArt
-
-    ' ---- Implementation Classes ----
-    class MediaFileInfo {
-        -mFilename : string
-        -mPath : string
-        --
-        +getFilename() : string
-        +setFilename(filename : string) : void
-        +getPath() : string
-        +setPath(path : string) : void
-        +isValid() : bool
-    }
-
-    class MediaMetadata {
-        -mDuration : uint32_t
-        -mArtist : string
-        -mAlbum : string
-        --
-        +getDuration() : uint32_t
-        +setDuration(duration : uint32_t) : void
-        +getArtist() : string
-        +setArtist(artist : string) : void
-        +getAlbum() : string
-        +setAlbum(album : string) : void
-    }
-
-    class CoverArt {
-        -mData : vector<uint8_t>
-        --
-        +getCoverArt() : vector<uint8_t>&
-        +setCoverArt(data : vector<uint8_t>) : void
-        +hasCoverArt() : bool
-    }
-
+    
     MediaFileInfo ..|> IMediaFileInfo
     MediaMetadata ..|> IMediaMetadata
     CoverArt ..|> ICoverArt
-
-    ' ---- Main Facade ----
-    class MediaFile {
-        -mFileInfo : MediaFileInfo
-        -mMetadata : MediaMetadata
-        -mCoverArt : CoverArt
-        ==
-        +MediaFile()
-        +MediaFile(filename, path, duration, artist, album, coverArt)
-        +~MediaFile()
-        --
-        +getFileInfoComponent() : MediaFileInfo&
-        +getMetadataComponent() : MediaMetadata&
-        +getCoverArtComponent() : CoverArt&
-        +operator==(other : MediaFile) : bool
-        +operator!=(other : MediaFile) : bool
-    }
-
+    
     MediaFile ..|> IMediaFile
     MediaFile *-- MediaFileInfo
     MediaFile *-- MediaMetadata

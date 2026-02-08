@@ -1,160 +1,194 @@
 @startuml class_diagram_view
-' ============================================================================
-' S32K_MediaPlayer - View Layer Class Diagram
-' ============================================================================
 skinparam classAttributeIconSize 0
-skinparam linetype ortho
-skinparam groupInheritance 2
+skinparam dpi 150
+skinparam packageStyle rectangle
 
-' ============================================================================
-' PACKAGE: View
-' ============================================================================
-package "view" {
-    ' ---- Interface ----
-    interface IView <<interface>> {
+title VIEW LAYER - Class Diagram
+
+package "View" {
+    
+    interface IView {
         +initialize() : bool
         +shutdown() : void
         +isRunning() : bool
         +processEvents() : void
         +render() : void
     }
-
-    interface IWindowComponent <<interface>> {
+    
+    interface IWindowComponent {
         +render() : void
     }
-
-    ' ---- Manager Classes ----
-    class LifecycleManager {
-        -mWindow : SDL_Window*
-        -mRenderer : SDL_Renderer*
-        -mInitialized : bool
-        ==
-        +LifecycleManager()
-        +~LifecycleManager()
-        --
-        +initialize(width : int, height : int, title : char*) : bool
+    
+    class PlaylistData <<struct>> {
+        +name : string
+        +desc : string
+        +colorIdx : int
+        +trackPaths : vector_string
+    }
+    
+    enum ViewMode {
+        NORMAL
+        CREATE_PLAYLIST
+        EDIT_PLAYLIST
+    }
+    
+    class ImGuiView <<facade>> {
+        -mController : IAppController
+        -mPlayerState : IPlayerState
+        -mLifecycle : LifecycleManager
+        -mAssetManager : AssetManager
+        -mMainContent : MainContent
+        -mRightSidebar : RightSidebar
+        -mPlayerBar : PlayerBar
+        -mRunning : bool
+        -mPlaylistDirty : atomic_bool
+        +ImGuiView(controller, playerState)
+        +initialize() : bool
         +shutdown() : void
-        +processEvents(running : bool&) : void
-        +getWindow() : SDL_Window*
-        +getRenderer() : SDL_Renderer*
+        +isRunning() : bool
+        +processEvents() : void
+        +render() : void
+        -updatePlaylistData() : void
+    }
+    
+    class LifecycleManager {
+        -mWindow : SDL_Window
+        -mRenderer : SDL_Renderer
+        -mInitialized : bool
+        +LifecycleManager()
+        +initialize(width, height, title) : bool
+        +shutdown() : void
+        +processEvents(running) : void
+        +getWindow() : SDL_Window
+        +getRenderer() : SDL_Renderer
         +getWindowWidth() : int
         +getWindowHeight() : int
         +beginFrame() : void
         +endFrame() : void
-        --
         -setupStyle() : void
     }
-
+    
     class AssetManager {
-        -mRenderer : SDL_Renderer*
-        -mCoverCache : map<int, SDL_Texture*>
-        ==
-        +AssetManager(renderer : SDL_Renderer*)
-        +~AssetManager()
-        --
+        -mRenderer : SDL_Renderer
+        -mCoverCache : map
+        +AssetManager(renderer)
         +clearCache() : void
-        +drawAlbumCover(dl, pos, size, trackIndex, data) : void
-        --
-        -createTextureFromMemory(data) : SDL_Texture*
+        +drawAlbumCover(dl, pos, size, cacheKey, data) : void
+        -createTextureFromMemory(data) : SDL_Texture
     }
-
-    ' ---- UI Components ----
+    
+    class PlaylistManager {
+        -mPlaylists : vector_PlaylistData
+        -mDefaultPlaylistsPopulated : bool
+        +PlaylistManager()
+        +createPlaylist(name, desc, colorIdx) : void
+        +updatePlaylist(idx, name, desc, colorIdx) : void
+        +deletePlaylist(idx) : void
+        +addTrackToPlaylist(playlistIdx, trackPath) : void
+        +removeTrackFromPlaylist(playlistIdx, trackIdx) : void
+        +getPlaylistCount() : size_t
+        +getPlaylist(idx) : PlaylistData
+        +getPlaylistMutable(idx) : PlaylistData
+        +getAllPlaylists() : vector
+        +populateDefaultPlaylists(controller) : void
+        +isDefaultPopulated() : bool
+    }
+    
     class MainContent {
-        -mController : shared_ptr<IAppController>
-        -mPlayerState : shared_ptr<IPlayerState>
-        -mAssetManager : shared_ptr<AssetManager>
-        -mPlaylistDisplay : vector<string>
-        -mSearchQuery : char[256]
+        -mController : IAppController
+        -mPlayerState : IPlayerState
+        -mAssetManager : AssetManager
+        -mPlaylistDisplay : vector_string
+        -mSearchQuery : char_array
         -mMainTabIndex : int
-        ==
+        -mShowPlaylistDetail : bool
+        -mSelectedPlaylistIndex : int
+        -mViewMode : ViewMode
+        -mPlaylistManager : PlaylistManager
         +MainContent(controller, playerState, assetManager)
-        --
         +render() : void
-        +setPlaylist(playlist : vector<string>) : void
-        --
-        -stripExtension(name : string) : string
-        -matchesSearch(text, query) : bool
+        +setPlaylist(playlist) : void
         -renderSearch() : void
         -renderTabs() : void
-        -renderRecentTab(mainW, contentH) : void
         -renderMusicTab(mainW, contentH) : void
         -renderPlaylistTab() : void
+        -renderPlaylistDetailView() : void
+        -renderCreatePlaylistModal() : void
+        -renderEditPlaylistModal() : void
+        -renderDeleteConfirmModal() : void
+        -renderAddToPlaylistMenu() : void
     }
-
+    
     class RightSidebar {
-        -mController : shared_ptr<IAppController>
-        -mPlayerState : shared_ptr<IPlayerState>
-        -mAssetManager : shared_ptr<AssetManager>
-        -mPlaylistDisplay : vector<string>
+        -mController : IAppController
+        -mPlayerState : IPlayerState
+        -mAssetManager : AssetManager
+        -mPlaylistDisplay : vector_string
         -mRightTabIndex : int
-        ==
+        -mPortBuffer : char_array
+        -mAvailablePorts : vector_string
+        -mSelectedPortIndex : int
+        -mStorageDevices : vector
+        -mSelectedStorageIndex : int
         +RightSidebar(controller, playerState, assetManager)
-        --
         +render() : void
-        +setPlaylist(playlist : vector<string>) : void
-        --
-        -stripExtension(name : string) : string
-        -renderNowPlaying(dl : ImDrawList*) : void
+        +setPlaylist(playlist) : void
+        -renderNowPlaying(dl) : void
         -renderTabs() : void
         -renderQueue(dl, width, currentTrack) : void
         -renderRecent(dl, width) : void
+        -renderConnectionPanel() : void
+        -refreshPorts() : void
+        -renderStoragePanel() : void
+        -refreshStorage() : void
     }
-
+    
     class PlayerBar {
-        -mController : shared_ptr<IAppController>
-        -mPlayerState : shared_ptr<IPlayerState>
-        -mAssetManager : shared_ptr<AssetManager>
+        -mController : IAppController
+        -mPlayerState : IPlayerState
+        -mAssetManager : AssetManager
         -mWasPlaying : bool
         -mPlayStartTime : time_point
-        -mPlayStartPos : uint32_t
+        -mPlayStartPos : uint32
+        -mLastTrackPath : string
         -mLastTrack : int
         -mIsDraggingSlider : bool
-        ==
+        -mLastPlaybackVersion : uint32
         +PlayerBar(controller, playerState, assetManager)
-        --
         +render() : void
-        +update(windowWidth : float, windowHeight : float) : void
-        --
-        -stripExtension(name : string) : string
+        +update(windowWidth, windowHeight) : void
+        -stripExtension(name) : string
     }
-
-    ' ---- Main Facade ----
-    class ImGuiView {
-        -mController : shared_ptr<IAppController>
-        -mPlayerState : shared_ptr<IPlayerState>
-        -mLifecycle : unique_ptr<LifecycleManager>
-        -mAssetManager : shared_ptr<AssetManager>
-        -mMainContent : unique_ptr<MainContent>
-        -mRightSidebar : unique_ptr<RightSidebar>
-        -mPlayerBar : unique_ptr<PlayerBar>
-        -mRunning : bool
-        ==
-        +ImGuiView(controller, playerState)
-        +~ImGuiView()
-        --
-        +initialize() : bool
-        +shutdown() : void
-        +isRunning() : bool
-        +processEvents() : void
-        +render() : void
-        --
-        -updatePlaylistData() : void
+    
+    class StoragePanelHelper {
+        -mSelectedDeviceIndex : int
+        +StoragePanelHelper()
+        +refresh(controller, devices) : void
+        +getSelectedIndex() : int
+        +setSelectedIndex(index) : void
     }
-
-    ' ---- Relationships ----
+    
+    class ConnectionPanelHelper {
+        -mSelectedPortIndex : int
+        +ConnectionPanelHelper()
+        +refresh(controller, ports) : void
+        +getSelectedIndex() : int
+        +setSelectedIndex(index) : void
+    }
+    
     ImGuiView ..|> IView
     MainContent ..|> IWindowComponent
     RightSidebar ..|> IWindowComponent
     PlayerBar ..|> IWindowComponent
-
+    
     ImGuiView *-- LifecycleManager
     ImGuiView *-- AssetManager
     ImGuiView *-- MainContent
     ImGuiView *-- RightSidebar
     ImGuiView *-- PlayerBar
-
-    MainContent --> AssetManager 
-    RightSidebar --> AssetManager 
-    PlayerBar --> AssetManager
+    
+    MainContent *-- PlaylistManager
+    MainContent --> PlaylistData : manages
 }
+
 @enduml

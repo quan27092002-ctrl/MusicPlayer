@@ -1,192 +1,19 @@
 @startuml class_diagram_controller
-' ============================================================================
-' S32K_MediaPlayer - Controller Layer Class Diagram
-' ============================================================================
 skinparam classAttributeIconSize 0
-skinparam linetype ortho
-skinparam groupInheritance 2
+skinparam dpi 150
+skinparam packageStyle rectangle
 
-' ============================================================================
-' PACKAGE: AppController
-' ============================================================================
-package "appcontroller" {
-    ' ---- Enums ----
+title CONTROLLER LAYER - Class Diagram
+
+package "Controller" {
+
     enum AppState {
         UNINITIALIZED
         READY
         RUNNING
         ERROR
     }
-
-    ' ---- Interfaces ----
-    interface IAppLifecycle <<interface>> {
-        +initialize() : bool
-        +shutdown() : void
-        +getState() : AppState
-        +setStateCallback(callback : AppStateCallback) : void
-    }
-
-    interface IPlaybackController <<interface>> {
-        +loadTrack(filePath : string) : bool
-        +play() : void
-        +pause() : void
-        +stop() : void
-        +next() : void
-        +previous() : void
-        +playTrack(index : int) : void
-        +seek(positionMs : uint32_t) : void
-    }
-
-    interface IVolumeController <<interface>> {
-        +setVolume(volume : int) : void
-        +getVolume() : int
-        +toggleMute() : void
-    }
-
-    interface IPlaylistManager <<interface>> {
-        +addToPlaylist(filePath : string) : void
-        +clearPlaylist() : void
-        +getPlaylistSize() : size_t
-        +loadDirectory(directoryPath : string) : size_t
-        +getTrackName(index : size_t) : string
-        +getTrackPath(index : size_t) : string
-        +getTrackArtist(index : size_t) : string
-        +getTrackAlbum(index : size_t) : string
-        +getTrackDuration(index : size_t) : uint32_t
-        +getTrackCoverArt(index : size_t) : vector<uint8_t>
-    }
-
-    interface IHistoryManager <<interface>> {
-        +getHistory() : vector<int>
-    }
-
-    interface IBoardCommunicator <<interface>> {
-        +connectToBoard(portName : string, baudRate : uint32_t) : bool
-        +disconnectFromBoard() : void
-        +isConnectedToBoard() : bool
-    }
-
-    ' ---- Aggregate Interface ----
-    interface IAppController <<interface>>
-    IAppController --|> IAppLifecycle
-    IAppController --|> IPlaybackController
-    IAppController --|> IVolumeController
-    IAppController --|> IPlaylistManager
-    IAppController --|> IHistoryManager
-    IAppController --|> IBoardCommunicator
-
-    ' ---- Implementation Classes ----
-    class PlaybackControllerImpl {
-        -mAudioPlayer : IAudioPlayer*
-        -mPlayerState : IPlayerState*
-        -mPlaylistManager : PlaylistManagerImpl*
-        -mHistoryManager : HistoryManagerImpl*
-        -mCurrentTrackIterator : iterator
-        --
-        +loadTrack(filePath : string) : bool
-        +play() : void
-        +pause() : void
-        +stop() : void
-        +next() : void
-        +previous() : void
-        +playTrack(index : int) : void
-        +seek(positionMs : uint32_t) : void
-        +getCurrentTrackIndex() : int
-        +getCurrentIterator() : iterator&
-    }
-
-    class VolumeControllerImpl {
-        -mAudioPlayer : IAudioPlayer*
-        -mPlayerState : IPlayerState*
-        --
-        +setVolume(volume : int) : void
-        +getVolume() : int
-        +toggleMute() : void
-    }
-
-    class PlaylistManagerImpl {
-        -mPlaylist : list<MediaFilePtr>
-        -mMutex : mutex
-        --
-        +addToPlaylist(filePath : string) : void
-        +clearPlaylist() : void
-        +getPlaylistSize() : size_t
-        +loadDirectory(directoryPath : string) : size_t
-        +getTrackName(index : size_t) : string
-        +getPlaylistRef() : list<MediaFilePtr>&
-        +getMutex() : mutex&
-    }
-
-    class HistoryManagerImpl {
-        -mHistory : deque<MediaFilePtr>
-        -mPlaylist : list<MediaFilePtr>*
-        -mPlaylistMutex : mutex*
-        --
-        +pushHistory(track : MediaFilePtr) : void
-        +popHistory() : MediaFilePtr
-        +clearHistory() : void
-        +getHistory() : vector<int>
-    }
-
-    class BoardCommunicatorImpl {
-        -mSerialManager : ISerialManager*
-        -mPlayerState : IPlayerState*
-        -mCurrentTrackIndexGetter : function<int()>
-        --
-        +connectToBoard(portName : string, baudRate : uint32_t) : bool
-        +disconnectFromBoard() : void
-        +isConnectedToBoard() : bool
-        +sendStatusToBoard() : void
-        +setCurrentTrackIndexGetter(getter : function<int()>) : void
-    }
-
-    ' ---- Main Facade ----
-    class AppController {
-        -mAudioPlayer : shared_ptr<IAudioPlayer>
-        -mSerialManager : shared_ptr<ISerialManager>
-        -mPlayerState : shared_ptr<IPlayerState>
-        -mPlaylistManager : unique_ptr<PlaylistManagerImpl>
-        -mVolumeController : unique_ptr<VolumeControllerImpl>
-        -mHistoryManager : unique_ptr<HistoryManagerImpl>
-        -mBoardCommunicator : unique_ptr<BoardCommunicatorImpl>
-        -mPlaybackController : unique_ptr<PlaybackControllerImpl>
-        -mAppState : atomic<AppState>
-        -mCallbackMutex : mutex
-        ==
-        +AppController(audioPlayer, serialManager, playerState)
-        +~AppController()
-        --
-        .. IAppLifecycle ..
-        +initialize() : bool
-        +shutdown() : void
-        +getState() : AppState
-        +setStateCallback(callback) : void
-        --
-        .. Private ..
-        -onSerialDataReceived(data : string) : void
-        -onAudioStateChanged(state, position) : void
-        -processCommand(command : string) : void
-    }
-
-    AppController ..|> IAppController
-    AppController *-- PlaybackControllerImpl
-    AppController *-- VolumeControllerImpl
-    AppController *-- PlaylistManagerImpl
-    AppController *-- HistoryManagerImpl
-    AppController *-- BoardCommunicatorImpl
-
-    PlaybackControllerImpl ..|> IPlaybackController
-    VolumeControllerImpl ..|> IVolumeController
-    PlaylistManagerImpl ..|> IPlaylistManager
-    HistoryManagerImpl ..|> IHistoryManager
-    BoardCommunicatorImpl ..|> IBoardCommunicator
-}
-
-' ============================================================================
-' PACKAGE: AudioPlayer
-' ============================================================================
-package "audioplayer" {
-    ' ---- Enums ----
+    
     enum AudioState {
         IDLE
         LOADED
@@ -195,219 +22,246 @@ package "audioplayer" {
         ERROR
         FINISHED
     }
-
-    ' ---- Interfaces ----
-    interface IAudioLifecycle <<interface>> {
-        +initialize() : bool
-        +shutdown() : void
-        +getState() : AudioState
-        +setCallback(callback : AudioCallback) : void
-    }
-
-    interface IAudioLoader <<interface>> {
-        +load(filePath : string) : bool
-        +unload() : void
-        +isLoaded() : bool
-    }
-
-    interface IAudioPlayback <<interface>> {
-        +play() : void
-        +pause() : void
-        +stop() : void
-        +seek(positionMs : uint32_t) : void
-        +isPlaying() : bool
-        +getPosition() : uint32_t
-        +getDuration() : uint32_t
-        +setFinishedCallback(callback : function<void()>) : void
-    }
-
-    interface IAudioVolume <<interface>> {
-        +setVolume(volume : int) : void
-        +getVolume() : int
-    }
-
-    ' ---- Aggregate Interface ----
-    interface IAudioPlayer <<interface>>
-    IAudioPlayer --|> IAudioLifecycle
-    IAudioPlayer --|> IAudioLoader
-    IAudioPlayer --|> IAudioPlayback
-    IAudioPlayer --|> IAudioVolume
-
-    ' ---- Implementation Classes ----
-    class AudioLifecycleImpl {
-        -mState : atomic<AudioState>
-        -mCallback : AudioCallback
-        -mMutex : mutex
-        --
-        +initialize() : bool
-        +shutdown() : void
-        +getState() : AudioState
-        +setState(state : AudioState) : void
-        +setCallback(callback : AudioCallback) : void
-        +notifyCallback(state, position) : void
-    }
-
-    class AudioLoaderImpl {
-        -mLifecycle : AudioLifecycleImpl*
-        -mMusic : Mix_Music*
-        -mFilePath : string
-        -mDuration : uint32_t
-        --
-        +load(filePath : string) : bool
-        +unload() : void
-        +isLoaded() : bool
-        +getMusic() : Mix_Music*
-        +getDuration() : uint32_t
-    }
-
-    class AudioPlaybackImpl {
-        -mLifecycle : AudioLifecycleImpl*
-        -mLoader : AudioLoaderImpl*
-        -mIsManualStop : atomic<bool>
-        -mFinishedCallback : function<void()>
-        -mMutex : mutex
-        +{static}sInstance : AudioPlaybackImpl*
-        --
-        +play() : void
-        +pause() : void
-        +stop() : void
-        +seek(positionMs : uint32_t) : void
-        +isPlaying() : bool
-        +getPosition() : uint32_t
-        +getDuration() : uint32_t
-        +handleMusicFinished() : void
-    }
-
-    class AudioVolumeImpl {
-        -mVolume : int
-        --
-        +setVolume(volume : int) : void
-        +getVolume() : int
-    }
-
-    ' ---- Main Facade ----
-    class AudioPlayer {
-        -mLifecycle : unique_ptr<AudioLifecycleImpl>
-        -mLoader : unique_ptr<AudioLoaderImpl>
-        -mPlayback : unique_ptr<AudioPlaybackImpl>
-        -mVolume : unique_ptr<AudioVolumeImpl>
-        ==
-        +AudioPlayer()
-        +~AudioPlayer()
-    }
-
-    AudioPlayer ..|> IAudioPlayer
-    AudioPlayer *-- AudioLifecycleImpl
-    AudioPlayer *-- AudioLoaderImpl
-    AudioPlayer *-- AudioPlaybackImpl
-    AudioPlayer *-- AudioVolumeImpl
-
-    AudioPlaybackImpl ..|> IAudioPlayback
-    AudioVolumeImpl ..|> IAudioVolume
-    AudioLoaderImpl ..|> IAudioLoader
-    AudioLifecycleImpl ..|> IAudioLifecycle
-}
-
-' ============================================================================
-' PACKAGE: SerialManager
-' ============================================================================
-package "serialmanager" {
-    ' ---- Enums ----
+    
     enum SerialState {
         DISCONNECTED
         CONNECTING
         CONNECTED
         ERROR
     }
+    
+    class StorageDevice <<struct>> {
+        +name : string
+        +path : string
+    }
+    
+    interface IAppLifecycle {
+        +initialize() : bool
+        +shutdown() : void
+        +getState() : AppState
+        +setStateCallback(callback) : void
+    }
+    
+    interface IPlaybackController {
+        +loadTrack(filePath) : bool
+        +play() : void
+        +pause() : void
+        +stop() : void
+        +next() : void
+        +previous() : void
+        +playTrack(index) : void
+        +seek(positionMs) : void
+        +queueNext(filePath) : void
+        +replaceQueue(filePaths) : void
+        +queuePlaylist(filePaths) : void
+        +playLibrary(startIndex) : void
+    }
+    
+    interface IVolumeController {
+        +setVolume(volume) : void
+        +getVolume() : int
+        +toggleMute() : void
+    }
+    
+    interface IPlaylistManager {
+        +addToPlaylist(filePath) : void
+        +clearPlaylist() : void
+        +getPlaylistSize() : size_t
+        +loadDirectory(directoryPath) : size_t
+        +getTrackName(index) : string
+        +getTrackPath(index) : string
+        +getTrackArtist(index) : string
+        +getTrackAlbum(index) : string
+        +getTrackDuration(index) : uint32
+        +getTrackCoverArt(index) : vector
+        +acquireMediaFile(filePath) : MediaFilePtr
+        +getLibrarySize() : size_t
+        +setPlaylistUpdatedCallback(callback) : void
+        +notifyPlaylistUpdated() : void
+    }
+    
+    interface IHistoryManager {
+        +addToHistory(track) : void
+        +clearHistory() : void
+        +getHistory() : vector_int
+        +getHistorySize() : size_t
+        +getHistoryTrackPath(index) : string
+        +getHistoryItem(index) : MediaFilePtr
+    }
+    
+    interface IBoardCommunicator {
+        +connectToBoard(port, baud) : bool
+        +disconnectFromBoard() : void
+        +isConnectedToBoard() : bool
+        +sendVolumeToBoard(volume) : void
+        +sendTrackInfo(name, artist) : void
+        +getAvailablePorts() : vector_string
+    }
+    
+    interface IAppController {
+        +getLibrarySize() : size_t
+        +getLibraryTrackName(index) : string
+        +playTrack(index) : void
+        +playPlaylist(filePaths) : void
+        +playLibrary(startIndex) : void
+        +queueNext(filePath) : void
+        +getStorageDevices() : vector
+        +loadFromStorage(path) : size_t
+        +getLoadingProgress() : pair
+        +toggleShuffle() : void
+        +toggleRepeat() : void
+    }
 
-    ' ---- Interfaces ----
-    interface ISerialConnection <<interface>> {
-        +connect(portName : string, baudRate : uint32_t) : bool
+
+    interface IAudioLifecycle {
+        +initialize() : bool
+        +shutdown() : void
+        +getState() : AudioState
+        +setCallback(callback) : void
+    }
+    
+    interface IAudioLoader {
+        +loadFile(filePath) : bool
+        +unload() : void
+        +isLoaded() : bool
+        +getFilePath() : string
+    }
+    
+    interface IAudioPlayback {
+        +play() : void
+        +pause() : void
+        +stop() : void
+        +seek(positionMs) : void
+        +isPlaying() : bool
+        +getPosition() : uint32
+        +getDuration() : uint32
+        +setFinishedCallback(callback) : void
+    }
+    
+    interface IAudioVolume {
+        +setVolume(volume) : void
+        +getVolume() : int
+        +setMuted(muted) : void
+        +isMuted() : bool
+    }
+    
+    interface IAudioPlayer {
+    }
+    
+    interface ISerialConnection {
+        +connect(portName, baudRate) : bool
         +disconnect() : void
         +isConnected() : bool
         +getState() : SerialState
         +getPortName() : string
-        +getBaudRate() : uint32_t
-        +setStateCallback(callback : SerialStateCallback) : void
+        +getBaudRate() : uint32
+        +setStateCallback(callback) : void
+        +getAvailablePorts() : vector_string
     }
-
-    interface ISerialIO <<interface>> {
-        +send(data : string) : int
-        +sendBytes(data : uint8_t*, length : size_t) : int
-        +read(buffer : uint8_t*, maxLength : size_t) : int
-        +readLine(timeout : uint32_t) : string
-        +available() : size_t
-        +flush() : void
-        +setDataCallback(callback : SerialDataCallback) : void
+    
+    interface ISerialIO {
+        +write(data) : bool
+        +read() : string
+        +readLine() : string
+        +setReadCallback(callback) : void
     }
-
-    ' ---- Aggregate Interface ----
-    interface ISerialManager <<interface>>
+    
+    interface ISerialManager {
+    }
+    
+    interface IStorageManager {
+        +getAvailableStorage() : vector
+        +refreshDevices() : void
+    }
+    
+    class AppController <<facade>> {
+        -mAudioPlayer : IAudioPlayer
+        -mSerialManager : ISerialManager
+        -mPlayerState : IPlayerState
+        -mPlaylistManager : PlaylistManagerImpl
+        -mVolumeController : VolumeControllerImpl
+        -mHistoryManager : HistoryManagerImpl
+        -mBoardCommunicator : BoardCommunicatorImpl
+        -mPlaybackController : PlaybackControllerImpl
+        -mState : atomic_AppState
+        +AppController(audioPlayer, serialManager, playerState)
+    }
+    
+    class AudioPlayer <<facade>> {
+        -mAudioLifecycle : AudioLifecycleImpl
+        -mAudioLoader : AudioLoaderImpl
+        -mAudioPlayback : AudioPlaybackImpl
+        -mAudioVolume : AudioVolumeImpl
+        +AudioPlayer()
+    }
+    
+    class SerialManager <<facade>> {
+        -mSerialConnection : SerialConnectionImpl
+        -mSerialIO : SerialIOImpl
+        +SerialManager()
+    }
+    
+    class StorageManager {
+        -mDevices : vector
+        +getAvailableStorage() : vector
+        +refreshDevices() : void
+    }
+    
+    class PlaylistManagerImpl {
+        -mPlaylist : list
+        -mLibrary : vector
+        -mCallback : function
+        -mMutex : mutex
+    }
+    
+    class VolumeControllerImpl {
+        -mAudioPlayer : IAudioPlayer
+        -mPlayerState : IPlayerState
+    }
+    
+    class HistoryManagerImpl {
+        -mHistory : vector
+        -mMaxSize : size_t
+    }
+    
+    class BoardCommunicatorImpl {
+        -mSerialManager : ISerialManager
+    }
+    
+    class PlaybackControllerImpl {
+        -mAudioPlayer : IAudioPlayer
+        -mPlayerState : IPlayerState
+        -mPlaylistManager : IPlaylistManager
+    }
+    
+    IAppController --|> IAppLifecycle
+    IAppController --|> IPlaybackController
+    IAppController --|> IVolumeController
+    IAppController --|> IPlaylistManager
+    IAppController --|> IHistoryManager
+    IAppController --|> IBoardCommunicator
+    
+    IAudioPlayer --|> IAudioLifecycle
+    IAudioPlayer --|> IAudioLoader
+    IAudioPlayer --|> IAudioPlayback
+    IAudioPlayer --|> IAudioVolume
+    
     ISerialManager --|> ISerialConnection
     ISerialManager --|> ISerialIO
-
-    ' ---- Implementation Classes ----
-    class SerialConnectionImpl {
-        -mFd : int
-        -mState : atomic<SerialState>
-        -mPortName : string
-        -mBaudRate : uint32_t
-        -mStateCallback : SerialStateCallback
-        -mMutex : mutex
-        --
-        +connect(portName : string, baudRate : uint32_t) : bool
-        +disconnect() : void
-        +isConnected() : bool
-        +getState() : SerialState
-        +getFileDescriptor() : int
-        +setState(state : SerialState) : void
-        +notifyStateChange(state : SerialState) : void
-    }
-
-    class SerialIOImpl {
-        -mConnection : SerialConnectionImpl*
-        -mDataCallback : SerialDataCallback
-        -mRunning : atomic<bool>
-        -mReadThread : thread
-        -mCallbackMutex : mutex
-        --
-        +send(data : string) : int
-        +sendBytes(data : uint8_t*, length : size_t) : int
-        +read(buffer : uint8_t*, maxLength : size_t) : int
-        +readLine(timeout : uint32_t) : string
-        +available() : size_t
-        +flush() : void
-        +startReadThread() : void
-        +stopReadThread() : void
-        -readThreadFunc() : void
-        -notifyDataReceived(data : string) : void
-    }
-
-    ' ---- Main Facade ----
-    class SerialManager {
-        -mConnection : unique_ptr<SerialConnectionImpl>
-        -mIO : unique_ptr<SerialIOImpl>
-        ==
-        +SerialManager()
-        +~SerialManager()
-    }
-
+    
+    AppController ..|> IAppController
+    AudioPlayer ..|> IAudioPlayer
     SerialManager ..|> ISerialManager
-    SerialManager *-- SerialConnectionImpl
-    SerialManager *-- SerialIOImpl
-
-    SerialIOImpl ..|> ISerialIO
-    SerialConnectionImpl ..|> ISerialConnection
+    StorageManager ..|> IStorageManager
+    
+    AppController *-- PlaylistManagerImpl
+    AppController *-- VolumeControllerImpl
+    AppController *-- HistoryManagerImpl
+    AppController *-- BoardCommunicatorImpl
+    AppController *-- PlaybackControllerImpl
+    
+    AppController --> IAudioPlayer : uses
+    AppController --> ISerialManager : uses
 }
-
-' ============================================================================
-' INTER-PACKAGE RELATIONSHIPS
-' ============================================================================
-
-IAudioPlayer <-up- AppController
-ISerialManager <-up- AppController 
-IAudioPlayer <-up- PlaybackControllerImpl 
-IAudioPlayer <-up- VolumeControllerImpl 
-ISerialManager <-up- BoardCommunicatorImpl 
 
 @enduml
