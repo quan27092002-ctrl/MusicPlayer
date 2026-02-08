@@ -104,7 +104,7 @@ void RightSidebar::render() {
     ImGui::SetCursorPos(ImVec2(10, 185 + listHeight + 10));
     renderStoragePanel();
     ImGui::Dummy(ImVec2(0, 10)); // Gap
-    renderConnectionPanel();
+    // renderConnectionPanel(); // Removed as per user request
     
     ImGui::End();
     ImGui::PopStyleColor();
@@ -339,29 +339,45 @@ void RightSidebar::renderStoragePanel() {
 
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
-    if (ImGui::Button("Load")) {
-        if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
-             if (mController) {
-                 int count = mController->loadFromStorage(mStorageDevices[mSelectedStorageIndex].path);
-                 mLoadMessage = "Upload done " + std::to_string(count) + " songs";
-                 mShowLoadPopup = true;
-                 mPopupTimer = 3.0f; // Show for 3 seconds
-             }
-        }
-    }
-    ImGui::PopStyleColor();
     
-    // Inline Status Message
-    if (mShowLoadPopup) {
-        mPopupTimer -= ImGui::GetIO().DeltaTime;
-        if (mPopupTimer <= 0.0f) {
-            mShowLoadPopup = false;
-        } else {
-            ImGui::SameLine();
-            ImGui::TextColored(Colors::GreenV, "%s", mLoadMessage.c_str());
+    // Check loading status
+    bool isLoading = false;
+    size_t current = 0;
+    size_t total = 0;
+    if (mController) {
+        auto progress = mController->getLoadingProgress();
+        current = progress.first;
+        total = progress.second;
+        if (total > 0 && current < total) isLoading = true;
+    }
+
+    if (isLoading) {
+        // Disable load button and show progress
+        ImGui::BeginDisabled();
+        ImGui::Button("Loading...");
+        ImGui::EndDisabled();
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        ImGui::TextColored(Colors::GreenV, "%zu songs done", current);
+    } else {
+        if (ImGui::Button("Load")) {
+            if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
+                 if (mController) {
+                     // Start async load
+                     mController->loadFromStorage(mStorageDevices[mSelectedStorageIndex].path);
+                 }
+            }
         }
+        ImGui::PopStyleColor();
+        
+        // Show completion message if just finished
+        // logic for completion message might need state tracking in View if we want to show "Done" after it finishes.
+        // For now, let's just rely on the fact that when it finishes, isLoading becomes false.
+        // The user asked to see "200 songs done", then "320 songs done".
     }
 }
+
 
 
 

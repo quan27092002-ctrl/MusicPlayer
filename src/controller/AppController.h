@@ -30,6 +30,7 @@
 #include <atomic>
 #include <mutex>
 #include <vector>
+#include <thread>
 
 namespace Controller {
 
@@ -155,11 +156,7 @@ public:
     std::vector<uint8_t> getHistoryTrackCoverArt(size_t index) const override;
     void playHistoryTrack(size_t index) override;
 
-    // ========================================================================
-    // Storage Management (IAppController)
-    // ========================================================================
-    std::vector<StorageDevice> getStorageDevices() override; // Note: return type matches now
-    size_t loadFromStorage(const std::string& path) override;
+    // ... Storage Management overrides moved below ...
 
     // ========================================================================
     // IHistoryManager Interface (delegates to mHistoryManager)
@@ -193,7 +190,19 @@ private:
     mutable std::mutex mCallbackMutex;
 
     // ========================================================================
-    // Private Helpers
+    // Async Loading
+    // ========================================================================
+    std::thread mLoadingThread;
+    std::atomic<bool> mLoadingInProgress{false};
+    std::atomic<size_t> mLoadedCount{0};
+    std::atomic<size_t> mTotalToLoad{0};
+
+    // ========================================================================
+    // Storage Management (IAppController)
+    // ========================================================================
+    std::vector<StorageDevice> getStorageDevices() override;
+    size_t loadFromStorage(const std::string& path) override;
+    std::pair<size_t, size_t> getLoadingProgress() const override;
     // ========================================================================
     void notifyStateChange(AppState newState);
     void onSerialDataReceived(const std::string& data);

@@ -83,6 +83,7 @@ public:
     // Storage Management
     virtual std::vector<StorageDevice> getStorageDevices() = 0;
     virtual size_t loadFromStorage(const std::string& path) = 0;
+    virtual std::pair<size_t, size_t> getLoadingProgress() const = 0; // {current, total}
     
     // Shuffle & Repeat
     virtual void toggleShuffle() = 0;
