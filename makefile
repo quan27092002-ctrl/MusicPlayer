@@ -10,11 +10,15 @@ MAKEFLAGS += -j$(shell nproc)
 # 1. Compiler Settings
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -Isrc -Isrc/utils -Isrc/model -Isrc/model/mediafile -Isrc/model/playerstate -Isrc/controller -Isrc/controller/appcontroller -Isrc/controller/audioplayer -Isrc/controller/serialmanager -Isrc/view -Isrc/view/imgui
+CXXFLAGS += -I$(TEST_DIR)/mocks
 CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_mixer taglib SDL2_image)
 
 # Linker flags
-LDFLAGS  = -lgtest -lgtest_main -pthread
+LDFLAGS  = -lgtest -lgtest_main -lgmock -pthread
 LDFLAGS += $(shell pkg-config --libs sdl2 SDL2_mixer taglib SDL2_image)
+
+# Coverage flags (used with coverage targets)
+COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
 
 # 2. Project Directories
 SRC_DIR = src
@@ -143,4 +147,33 @@ clean:
 	@echo "Cleaning build directory..."
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all app clean run run_app
+# ==========================================
+# COVERAGE TARGETS
+# ==========================================
+
+# Build with coverage instrumentation and run tests
+coverage: CXXFLAGS += $(COVERAGE_FLAGS)
+coverage: LDFLAGS += $(COVERAGE_FLAGS)
+coverage: clean $(TEST_TARGET)
+	@echo "Running tests with coverage..."
+	./$(TEST_TARGET)
+
+# Generate HTML coverage report (requires lcov and genhtml)
+coverage-report: coverage
+	@echo "Generating coverage report..."
+	@mkdir -p $(BUILD_DIR)/coverage
+	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info --ignore-errors mismatch
+	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --ignore-errors unused
+	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage
+	@echo "========================================="
+	@echo "Coverage report: $(BUILD_DIR)/coverage/index.html"
+	@echo "========================================="
+
+# Clean coverage data
+clean-coverage:
+	@echo "Cleaning coverage data..."
+	find $(BUILD_DIR) -name "*.gcda" -delete 2>/dev/null || true
+	find $(BUILD_DIR) -name "*.gcno" -delete 2>/dev/null || true
+	rm -rf $(BUILD_DIR)/coverage $(BUILD_DIR)/coverage.info $(BUILD_DIR)/coverage_filtered.info
+
+.PHONY: all app clean run run_app coverage coverage-report clean-coverage
