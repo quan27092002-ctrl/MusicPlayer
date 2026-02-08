@@ -1,0 +1,64 @@
+@startuml UC1_PlayPauseMusic
+title UC1: Play/Pause Music - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+actor User
+actor "S32K Board" as Board #LightCoral
+
+rectangle "UC1: Play/Pause Music" {
+    usecase "Play Music" as Play
+    usecase "Pause Music" as Pause
+    usecase "Resume Music" as Resume
+}
+
+User --> Play
+User --> Pause
+User --> Resume
+Board --> Play
+Board --> Pause
+
+note right of Play
+  **Pre-conditions:**
+  - Track đã được load (UC2)
+  - Audio system initialized
+  
+  **Post-conditions:**
+  - Music đang phát
+  - PlayerState = PLAYING
+  - UI hiển thị trạng thái Playing
+  
+  **Main Flow:**
+  1. User click nút Play
+  2. View gọi AppController.play()
+  3. PlaybackController gọi AudioPlayer.play()
+  4. AudioPlaybackImpl gọi Mix_ResumeMusic()
+  5. PlayerState cập nhật PLAYING
+  6. UI cập nhật icon Play → Pause
+  
+  **Alternative Flow:**
+  A1. Chưa load track:
+      - Hiển thị thông báo lỗi
+      - Return về UI
+end note
+
+note right of Pause
+  **Pre-conditions:**
+  - Music đang phát (PLAYING)
+  
+  **Post-conditions:**
+  - Music tạm dừng
+  - PlayerState = PAUSED
+  - Vị trí phát được giữ nguyên
+  
+  **Main Flow:**
+  1. User click nút Pause
+  2. View gọi AppController.pause()
+  3. PlaybackController gọi AudioPlayer.pause()
+  4. AudioPlaybackImpl gọi Mix_PauseMusic()
+  5. PlayerState cập nhật PAUSED
+  6. UI cập nhật icon Pause → Play
+end note
+
+@enduml

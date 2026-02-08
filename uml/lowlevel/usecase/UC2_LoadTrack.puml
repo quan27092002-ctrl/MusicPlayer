@@ -1,0 +1,53 @@
+@startuml UC2_LoadTrack
+title UC2: Load Track - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC2: Load Track" {
+    usecase "Select Track" as Select
+    usecase "Load Metadata" as LoadMeta
+    usecase "Prepare Audio" as PrepAudio
+}
+
+User --> Select
+Select ..> LoadMeta : <<include>>
+LoadMeta ..> PrepAudio : <<include>>
+
+note right of Select
+  **Pre-conditions:**
+  - Library đã có tracks
+  - UI đang hiển thị danh sách nhạc
+  
+  **Post-conditions:**
+  - Track được load vào AudioPlayer
+  - Metadata hiển thị trên UI
+  - Sẵn sàng để phát
+  
+  **Main Flow:**
+  1. User click vào track trong danh sách
+  2. View gọi AppController.loadTrack(filePath)
+  3. PlaybackController tạo MediaFile
+  4. MediaFile extract metadata bằng TagLib
+  5. AudioLoaderImpl load file bằng Mix_LoadMUS()
+  6. PlayerState cập nhật currentTrack
+  7. UI hiển thị Now Playing
+  
+  **Alternative Flow:**
+  A1. File không tồn tại:
+      - AudioLoader return error
+      - Hiển thị thông báo lỗi
+      
+  A2. File format không hỗ trợ:
+      - Mix_LoadMUS() fail
+      - Log error và thông báo user
+      
+  A3. Metadata bị lỗi:
+      - Sử dụng filename làm title
+      - Artist/Album = "Unknown"
+end note
+
+@enduml

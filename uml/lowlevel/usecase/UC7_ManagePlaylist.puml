@@ -1,0 +1,73 @@
+@startuml UC7_ManagePlaylist
+title UC7: Manage Playlist - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC7: Manage Playlist" {
+    usecase "Create Playlist" as Create
+    usecase "Add Track to Playlist" as Add
+    usecase "Remove Track" as Remove
+    usecase "Edit Playlist" as Edit
+    usecase "Delete Playlist" as Delete
+    usecase "Play Playlist" as Play
+}
+
+User --> Create
+User --> Add
+User --> Remove
+User --> Edit
+User --> Delete
+User --> Play
+
+note right of Create
+  **Pre-conditions:**
+  - UI đang hiển thị tab Playlist
+  
+  **Post-conditions:**
+  - Playlist mới được tạo
+  - Hiển thị trong danh sách
+  
+  **Main Flow:**
+  1. User click "Create Playlist"
+  2. MainContent hiển thị modal
+  3. User nhập name, description
+  4. User chọn màu (colorIdx)
+  5. PlaylistManager.createPlaylist()
+  6. Modal đóng, list refresh
+end note
+
+note right of Add
+  **Pre-conditions:**
+  - Có track trong library
+  - Có ít nhất 1 playlist
+  
+  **Main Flow:**
+  1. User click "+" trên track
+  2. Menu hiện danh sách playlist
+  3. User chọn playlist
+  4. PlaylistManager.addTrackToPlaylist()
+  5. Hiển thị confirmation
+end note
+
+note right of Play
+  **Pre-conditions:**
+  - Playlist có ít nhất 1 track
+  
+  **Main Flow:**
+  1. User click "Play" trên playlist
+  2. MainContent lấy trackPaths
+  3. AppController.playPlaylist(paths)
+  4. Queue được replace với tracks
+  5. Phát bài đầu tiên
+  
+  **Alternative Flow:**
+  A1. Playlist rỗng:
+      - Hiển thị thông báo
+      - Không phát
+end note
+
+@enduml

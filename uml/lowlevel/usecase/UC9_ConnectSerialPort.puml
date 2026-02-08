@@ -1,0 +1,88 @@
+@startuml UC9_ConnectSerialPort
+title UC9: Connect Serial Port - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC9: Connect Serial Port" {
+    usecase "Scan Ports" as Scan
+    usecase "Select Port" as Select
+    usecase "Connect" as Connect
+    usecase "Disconnect" as Disconnect
+}
+
+User --> Scan
+User --> Select
+User --> Connect
+User --> Disconnect
+
+note right of Scan
+  **Pre-conditions:**
+  - Serial ports available trên hệ thống
+  
+  **Post-conditions:**
+  - Danh sách ports được hiển thị
+  
+  **Main Flow:**
+  1. User click "Refresh Ports"
+  2. ConnectionPanelHelper gọi controller
+  3. SerialConnectionImpl scan:
+     - /dev/ttyUSB* (Linux)
+     - /dev/ttyACM* (Linux)
+  4. Dropdown được cập nhật
+end note
+
+note right of Connect
+  **Pre-conditions:**
+  - Port đã được chọn
+  - Port không bị sử dụng bởi app khác
+  
+  **Post-conditions:**
+  - Serial connection established
+  - Read thread đang chạy
+  - UI hiển thị "Connected"
+  
+  **Main Flow:**
+  1. User chọn port, click "Connect"
+  2. AppController.connectToPort(name)
+  3. SerialConnectionImpl.connect(name, 115200)
+  4. Open port với O_RDWR | O_NOCTTY
+  5. Configure termios: 115200, 8N1
+  6. SerialIOImpl.startReading()
+  7. Spawn background read thread
+  8. UI update status "Connected"
+  
+  **Alternative Flow:**
+  A1. Port không mở được:
+      - Error: "Permission denied" hoặc "Device busy"
+      - UI hiển thị error message
+      
+  A2. Port bị disconnect bất ngờ:
+      - Read thread phát hiện
+      - Cleanup resources
+      - UI update "Disconnected"
+end note
+
+note right of Disconnect
+  **Pre-conditions:**
+  - Đang connected
+  
+  **Post-conditions:**
+  - Connection closed
+  - Read thread stopped
+  - Resources freed
+  
+  **Main Flow:**
+  1. User click "Disconnect"
+  2. AppController.disconnect()
+  3. SerialIOImpl.stopReading()
+  4. Join read thread
+  5. SerialConnectionImpl.disconnect()
+  6. Close file descriptor
+  7. UI update "Disconnected"
+end note
+
+@enduml

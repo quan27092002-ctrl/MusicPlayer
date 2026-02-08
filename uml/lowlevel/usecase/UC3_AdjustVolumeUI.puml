@@ -1,0 +1,49 @@
+@startuml UC3_AdjustVolumeUI
+title UC3: Adjust Volume (UI) - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC3: Adjust Volume (UI)" {
+    usecase "Drag Volume Slider" as Drag
+    usecase "Update Audio Volume" as Update
+    usecase "Save Volume State" as Save
+}
+
+User --> Drag
+Drag ..> Update : <<include>>
+Update ..> Save : <<include>>
+
+note right of Drag
+  **Pre-conditions:**
+  - UI đang hiển thị
+  - Audio system initialized
+  
+  **Post-conditions:**
+  - Volume đã được thay đổi
+  - PlayerState lưu giá trị mới
+  - UI slider hiển thị giá trị mới
+  
+  **Main Flow:**
+  1. User kéo slider volume trên PlayerBar
+  2. View gọi AppController.setVolume(value)
+  3. VolumeController gọi AudioPlayer.setVolume(value)
+  4. AudioVolumeImpl gọi Mix_VolumeMusic(sdlValue)
+  5. PlayerState.setVolume(value)
+  6. UI cập nhật vị trí slider
+  
+  **Alternative Flow:**
+  A1. Value ngoài range 0-100:
+      - Clamp về 0 hoặc 100
+      - Tiếp tục main flow
+  
+  **Notes:**
+  - SDL volume range: 0-128
+  - UI/App range: 0-100
+  - Conversion: sdlValue = value * 128 / 100
+end note
+
+@enduml

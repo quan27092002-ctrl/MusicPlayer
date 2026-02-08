@@ -1,0 +1,55 @@
+@startuml usecase_lowlevel
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+left to right direction
+
+title LOW-LEVEL USE CASE DIAGRAM - S32K Media Player
+
+' Actors
+actor "User" as User
+actor "S32K Board" as Board #LightCoral
+
+rectangle "S32K Media Player" {
+    
+    package "Playback Subsystem" #LightGreen {
+        usecase "UC1: Play/Pause Music" as UC1
+        usecase "UC2: Load Track" as UC2
+        usecase "UC6: Toggle Shuffle/Repeat" as UC6
+    }
+    
+    package "Volume Subsystem" #LightBlue {
+        usecase "UC3: Adjust Volume (UI)" as UC3
+        usecase "UC4: Adjust Volume (Board)" as UC4
+    }
+    
+    package "Playlist Subsystem" #LightYellow {
+        usecase "UC7: Manage Playlist" as UC7
+    }
+    
+    package "Hardware Subsystem" #LightCoral {
+        usecase "UC5: Control Playback (Board)" as UC5
+        usecase "UC8: Load Music from USB" as UC8
+        usecase "UC9: Connect Serial Port" as UC9
+    }
+}
+
+' User associations
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+
+' Board associations
+Board --> UC4
+Board --> UC5
+
+' Include/Extend relationships
+UC1 ..> UC2 : <<include>>
+UC7 ..> UC2 : <<extend>>
+UC5 ..> UC1 : <<include>>
+
+@enduml

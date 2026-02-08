@@ -1,0 +1,57 @@
+@startuml UC4_AdjustVolumeBoard
+title UC4: Adjust Volume (Board) - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor "S32K Board" as Board #LightCoral
+actor User
+
+rectangle "UC4: Adjust Volume (Board)" {
+    usecase "Rotate Volume Knob" as Rotate
+    usecase "Send ADC Value" as SendADC
+    usecase "Parse & Convert" as Parse
+    usecase "Update Volume" as Update
+}
+
+User --> Rotate
+Rotate --> Board
+Board --> SendADC
+SendADC ..> Parse : <<include>>
+Parse ..> Update : <<include>>
+
+note right of SendADC
+  **Pre-conditions:**
+  - Serial connected (UC9)
+  - Board đang hoạt động
+  
+  **Post-conditions:**
+  - Volume đã được thay đổi
+  - UI slider sync với giá trị mới
+  
+  **Main Flow:**
+  1. User xoay núm volume trên Board
+  2. Board đọc ADC value (0-4095)
+  3. Board gửi "VR: {value}\n" qua Serial
+  4. SerialIOImpl nhận data
+  5. BoardCommunicator parse: value → volume%
+  6. AppController.setVolume(percent)
+  7. VolumeController cập nhật AudioPlayer
+  8. UI slider sync giá trị mới
+  
+  **Alternative Flow:**
+  A1. Serial disconnected:
+      - Data không được nhận
+      - Volume không thay đổi
+      
+  A2. ADC value không hợp lệ:
+      - BoardCommunicator log error
+      - Bỏ qua command
+  
+  **Conversion:**
+  - ADC 0-4095 → Volume 0-100%
+  - volume = adc * 100 / 4095
+end note
+
+@enduml

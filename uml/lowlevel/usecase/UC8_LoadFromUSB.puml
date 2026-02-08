@@ -1,0 +1,68 @@
+@startuml UC8_LoadFromUSB
+title UC8: Load Music from USB - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC8: Load Music from USB" {
+    usecase "Refresh Devices" as Refresh
+    usecase "Select USB Device" as Select
+    usecase "Load Music" as Load
+    usecase "Scan Directory" as Scan
+    usecase "Extract Metadata" as Extract
+}
+
+User --> Refresh
+User --> Select
+User --> Load
+Load ..> Scan : <<include>>
+Scan ..> Extract : <<include>>
+
+note right of Refresh
+  **Pre-conditions:**
+  - USB đã cắm vào máy
+  - OS đã mount USB
+  
+  **Post-conditions:**
+  - Danh sách device được cập nhật
+  
+  **Main Flow:**
+  1. User click "Refresh" trên Storage panel
+  2. StoragePanelHelper gọi controller
+  3. StorageManager scan mounted drives
+  4. Dropdown được cập nhật với devices
+end note
+
+note right of Load
+  **Pre-conditions:**
+  - Device đã được chọn
+  - Path tồn tại và có quyền đọc
+  
+  **Post-conditions:**
+  - Tracks được thêm vào library
+  - UI hiển thị số lượng loaded
+  
+  **Main Flow:**
+  1. User chọn device, click "Load"
+  2. AppController.loadFromStorage(path)
+  3. PlaylistManager.loadDirectoryAsync(path)
+  4. Scan recursive tìm *.mp3, *.wav, *.flac
+  5. Với mỗi file: tạo MediaFile, extract metadata
+  6. Add vào library
+  7. Notify "Loaded X tracks"
+  
+  **Alternative Flow:**
+  A1. USB bị ngắt kết nối:
+      - Scan dừng lại
+      - Error message hiển thị
+      
+  A2. File bị corrupt:
+      - Skip file
+      - Continue scan
+      - Log warning
+end note
+
+@enduml

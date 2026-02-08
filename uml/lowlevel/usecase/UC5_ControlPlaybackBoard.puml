@@ -1,0 +1,60 @@
+@startuml UC5_ControlPlaybackBoard
+title UC5: Control Playback (Board) - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor "S32K Board" as Board #LightCoral
+actor User
+
+rectangle "UC5: Control Playback (Board)" {
+    usecase "Press Button" as Press
+    usecase "Send Command" as Send
+    usecase "Execute Playback" as Execute
+}
+
+User --> Press
+Press --> Board
+Board --> Send
+Send ..> Execute : <<include>>
+
+note right of Send
+  **Pre-conditions:**
+  - Serial connected (UC9)
+  - Track đã được load
+  
+  **Post-conditions:**
+  - Playback state thay đổi tương ứng
+  - UI sync với state mới
+  
+  **Main Flow:**
+  1. User nhấn nút trên Board
+  2. Board gửi "cmd:{command}\n" qua Serial
+  3. SerialIOImpl nhận data
+  4. BoardCommunicator parse command
+  5. Gọi AppController tương ứng:
+     - "play" → play()
+     - "pause" → pause()
+     - "next" → next()
+     - "prev" → previous()
+  6. PlaybackController thực hiện action
+  7. UI cập nhật trạng thái
+  
+  **Alternative Flow:**
+  A1. Command không hợp lệ:
+      - BoardCommunicator log warning
+      - Bỏ qua command
+      
+  A2. No track loaded (cho play):
+      - PlaybackController return error
+      - Không có thay đổi
+  
+  **Supported Commands:**
+  - cmd:play - Phát nhạc
+  - cmd:pause - Tạm dừng
+  - cmd:next - Bài tiếp theo
+  - cmd:prev - Bài trước
+end note
+
+@enduml

@@ -1,0 +1,64 @@
+@startuml UC6_ShuffleRepeat
+title UC6: Toggle Shuffle/Repeat - Use Case Specification
+
+skinparam packageStyle rectangle
+skinparam noteBackgroundColor #FFFFCC
+left to right direction
+
+actor User
+
+rectangle "UC6: Toggle Shuffle/Repeat" {
+    usecase "Toggle Shuffle" as Shuffle
+    usecase "Toggle Repeat" as Repeat
+}
+
+User --> Shuffle
+User --> Repeat
+
+note right of Shuffle
+  **Pre-conditions:**
+  - Có tracks trong queue
+  
+  **Post-conditions:**
+  - Queue được shuffle hoặc restore
+  - PlayerState.shuffleEnabled updated
+  - UI icon thay đổi
+  
+  **Main Flow (Enable Shuffle):**
+  1. User click Shuffle button
+  2. View gọi AppController.toggleShuffle()
+  3. PlaybackController lưu originalOrder
+  4. PlaylistManager randomize queue
+  5. PlayerState.setShuffleEnabled(true)
+  6. UI highlight Shuffle icon
+  
+  **Alternative Flow (Disable Shuffle):**
+  A1. Shuffle đang enable:
+      1. PlaylistManager restore originalOrder
+      2. PlayerState.setShuffleEnabled(false)
+      3. UI un-highlight Shuffle icon
+end note
+
+note right of Repeat
+  **Pre-conditions:**
+  - Player đã khởi tạo
+  
+  **Post-conditions:**
+  - Repeat mode thay đổi
+  - PlayerState.repeatMode updated
+  
+  **Main Flow (Cycle Through Modes):**
+  1. User click Repeat button
+  2. View gọi AppController.toggleRepeat()
+  3. PlaybackController đọc current mode
+  4. Cycle: OFF → REPEAT_ALL → REPEAT_ONE → OFF
+  5. PlayerState.setRepeatMode(newMode)
+  6. UI icon thay đổi theo mode
+  
+  **Repeat Modes:**
+  - OFF: Không repeat
+  - REPEAT_ALL: Repeat toàn bộ playlist
+  - REPEAT_ONE: Repeat bài hiện tại
+end note
+
+@enduml
