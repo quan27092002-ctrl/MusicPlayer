@@ -136,6 +136,19 @@ package "Controller" {
             -mPlayerState : IPlayerState
             -mPlaylistManager : IPlaylistManager
         }
+        
+        ' Relationships in App Controller
+        PlaylistManagerImpl ..|> IPlaylistManager
+        VolumeControllerImpl ..|> IVolumeController
+        HistoryManagerImpl ..|> IHistoryManager
+        BoardCommunicatorImpl ..|> IBoardCommunicator
+        PlaybackControllerImpl ..|> IPlaybackController
+        
+        AppController *-- PlaylistManagerImpl
+        AppController *-- VolumeControllerImpl
+        AppController *-- HistoryManagerImpl
+        AppController *-- BoardCommunicatorImpl
+        AppController *-- PlaybackControllerImpl
     }
 
     package "Audio Player" {
@@ -183,6 +196,38 @@ package "Controller" {
         interface IAudioPlayer {
         }
         
+        class AudioLifecycleImpl {
+            -mState : atomic_AudioState
+            -mInitialized : atomic_bool
+            +initialize() : bool
+            +shutdown() : void
+            +getState() : AudioState
+        }
+        
+        class AudioLoaderImpl {
+            -mFilePath : string
+            -mLoaded : bool
+            +loadFile(filePath) : bool
+            +unload() : void
+            +isLoaded() : bool
+        }
+        
+        class AudioPlaybackImpl {
+            -mPlaying : bool
+            -mPositionMs : uint32
+            +play() : void
+            +pause() : void
+            +stop() : void
+            +seek(positionMs) : void
+        }
+        
+        class AudioVolumeImpl {
+            -mVolume : int
+            -mMuted : bool
+            +setVolume(volume) : void
+            +getVolume() : int
+        }
+        
         class AudioPlayer <<facade>> {
             -mAudioLifecycle : AudioLifecycleImpl
             -mAudioLoader : AudioLoaderImpl
@@ -190,6 +235,17 @@ package "Controller" {
             -mAudioVolume : AudioVolumeImpl
             +AudioPlayer()
         }
+        
+        ' Relationships in Audio Player
+        AudioLifecycleImpl ..|> IAudioLifecycle
+        AudioLoaderImpl ..|> IAudioLoader
+        AudioPlaybackImpl ..|> IAudioPlayback
+        AudioVolumeImpl ..|> IAudioVolume
+        
+        AudioPlayer *-- AudioLifecycleImpl
+        AudioPlayer *-- AudioLoaderImpl
+        AudioPlayer *-- AudioPlaybackImpl
+        AudioPlayer *-- AudioVolumeImpl
     }
 
     package "Serial Manager" {
@@ -221,11 +277,34 @@ package "Controller" {
         interface ISerialManager {
         }
         
+        class SerialConnectionImpl {
+            -mFd : int
+            -mPortName : string
+            -mBaudRate : uint32
+            -mState : atomic_SerialState
+            +connect(portName, baudRate) : bool
+            +disconnect() : void
+        }
+        
+        class SerialIOImpl {
+            -mFd : int*
+            -mReadCallback : function
+            +write(data) : bool
+            +read() : string
+        }
+        
         class SerialManager <<facade>> {
             -mSerialConnection : SerialConnectionImpl
             -mSerialIO : SerialIOImpl
             +SerialManager()
         }
+        
+        ' Relationships in Serial Manager
+        SerialConnectionImpl ..|> ISerialConnection
+        SerialIOImpl ..|> ISerialIO
+        
+        SerialManager *-- SerialConnectionImpl
+        SerialManager *-- SerialIOImpl
     }
 
     package "Storage Manager" {
@@ -239,6 +318,8 @@ package "Controller" {
             +getAvailableStorage() : vector
             +refreshDevices() : void
         }
+        
+        StorageManager ..|> IStorageManager
     }
 
     IAppController --|> IAppLifecycle
@@ -259,16 +340,10 @@ package "Controller" {
     AppController ..|> IAppController
     AudioPlayer ..|> IAudioPlayer
     SerialManager ..|> ISerialManager
-    StorageManager ..|> IStorageManager
-    
-    AppController *-- PlaylistManagerImpl
-    AppController *-- VolumeControllerImpl
-    AppController *-- HistoryManagerImpl
-    AppController *-- BoardCommunicatorImpl
-    AppController *-- PlaybackControllerImpl
     
     AppController --> IAudioPlayer : uses
     AppController --> ISerialManager : uses
+    AppController --> StorageManager : uses
 }
 
 @enduml
