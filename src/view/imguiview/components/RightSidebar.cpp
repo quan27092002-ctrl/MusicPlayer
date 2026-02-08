@@ -176,15 +176,6 @@ void RightSidebar::renderConnectionPanel() {
     }
     
     ImGui::Dummy(ImVec2(0, 5));
-    ImGui::Dummy(ImVec2(0, 5));
-    // Status text hidden as per user request
-    /*
-    if (isConnected) {
-        ImGui::TextColored(Colors::GreenV, "Status: Connected");
-    } else {
-        ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1), "Status: Disconnected");
-    }
-    */
 }
 
 void RightSidebar::renderTabs() {

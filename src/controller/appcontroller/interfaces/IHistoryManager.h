@@ -32,8 +32,7 @@ public:
      * @brief Get the history of played tracks.
      * @return Vector of track indices in play order
      */
-    virtual std::vector<int> getHistory() const = 0; // Deprecated but kept for now? Or replace/remove?
-    // Removing getHistory() returning int indices as it is broken for Consumer Queue.
+    virtual std::vector<int> getHistory() const = 0;
     
     /**
      * @brief Get the number of items in history.
@@ -45,7 +44,7 @@ public:
      * @param index Index into history stack (0 = oldest).
      * @return Smart pointer to MediaFile.
      */
-    virtual std::string getHistoryTrackPath(size_t index) const = 0; // New
+    virtual std::string getHistoryTrackPath(size_t index) const = 0;
     virtual std::shared_ptr<Model::MediaFile> getHistoryItem(size_t index) const = 0;
 };
 
