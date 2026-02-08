@@ -90,7 +90,10 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testAudioPlayer.cpp \
             $(TEST_DIR)/testSerialManager.cpp \
             $(TEST_DIR)/testAppController.cpp \
-            $(TEST_DIR)/testPlaybackFix.cpp
+            $(TEST_DIR)/testPlaybackFix.cpp \
+            $(TEST_DIR)/testStorageManager.cpp \
+            $(TEST_DIR)/testCoverArt.cpp \
+            $(TEST_DIR)/testPlaylistManager.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
@@ -152,9 +155,11 @@ clean:
 # ==========================================
 
 # Build with coverage instrumentation and run tests
-coverage: CXXFLAGS += $(COVERAGE_FLAGS)
-coverage: LDFLAGS += $(COVERAGE_FLAGS)
-coverage: clean $(TEST_TARGET)
+coverage:
+	@echo "Cleaning for coverage build..."
+	rm -rf $(BUILD_DIR)
+	@echo "Building with coverage instrumentation..."
+	$(MAKE) CXXFLAGS="$(CXXFLAGS) $(COVERAGE_FLAGS)" LDFLAGS="$(LDFLAGS) $(COVERAGE_FLAGS)" $(TEST_TARGET)
 	@echo "Running tests with coverage..."
 	./$(TEST_TARGET)
 
@@ -162,8 +167,8 @@ coverage: clean $(TEST_TARGET)
 coverage-report: coverage
 	@echo "Generating coverage report..."
 	@mkdir -p $(BUILD_DIR)/coverage
-	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info --ignore-errors mismatch
-	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --ignore-errors unused
+	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info
+	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info
 	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage
 	@echo "========================================="
 	@echo "Coverage report: $(BUILD_DIR)/coverage/index.html"
