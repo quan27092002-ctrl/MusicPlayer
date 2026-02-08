@@ -7,7 +7,7 @@ title VIEW LAYER - Class Diagram
 
 package "View" {
     
-    package "Interfaces" {
+    package "interfaces" #LightBlue {
         interface IView {
             +initialize() : bool
             +shutdown() : void
@@ -19,19 +19,32 @@ package "View" {
         interface IWindowComponent {
             +render() : void
         }
+        
+        interface ILifecycleManager {
+            +initialize(width, height, title) : bool
+            +shutdown() : void
+            +processEvents(running) : void
+            +beginFrame() : void
+            +endFrame() : void
+        }
+        
+        interface IAssetManager {
+            +clearCache() : void
+            +drawAlbumCover(dl, pos, size, cacheKey, data) : void
+        }
     }
     
-    package "Managers" {
+    package "managers" #LightGreen {
         class LifecycleManager {
-            -mWindow : SDL_Window
-            -mRenderer : SDL_Renderer
+            -mWindow : SDL_Window*
+            -mRenderer : SDL_Renderer*
             -mInitialized : bool
             +LifecycleManager()
             +initialize(width, height, title) : bool
             +shutdown() : void
             +processEvents(running) : void
-            +getWindow() : SDL_Window
-            +getRenderer() : SDL_Renderer
+            +getWindow() : SDL_Window*
+            +getRenderer() : SDL_Renderer*
             +getWindowWidth() : int
             +getWindowHeight() : int
             +beginFrame() : void
@@ -40,41 +53,21 @@ package "View" {
         }
         
         class AssetManager {
-            -mRenderer : SDL_Renderer
-            -mCoverCache : map
+            -mRenderer : SDL_Renderer*
+            -mCoverCache : map<string, SDL_Texture*>
             +AssetManager(renderer)
             +clearCache() : void
             +drawAlbumCover(dl, pos, size, cacheKey, data) : void
-            -createTextureFromMemory(data) : SDL_Texture
+            -createTextureFromMemory(data) : SDL_Texture*
         }
     }
     
-    package "UI Components" {
-        class ImGuiView <<facade>> {
-            -mController : IAppController
-            -mPlayerState : IPlayerState
-            -mLifecycle : LifecycleManager
-            -mAssetManager : AssetManager
-            -mMainContent : MainContent
-            -mRightSidebar : RightSidebar
-            -mPlayerBar : PlayerBar
-            -mRunning : bool
-            -mPlaylistDirty : atomic_bool
-            +ImGuiView(controller, playerState)
-            +initialize() : bool
-            +shutdown() : void
-            +isRunning() : bool
-            +processEvents() : void
-            +render() : void
-            -updatePlaylistData() : void
-        }
-        
+    package "maincontent" #LightYellow {
         class MainContent {
-            -mController : IAppController
-            -mPlayerState : IPlayerState
-            -mAssetManager : AssetManager
-            -mPlaylistDisplay : vector_string
-            -mSearchQuery : char_array
+            -mController : IAppController*
+            -mPlayerState : IPlayerState*
+            -mAssetManager : AssetManager*
+            -mSearchQuery : char[256]
             -mMainTabIndex : int
             -mShowPlaylistDetail : bool
             -mSelectedPlaylistIndex : int
@@ -94,64 +87,15 @@ package "View" {
             -renderAddToPlaylistMenu() : void
         }
         
-        class RightSidebar {
-            -mController : IAppController
-            -mPlayerState : IPlayerState
-            -mAssetManager : AssetManager
-            -mPlaylistDisplay : vector_string
-            -mRightTabIndex : int
-            -mPortBuffer : char_array
-            -mAvailablePorts : vector_string
-            -mSelectedPortIndex : int
-            -mStorageDevices : vector
-            -mSelectedStorageIndex : int
-            +RightSidebar(controller, playerState, assetManager)
-            +render() : void
-            +setPlaylist(playlist) : void
-            -renderNowPlaying(dl) : void
-            -renderTabs() : void
-            -renderQueue(dl, width, currentTrack) : void
-            -renderRecent(dl, width) : void
-            -renderConnectionPanel() : void
-            -refreshPorts() : void
-            -renderStoragePanel() : void
-            -refreshStorage() : void
-        }
-        
-        class PlayerBar {
-            -mController : IAppController
-            -mPlayerState : IPlayerState
-            -mAssetManager : AssetManager
-            -mWasPlaying : bool
-            -mPlayStartTime : time_point
-            -mPlayStartPos : uint32
-            -mLastTrackPath : string
-            -mLastTrack : int
-            -mIsDraggingSlider : bool
-            -mLastPlaybackVersion : uint32
-            +PlayerBar(controller, playerState, assetManager)
-            +render() : void
-            +update(windowWidth, windowHeight) : void
-            -stripExtension(name) : string
-        }
-    }
-    
-    package "Playlist" {
         class PlaylistData <<struct>> {
             +name : string
             +desc : string
             +colorIdx : int
-            +trackPaths : vector_string
-        }
-        
-        enum ViewMode {
-            NORMAL
-            CREATE_PLAYLIST
-            EDIT_PLAYLIST
+            +trackPaths : vector<string>
         }
         
         class PlaylistManager {
-            -mPlaylists : vector_PlaylistData
+            -mPlaylists : vector<PlaylistData>
             -mDefaultPlaylistsPopulated : bool
             +PlaylistManager()
             +createPlaylist(name, desc, colorIdx) : void
@@ -160,27 +104,124 @@ package "View" {
             +addTrackToPlaylist(playlistIdx, trackPath) : void
             +removeTrackFromPlaylist(playlistIdx, trackIdx) : void
             +getPlaylistCount() : size_t
-            +getPlaylist(idx) : PlaylistData
-            +getPlaylistMutable(idx) : PlaylistData
-            +getAllPlaylists() : vector
+            +getPlaylist(idx) : PlaylistData&
+            +getPlaylistMutable(idx) : PlaylistData&
+            +getAllPlaylists() : vector<PlaylistData>&
             +populateDefaultPlaylists(controller) : void
             +isDefaultPopulated() : bool
         }
+        
+        enum ViewMode {
+            NORMAL
+            CREATE_PLAYLIST
+            EDIT_PLAYLIST
+        }
     }
-
+    
+    package "rightsidebar" #LightCoral {
+        class RightSidebar {
+            -mController : IAppController*
+            -mPlayerState : IPlayerState*
+            -mAssetManager : AssetManager*
+            -mPlaylistDisplay : vector<string>
+            -mRightTabIndex : int
+            -mConnectionHelper : ConnectionPanelHelper
+            -mStorageHelper : StoragePanelHelper
+            +RightSidebar(controller, playerState, assetManager)
+            +render() : void
+            +setPlaylist(playlist) : void
+            -renderNowPlaying(dl) : void
+            -renderTabs() : void
+            -renderQueue(dl, width, currentTrack) : void
+            -renderRecent(dl, width) : void
+            -renderConnectionPanel() : void
+            -renderStoragePanel() : void
+        }
+        
+        class ConnectionPanelHelper {
+            -mPorts : vector<string>
+            -mSelectedIndex : int
+            -mPortBuffer : char[128]
+            +refresh(controller) : void
+            +getSelectedPort() : string
+            +getSelectedIndex() : int
+            +setSelectedIndex(idx) : void
+            +getPorts() : vector<string>&
+            +getPortBuffer() : char*
+        }
+        
+        class StoragePanelHelper {
+            -mDevices : vector<StorageDevice>
+            -mSelectedIndex : int
+            -mBuffer : char[128]
+            +refresh(controller) : void
+            +getSelectedPath() : string
+            +getSelectedIndex() : int
+            +setSelectedIndex(idx) : void
+            +getDevices() : vector<StorageDevice>&
+            +getDisplayBuffer() : char*
+        }
+    }
+    
+    package "playerbar" #Lavender {
+        class PlayerBar {
+            -mController : IAppController*
+            -mPlayerState : IPlayerState*
+            -mAssetManager : AssetManager*
+            -mWasPlaying : bool
+            -mPlayStartTime : time_point
+            -mPlayStartPos : uint32_t
+            -mLastTrackPath : string
+            -mLastTrack : int
+            -mIsDraggingSlider : bool
+            -mLastPlaybackVersion : uint32_t
+            +PlayerBar(controller, playerState, assetManager)
+            +render() : void
+            +update(windowWidth, windowHeight) : void
+            -stripExtension(name) : string
+        }
+    }
+    
+    ' Main facade class
+    class ImGuiView <<facade>> {
+        -mController : IAppController*
+        -mPlayerState : IPlayerState*
+        -mLifecycle : LifecycleManager
+        -mAssetManager : AssetManager
+        -mMainContent : MainContent
+        -mRightSidebar : RightSidebar
+        -mPlayerBar : PlayerBar
+        -mRunning : bool
+        -mPlaylistDirty : atomic<bool>
+        +ImGuiView(controller, playerState)
+        +initialize() : bool
+        +shutdown() : void
+        +isRunning() : bool
+        +processEvents() : void
+        +render() : void
+        -updatePlaylistData() : void
+    }
+    
+    ' Interface implementations
     ImGuiView ..|> IView
+    LifecycleManager ..|> ILifecycleManager
+    AssetManager ..|> IAssetManager
     MainContent ..|> IWindowComponent
     RightSidebar ..|> IWindowComponent
     PlayerBar ..|> IWindowComponent
     
+    ' Composition relationships
     ImGuiView *-- LifecycleManager
     ImGuiView *-- AssetManager
     ImGuiView *-- MainContent
     ImGuiView *-- RightSidebar
     ImGuiView *-- PlayerBar
     
+    ' Internal compositions
     MainContent *-- PlaylistManager
     MainContent --> PlaylistData : manages
+    RightSidebar *-- ConnectionPanelHelper
+    RightSidebar *-- StoragePanelHelper
 }
 
 @enduml
