@@ -2,36 +2,36 @@
  * PROJECT: S32K_MediaPlayer
  * FILE: src/controller/StorageManager.h
  * AUTHOR: Architecture Team
- * DESCRIPTION: Manages storage device detection (Internal, USB).
+ * DESCRIPTION: Concrete implementation of IStorageManager.
+ *              Manages storage device detection (Internal, USB).
  */
 
 #ifndef STORAGE_MANAGER_H
 #define STORAGE_MANAGER_H
 
-#include <string>
-#include <vector>
+#include "IStorageManager.h"
 #include <mutex>
 
 namespace Controller {
 
-struct StorageDevice {
-    std::string name; // Human readable (e.g., "Internal Storage", "USB Drive")
-    std::string path; // System path (e.g., "./mMusic", "/media/user/USB")
-};
-
-class StorageManager {
+/**
+ * @brief Concrete implementation of IStorageManager.
+ * 
+ * Scans local filesystem for available storage devices.
+ */
+class StorageManager : public IStorageManager {
 public:
     StorageManager();
-    virtual ~StorageManager() = default;
+    ~StorageManager() override = default;
 
-    /**
-     * @brief Scans for available storage devices.
-     * Always includes the internal "./mMusic" folder.
-     * Checks /media/ and /mnt/ for external drives.
-     */
-    std::vector<StorageDevice> getAvailableStorage();
+    // IStorageManager interface
+    std::vector<StorageDevice> getAvailableStorage() override;
+    void refreshDevices() override;
 
 private:
+    std::vector<StorageDevice> mCachedDevices;
+    bool mNeedsRefresh;
+    
     std::string getUsername();
     bool hasMusicFiles(const std::string& path);
 };
@@ -39,3 +39,4 @@ private:
 } // namespace Controller
 
 #endif // STORAGE_MANAGER_H
+

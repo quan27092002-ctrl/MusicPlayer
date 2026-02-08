@@ -57,6 +57,7 @@ public:
     std::string getPortName() const override { return ""; }
     uint32_t getBaudRate() const override { return 0; }
     void flush() override {}
+    std::vector<std::string> getAvailablePorts() const override { return {}; }
 };
 
 class PlaybackFixTest : public ::testing::Test {

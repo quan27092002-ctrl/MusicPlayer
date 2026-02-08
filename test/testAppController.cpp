@@ -172,6 +172,7 @@ public:
     std::string getPortName() const override { return connectedPort; }
     uint32_t getBaudRate() const override { return connectedBaud; }
     void flush() override {}
+    std::vector<std::string> getAvailablePorts() const override { return {}; }
 
     // Test helper: simulate receiving data
     void simulateReceive(const std::string& data) {

@@ -12,6 +12,7 @@
 #include "../AssetManager.h"
 #include "../../../controller/IAppController.h"
 #include "../../../model/IPlayerState.h"
+#include "playlist/PlaylistData.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -49,7 +50,7 @@ private:
     void renderRecentTab(float mainW, float contentH);
     void renderMusicTab(float mainW, float contentH);
     void renderPlaylistTab();
-    void renderPlaylistDetailView(); // Detail View renderer
+    void renderPlaylistDetailView();
 
     // UI State
     bool mShowPlaylistDetail;
@@ -71,28 +72,17 @@ private:
     bool mShowAddToPlaylistMenu;
     int mAddToPlaylistTrackIdx;
     
-    // Mutable Playlist Data (Session Persistence)
-    struct PlaylistData {
-        std::string name;
-        std::string desc;
-        int colorIdx;
-        std::vector<std::string> trackPaths;
-    };
-    std::vector<PlaylistData> mPlaylists;
-    bool mDefaultPlaylistsPopulated;
+    // Playlist Manager (extracted SRP)
+    PlaylistManager mPlaylistManager;
     
-    // Helper Functions for CRUD
+    // Modal Renderers
     void renderCreatePlaylistModal();
     void renderEditPlaylistModal();
     void renderDeleteConfirmModal();
     void renderAddToPlaylistMenu();
-    
-    void createPlaylist();
-    void updatePlaylist();
-    void deletePlaylist(int idx);
-    void addTrackToPlaylist(int trackIdx, int playlistIdx);
 };
 
 } // namespace View
 
 #endif // MAINCONTENT_H
+

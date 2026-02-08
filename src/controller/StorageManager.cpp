@@ -15,7 +15,12 @@ namespace fs = std::filesystem;
 
 namespace Controller {
 
-StorageManager::StorageManager() {}
+StorageManager::StorageManager() : mNeedsRefresh(true) {}
+
+void StorageManager::refreshDevices() {
+    mNeedsRefresh = true;
+    mCachedDevices.clear();
+}
 
 std::string StorageManager::getUsername() {
     uid_t uid = geteuid();

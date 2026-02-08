@@ -69,7 +69,10 @@ IMGUI_SRCS = $(IMGUI_DIR)/imgui.cpp \
              $(SRC_DIR)/view/imguiview/AssetManager.cpp \
              $(SRC_DIR)/view/imguiview/components/PlayerBar.cpp \
              $(SRC_DIR)/view/imguiview/components/MainContent.cpp \
-             $(SRC_DIR)/view/imguiview/components/RightSidebar.cpp
+             $(SRC_DIR)/view/imguiview/components/RightSidebar.cpp \
+             $(SRC_DIR)/view/imguiview/components/playlist/PlaylistData.cpp \
+             $(SRC_DIR)/view/imguiview/components/sidebar/StoragePanelHelper.cpp \
+             $(SRC_DIR)/view/imguiview/components/sidebar/ConnectionPanelHelper.cpp
 
 # View sources
 VIEW_SRCS =

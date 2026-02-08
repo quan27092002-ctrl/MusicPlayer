@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include "../../controller/StorageManager.h"
+#include "../../../controller/IStorageManager.h"
 
 namespace View {
 

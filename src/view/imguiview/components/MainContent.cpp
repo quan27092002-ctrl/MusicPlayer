@@ -49,19 +49,7 @@ MainContent::MainContent(std::shared_ptr<Controller::IAppController> controller,
     mNewPlaylistColorIdx = 0;
     mShowAddToPlaylistMenu = false;
     mAddToPlaylistTrackIdx = -1;
-    
-    // Initialize Session Playlists
-    mPlaylists = {
-        { "Chill Vibes", "Relaxing acoustic & lofi tracks", 0, {} },
-        { "High Energy", "Workout & Upbeat hits", 1, {} },
-        { "Focus Flow", "Instrumental study mix", 2, {} }
-    };
-    
-    // Populate Initial Indices (Simulated) - REMOVED as we use paths now and can't easily guess paths
-    
-    // Initial indices population removed as we now use persistent paths.
-    // Real paths will be added by user interaction.
-    mDefaultPlaylistsPopulated = false;
+    // PlaylistManager is auto-initialized with default playlists
 }
 
 void MainContent::setPlaylist(const std::vector<std::string>& playlist) {
@@ -343,25 +331,7 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
 
 void MainContent::renderPlaylistTab() {
     // Auto-populate default playlists if library is loaded and not yet done
-    if (!mDefaultPlaylistsPopulated && mController) {
-        size_t totalTracks = mController->getLibrarySize(); // Use Library size
-        if (totalTracks > 0) {
-            // Distribute tracks: 0-9 to Chill, 10-19 to High Energy, 20-29 to Focus
-            for (int i = 0; i < 3 && i < (int)mPlaylists.size(); ++i) {
-                int startIdx = i * 10;
-                for (int j = 0; j < 10; ++j) {
-                    int trackIdx = startIdx + j;
-                    if (trackIdx < (int)totalTracks) {
-                        std::string path = mController->getLibraryTrackPath(trackIdx); // Use Library accessor
-                        if (!path.empty()) {
-                            mPlaylists[i].trackPaths.push_back(path);
-                        }
-                    }
-                }
-            }
-            mDefaultPlaylistsPopulated = true;
-        }
-    }
+    mPlaylistManager.populateDefaultPlaylists(mController);
     ImGui::Indent(10);
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::WhiteV);
     ImGui::Text("Saved Playlists");
@@ -373,7 +343,8 @@ void MainContent::renderPlaylistTab() {
     float btnWidth = 280.0f;
     float btnHeight = 80.0f;
     
-    for (int i = 0; i < (int)mPlaylists.size(); i++) {
+    for (int i = 0; i < (int)mPlaylistManager.getPlaylistCount(); i++) {
+        const auto& pl = mPlaylistManager.getPlaylist(i);
         ImGui::PushID(i);
         ImVec2 p = ImGui::GetCursorScreenPos();
         
@@ -394,9 +365,9 @@ void MainContent::renderPlaylistTab() {
         // User Request: Theme is the first song's cover art
         // Icon Box (Left side: 10,10 to 70,70 -> 60x60)
         // User Request: Theme is the first song's cover art
-        if (!mPlaylists[i].trackPaths.empty()) {
+        if (!pl.trackPaths.empty()) {
              // Draw Cover Art
-             std::string firstPath = mPlaylists[i].trackPaths[0];
+             std::string firstPath = pl.trackPaths[0];
              auto mediaFile = mController ? mController->acquireMediaFile(firstPath) : nullptr;
              std::vector<uint8_t> artData;
              if (mediaFile) artData = mediaFile->getCoverArt();
@@ -405,8 +376,8 @@ void MainContent::renderPlaylistTab() {
         } else {
              // Fallback to Color Box if empty
             ImU32 iconCol = IM_COL32(30, 215, 96, 255);
-            if (mPlaylists[i].colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
-            if (mPlaylists[i].colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
+            if (pl.colorIdx == 1) iconCol = IM_COL32(50, 100, 255, 255);
+            if (pl.colorIdx == 2) iconCol = IM_COL32(255, 140, 0, 255);
             
             dl->AddRectFilled(ImVec2(p.x + 10, p.y + 10), ImVec2(p.x + 70, p.y + 70), iconCol, 8.0f);
         }
@@ -414,13 +385,13 @@ void MainContent::renderPlaylistTab() {
         // Text (Name at 80, 15)
         ImGui::SetCursorScreenPos(ImVec2(p.x + 80, p.y + 15));
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
-        ImGui::Text("%s", mPlaylists[i].name.c_str());
+        ImGui::Text("%s", pl.name.c_str());
         ImGui::PopFont();
         
         // Text (Desc at 80, 40)
         ImGui::SetCursorScreenPos(ImVec2(p.x + 80, p.y + 40));
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
-        ImGui::Text("%s", mPlaylists[i].desc.c_str());
+        ImGui::Text("%s", pl.desc.c_str());
         ImGui::PopStyleColor();
         
         // Edit/Delete Buttons (Right side)
@@ -429,9 +400,9 @@ void MainContent::renderPlaylistTab() {
         if (ImGui::SmallButton("Edit")) {
              mViewMode = ViewMode::EDIT_PLAYLIST;
              mEditingPlaylistIdx = i;
-             std::strncpy(mNewPlaylistName, mPlaylists[i].name.c_str(), sizeof(mNewPlaylistName)-1);
-             std::strncpy(mNewPlaylistDesc, mPlaylists[i].desc.c_str(), sizeof(mNewPlaylistDesc)-1);
-             mNewPlaylistColorIdx = mPlaylists[i].colorIdx;
+             std::strncpy(mNewPlaylistName, pl.name.c_str(), sizeof(mNewPlaylistName)-1);
+             std::strncpy(mNewPlaylistDesc, pl.desc.c_str(), sizeof(mNewPlaylistDesc)-1);
+             mNewPlaylistColorIdx = pl.colorIdx;
         }
         
         // Del at Width - 45
@@ -477,14 +448,12 @@ void MainContent::renderPlaylistTab() {
 }
 
 void MainContent::renderPlaylistDetailView() {
-    // Use mPlaylists
-
-    if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= (int)mPlaylists.size()) {
+    if (mSelectedPlaylistIndex < 0 || mSelectedPlaylistIndex >= (int)mPlaylistManager.getPlaylistCount()) {
         mShowPlaylistDetail = false;
         return;
     }
     
-    const auto& pl = mPlaylists[mSelectedPlaylistIndex];
+    const auto& pl = mPlaylistManager.getPlaylist(mSelectedPlaylistIndex);
 
     // Header with Back Button
     ImGui::Indent(10);
@@ -564,7 +533,7 @@ void MainContent::renderPlaylistDetailView() {
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextMutedV);
         if (ImGui::Button("X", ImVec2(30, 30))) {
             // Remove from vector
-            mPlaylists[mSelectedPlaylistIndex].trackPaths.erase(mPlaylists[mSelectedPlaylistIndex].trackPaths.begin() + i);
+            mPlaylistManager.removeTrackFromPlaylist(mSelectedPlaylistIndex, i);
             ImGui::PopStyleColor();
             ImGui::PopID();
             break; // Break loop
@@ -588,54 +557,6 @@ void MainContent::renderPlaylistDetailView() {
     
     ImGui::Unindent(10);
 
-}
-
-void MainContent::createPlaylist() {
-    if (std::strlen(mNewPlaylistName) == 0) return;
-    
-    PlaylistData pd;
-    pd.name = mNewPlaylistName;
-    pd.desc = mNewPlaylistDesc;
-    pd.colorIdx = mNewPlaylistColorIdx;
-    
-    mPlaylists.push_back(pd);
-    mViewMode = ViewMode::NORMAL;
-}
-
-void MainContent::updatePlaylist() {
-    if (mEditingPlaylistIdx < 0 || mEditingPlaylistIdx >= (int)mPlaylists.size()) return;
-    if (std::strlen(mNewPlaylistName) == 0) return;
-    
-    mPlaylists[mEditingPlaylistIdx].name = mNewPlaylistName;
-    mPlaylists[mEditingPlaylistIdx].desc = mNewPlaylistDesc;
-    mPlaylists[mEditingPlaylistIdx].colorIdx = mNewPlaylistColorIdx;
-    
-    mViewMode = ViewMode::NORMAL;
-    mEditingPlaylistIdx = -1;
-}
-
-void MainContent::deletePlaylist(int idx) {
-    if (idx >= 0 && idx < (int)mPlaylists.size()) {
-        mPlaylists.erase(mPlaylists.begin() + idx);
-        if (mSelectedPlaylistIndex == idx) {
-            mShowPlaylistDetail = false;
-            mSelectedPlaylistIndex = -1;
-        } else if (mSelectedPlaylistIndex > idx) {
-            mSelectedPlaylistIndex--;
-        }
-    }
-    mShowDeleteConfirm = false;
-    mDeletePlaylistIdx = -1;
-}
-
-void MainContent::addTrackToPlaylist(int trackIdx, int playlistIdx) {
-    if (playlistIdx >= 0 && playlistIdx < (int)mPlaylists.size() && mController) {
-        // Fix: Use getLibraryTrackPath because the index comes from the Music Tab (Library)
-        std::string path = mController->getLibraryTrackPath(trackIdx);
-        if (!path.empty()) {
-            mPlaylists[playlistIdx].trackPaths.push_back(path);
-        }
-    }
 }
 
 void MainContent::renderCreatePlaylistModal() {
@@ -693,7 +614,10 @@ void MainContent::renderCreatePlaylistModal() {
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
         if (ImGui::Button("Create", ImVec2(btnW, 35))) {
-            createPlaylist();
+            if (std::strlen(mNewPlaylistName) > 0) {
+                mPlaylistManager.createPlaylist(mNewPlaylistName, mNewPlaylistDesc, mNewPlaylistColorIdx);
+            }
+            mViewMode = ViewMode::NORMAL;
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor(2);
@@ -755,7 +679,11 @@ void MainContent::renderEditPlaylistModal() {
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::GreenV);
         ImGui::PushStyleColor(ImGuiCol_Text, Colors::BlackV);
         if (ImGui::Button("Save", ImVec2(saveBtnW, 35))) {
-            updatePlaylist();
+            if (std::strlen(mNewPlaylistName) > 0) {
+                mPlaylistManager.updatePlaylist(mEditingPlaylistIdx, mNewPlaylistName, mNewPlaylistDesc, mNewPlaylistColorIdx);
+            }
+            mViewMode = ViewMode::NORMAL;
+            mEditingPlaylistIdx = -1;
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor(2);
@@ -783,7 +711,14 @@ void MainContent::renderDeleteConfirmModal() {
         
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         if (ImGui::Button("Delete", ImVec2(120, 0))) {
-            deletePlaylist(mDeletePlaylistIdx);
+            mPlaylistManager.deletePlaylist(mDeletePlaylistIdx);
+            if (mSelectedPlaylistIndex == mDeletePlaylistIdx) {
+                mShowPlaylistDetail = false;
+                mSelectedPlaylistIndex = -1;
+            } else if (mSelectedPlaylistIndex > mDeletePlaylistIdx) {
+                mSelectedPlaylistIndex--;
+            }
+            mDeletePlaylistIdx = -1;
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor();
@@ -809,16 +744,20 @@ void MainContent::renderAddToPlaylistMenu() {
         ImGui::Text("Select Playlist:");
         ImGui::Separator();
         
-        for (int i = 0; i < (int)mPlaylists.size(); i++) {
-            if (ImGui::Selectable(mPlaylists[i].name.c_str())) {
-                addTrackToPlaylist(mAddToPlaylistTrackIdx, i);
+        for (size_t i = 0; i < mPlaylistManager.getPlaylistCount(); i++) {
+            const auto& pl = mPlaylistManager.getPlaylist((int)i);
+            if (ImGui::Selectable(pl.name.c_str())) {
+                if (mController) {
+                    std::string path = mController->getLibraryTrackPath(mAddToPlaylistTrackIdx);
+                    if (!path.empty()) {
+                        mPlaylistManager.addTrackToPlaylist((int)i, path);
+                    }
+                }
             }
         }
         
         if (ImGui::Selectable("+ Create New Playlist")) {
             mViewMode = ViewMode::CREATE_PLAYLIST;
-            // Pre-fill creation modal? Maybe later.
-            // For now just open creation mode
             mNewPlaylistName[0] = '\0';
             mNewPlaylistDesc[0] = '\0';
             mNewPlaylistColorIdx = 0;
