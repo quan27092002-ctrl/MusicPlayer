@@ -9,7 +9,7 @@
 #define RIGHTSIDEBAR_H
 
 #include "../interfaces/IWindowComponent.h"
-#include "../AssetManager.h"
+#include "../managers/AssetManager.h"
 #include "../../../controller/IAppController.h"
 #include "../../../model/IPlayerState.h"
 #include <memory>

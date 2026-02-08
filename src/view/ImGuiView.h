@@ -12,11 +12,11 @@
 #include "IView.h"
 #include "../controller/IAppController.h"
 #include "../model/IPlayerState.h"
-#include "imguiview/LifecycleManager.h"
-#include "imguiview/AssetManager.h"
-#include "imguiview/components/MainContent.h"
-#include "imguiview/components/RightSidebar.h"
-#include "imguiview/components/PlayerBar.h"
+#include "imguiview/managers/LifecycleManager.h"
+#include "imguiview/managers/AssetManager.h"
+#include "imguiview/maincontent/MainContent.h"
+#include "imguiview/rightsidebar/RightSidebar.h"
+#include "imguiview/playerbar/PlayerBar.h"
 #include <memory>
 #include <vector>
 #include <string>

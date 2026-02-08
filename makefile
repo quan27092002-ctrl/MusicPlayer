@@ -65,14 +65,14 @@ IMGUI_SRCS = $(IMGUI_DIR)/imgui.cpp \
              $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp \
              $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer2.cpp \
              $(SRC_DIR)/view/ImGuiView.cpp \
-             $(SRC_DIR)/view/imguiview/LifecycleManager.cpp \
-             $(SRC_DIR)/view/imguiview/AssetManager.cpp \
-             $(SRC_DIR)/view/imguiview/components/PlayerBar.cpp \
-             $(SRC_DIR)/view/imguiview/components/MainContent.cpp \
-             $(SRC_DIR)/view/imguiview/components/RightSidebar.cpp \
-             $(SRC_DIR)/view/imguiview/components/playlist/PlaylistData.cpp \
-             $(SRC_DIR)/view/imguiview/components/sidebar/StoragePanelHelper.cpp \
-             $(SRC_DIR)/view/imguiview/components/sidebar/ConnectionPanelHelper.cpp
+             $(SRC_DIR)/view/imguiview/managers/LifecycleManager.cpp \
+             $(SRC_DIR)/view/imguiview/managers/AssetManager.cpp \
+             $(SRC_DIR)/view/imguiview/playerbar/PlayerBar.cpp \
+             $(SRC_DIR)/view/imguiview/maincontent/MainContent.cpp \
+             $(SRC_DIR)/view/imguiview/rightsidebar/RightSidebar.cpp \
+             $(SRC_DIR)/view/imguiview/maincontent/PlaylistData.cpp \
+             $(SRC_DIR)/view/imguiview/rightsidebar/StoragePanelHelper.cpp \
+             $(SRC_DIR)/view/imguiview/rightsidebar/ConnectionPanelHelper.cpp
 
 # View sources
 VIEW_SRCS =

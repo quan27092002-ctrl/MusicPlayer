@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "../../../../controller/IAppController.h"
+#include "../../../controller/IAppController.h"
 
 namespace View {
 
