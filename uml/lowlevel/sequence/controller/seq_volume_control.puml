@@ -4,15 +4,17 @@ skinparam backgroundColor #FEFEFE
 skinparam sequenceMessageAlign center
 
 actor User
+participant "S32K Board" as Board #LightCoral
+participant "SerialManager" as SM
+participant "BoardCommunicator" as BC
 participant "View\n(PlayerBar)" as View #LightGreen
 participant "AppController" as AC
 participant "VolumeControllerImpl" as VC
 participant "AudioPlayer" as AP
 participant "AudioVolumeImpl" as AVImpl
 participant "PlayerState" as PS #LightYellow
-participant "S32K Board" as Board #LightCoral
 
-== 1. UI Volume Change ==
+== 1. User Adjusts Volume on UI (Slider) ==
 User -> View : 1. dragVolumeSlider(50)
 activate View
 View -> AC : 1.1. setVolume(50)
@@ -40,34 +42,44 @@ deactivate AC
 View --> User : 2. updateVolumeUI()
 deactivate View
 
-== 3. Board ADC Volume Change ==
-Board -> AC : 3. sendData("VR: 2048")
+== 3. User Adjusts Volume on Board (Potentiometer) ==
+User -> Board : 3. rotateVolumeKnob()
+activate Board
+Board -> SM : 3.1. sendData("VR: 2048\\n")
+deactivate Board
+activate SM
+
+SM -> BC : 3.1.1. onDataReceived("VR: 2048")
+activate BC
+BC -> BC : 3.1.1.1. parseVolumeValue(2048)
+note right of BC : Convert ADC\n0-4095 → 0-100%\n2048 = 50%
+
+BC -> AC : 3.1.1.2. setVolume(50)
 activate AC
-note right of AC : Callback from\nBoardCommunicator
-AC -> AC : 3.1. parseVolumeValue(2048)
+AC -> VC : 3.1.1.2.1. setVolume(50)
+activate VC
+VC -> AP : 3.1.1.2.1.1. setVolume(50)
+activate AP
+AP -> AVImpl : 3.1.1.2.1.1.1. setVolume(50)
+activate AVImpl
+AVImpl -> AVImpl : 3.1.1.2.1.1.1.1. volumeMusic(64)
+AVImpl --> AP : 3.1.1.2.1.1.2. return
+deactivate AVImpl
+AP --> VC : 3.1.1.2.1.2. return
+deactivate AP
+VC -> PS : 3.1.1.2.1.3. setVolume(50)
+activate PS
+PS --> VC : 3.1.1.2.1.4. return
+deactivate PS
+VC --> AC : 3.1.1.2.2. return
+deactivate VC
 
-alt validADCValue (0-4095)
-    AC -> VC : 3.1.1. setVolume(50)
-    activate VC
-    VC -> AP : 3.1.1.1. setVolume(50)
-    activate AP
-    AP -> AVImpl : 3.1.1.1.1. setVolume(50)
-    activate AVImpl
-    AVImpl --> AP : 3.1.1.1.2. return
-    deactivate AVImpl
-    AP --> VC : 3.1.1.2. return
-    deactivate AP
-    VC -> PS : 3.1.1.3. setVolume(50)
-    activate PS
-    PS --> VC : 3.1.1.4. return
-    deactivate PS
-    VC --> AC : 3.1.2. return
-    deactivate VC
-else invalidADCValue
-    AC -> AC : 3.1.1. logError()
-end
-
-AC --> View : 3.2. notifyVolumeChanged()
+AC -> View : 3.1.1.3. notifyVolumeChanged()
 deactivate AC
+BC --> SM : 3.1.2. return
+deactivate BC
+deactivate SM
+
+View --> User : 4. updateVolumeSlider(50)
 
 @enduml

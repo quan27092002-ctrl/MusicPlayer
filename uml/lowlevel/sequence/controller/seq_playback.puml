@@ -1,5 +1,5 @@
 @startuml "seq_playback"
-title CONTROLLER LAYER - Playback Control Flow
+title CONTROLLER LAYER - Playback Control Flow (Play/Pause)
 skinparam backgroundColor #FEFEFE
 skinparam sequenceMessageAlign center
 
@@ -19,7 +19,7 @@ activate AC
 AC -> PBC : 1.1.1. play()
 activate PBC
 
-alt track is loaded
+alt trackIsLoaded
     PBC -> AP : 1.1.1.1. play()
     activate AP
     AP -> APImpl : 1.1.1.1.1. play()
@@ -33,7 +33,7 @@ alt track is loaded
     activate PS
     PS --> PBC : 1.1.1.4. return
     deactivate PS
-else no track loaded
+else noTrackLoaded
     PBC --> AC : 1.1.2. return error
 end
 
@@ -56,6 +56,7 @@ activate AP
 AP -> APImpl : 3.1.1.1.1. pause()
 activate APImpl
 APImpl -> APImpl : 3.1.1.1.1.1. pauseMusic()
+note right of APImpl : Pause giữ nguyên\nvị trí phát hiện tại
 APImpl --> AP : 3.1.1.1.2. return
 deactivate APImpl
 AP --> PBC : 3.1.1.2. return
@@ -69,33 +70,6 @@ deactivate PBC
 AC --> View : 3.2. triggerCallback()
 deactivate AC
 View --> User : 4. updateUI()
-deactivate View
-
-== 5. Stop ==
-User -> View : 5. clickStop()
-activate View
-View -> AC : 5.1. stop()
-activate AC
-AC -> PBC : 5.1.1. stop()
-activate PBC
-PBC -> AP : 5.1.1.1. stop()
-activate AP
-AP -> APImpl : 5.1.1.1.1. stop()
-activate APImpl
-APImpl -> APImpl : 5.1.1.1.1.1. haltMusic()
-APImpl --> AP : 5.1.1.1.2. return
-deactivate APImpl
-AP --> PBC : 5.1.1.2. return
-deactivate AP
-PBC -> PS : 5.1.1.3. setPlaybackState(STOPPED)
-activate PS
-PS --> PBC : 5.1.1.4. return
-deactivate PS
-PBC --> AC : 5.1.2. return
-deactivate PBC
-AC --> View : 5.2. triggerCallback()
-deactivate AC
-View --> User : 6. updateUI()
 deactivate View
 
 @enduml

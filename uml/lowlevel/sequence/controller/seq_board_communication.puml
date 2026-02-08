@@ -4,25 +4,25 @@ skinparam backgroundColor #FEFEFE
 skinparam sequenceMessageAlign center
 
 actor User
+participant "View" as View #LightGreen
 participant "S32K144 Board" as Board #LightCoral
 participant "SerialManager" as SM
 participant "SerialIOImpl" as SIO
 participant "BoardCommunicator" as BC
 participant "AppController" as AC
 participant "PlaybackControllerImpl" as PBC
-participant "View" as View #LightGreen
+participant "VolumeControllerImpl" as VC
+
 
 == 1. Button Press: PLAY ==
-User -> Board : 1. pressButton(PLAY)
+User -> Board : 1. pressPlayButton()
 activate Board
 Board -> SM : 1.1. sendData("cmd:play\\n")
 deactivate Board
 activate SM
 SM -> SIO : 1.1.1. readLine()
 activate SIO
-SIO -> SIO : 1.1.1.1. accumulateBuffer()
-SIO -> SIO : 1.1.1.2. detectNewline()
-SIO --> SM : 1.1.1.3. return "cmd:play"
+SIO --> SM : 1.1.1.1. return "cmd:play"
 deactivate SIO
 
 SM -> BC : 1.1.2. onDataReceived("cmd:play")
@@ -48,37 +48,35 @@ end
 
 BC --> SM : 1.1.3. return
 deactivate BC
+SM --> View : 1.2. notifyStateChanged()
 deactivate SM
 
-== 2. ADC Volume Reading ==
-Board -> SM : 2. sendData("VR: 2048\\n")
+== 2. Volume Knob Adjustment ==
+User -> Board : 2. rotateVolumeKnob()
+activate Board
+Board -> SM : 2.1. sendData("VR: 2048\\n")
+deactivate Board
 activate SM
-SM -> SIO : 2.1. readLine()
+SM -> SIO : 2.1.1. readLine()
 activate SIO
-SIO --> SM : 2.1.1. return "VR: 2048"
+SIO --> SM : 2.1.1.1. return "VR: 2048"
 deactivate SIO
 
-SM -> BC : 2.2. onDataReceived("VR: 2048")
+SM -> BC : 2.1.2. onDataReceived("VR: 2048")
 activate BC
-BC -> BC : 2.2.1. parseVolumeReading(2048)
-note right of BC : Convert ADC\n0-4095 → 0-100%
-BC -> AC : 2.2.2. setVolume(50)
+BC -> BC : 2.1.2.1. parseVolumeValue(2048)
+note right of BC : ADC 0-4095\n→ Volume 0-100%
+BC -> AC : 2.1.2.2. setVolume(50)
 activate AC
-AC --> BC : 2.2.3. return
+AC -> VC : 2.1.2.2.1. setVolume(50)
+activate VC
+VC --> AC : 2.1.2.2.2. return
+deactivate VC
+AC --> BC : 2.1.2.3. return
 deactivate AC
-BC --> SM : 2.3. return
+BC --> SM : 2.1.3. return
 deactivate BC
-deactivate SM
-
-== 3. Status Feedback to Board ==
-AC -> SM : 3. sendStatus("STATUS:PLAYING")
-activate SM
-SM -> SIO : 3.1. write("STATUS:PLAYING\\n")
-activate SIO
-SIO -> Board : 3.1.1. transmitUART()
-SIO --> SM : 3.1.2. return
-deactivate SIO
-SM --> AC : 3.2. return
+SM --> View : 2.2. notifyVolumeChanged()
 deactivate SM
 
 @enduml

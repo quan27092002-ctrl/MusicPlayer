@@ -1,0 +1,84 @@
+@startuml "seq_shuffle_repeat"
+title CONTROLLER LAYER - Shuffle and Repeat Control Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "View\n(PlayerBar)" as View #LightGreen
+participant "AppController" as AC
+participant "PlaybackControllerImpl" as PBC
+participant "PlaylistManagerImpl" as PM
+participant "PlayerState" as PS #LightYellow
+
+== 1. Toggle Shuffle ==
+User -> View : 1. clickShuffleButton()
+activate View
+View -> AC : 1.1. toggleShuffle()
+activate AC
+AC -> PBC : 1.1.1. toggleShuffle()
+activate PBC
+
+alt shuffleIsOff
+    PBC -> PBC : 1.1.1.1. saveOriginalOrder()
+    PBC -> PM : 1.1.1.2. shuffleQueue()
+    activate PM
+    PM -> PM : 1.1.1.2.1. randomizeTrackOrder()
+    PM --> PBC : 1.1.1.2.2. return
+    deactivate PM
+    PBC -> PS : 1.1.1.3. setShuffleEnabled(true)
+    activate PS
+    PS --> PBC : 1.1.1.4. return
+    deactivate PS
+else shuffleIsOn
+    PBC -> PM : 1.1.1.1. restoreOriginalOrder()
+    activate PM
+    PM --> PBC : 1.1.1.2. return
+    deactivate PM
+    PBC -> PS : 1.1.1.3. setShuffleEnabled(false)
+    activate PS
+    PS --> PBC : 1.1.1.4. return
+    deactivate PS
+end
+
+PBC --> AC : 1.1.2. return
+deactivate PBC
+AC --> View : 1.2. notifyShuffleChanged()
+deactivate AC
+View --> User : 2. updateShuffleIcon()
+deactivate View
+
+== 3. Toggle Repeat ==
+User -> View : 3. clickRepeatButton()
+activate View
+View -> AC : 3.1. toggleRepeat()
+activate AC
+AC -> PBC : 3.1.1. toggleRepeat()
+activate PBC
+
+PBC -> PS : 3.1.1.1. getRepeatMode()
+activate PS
+PS --> PBC : 3.1.1.2. return currentMode
+deactivate PS
+
+alt currentMode == OFF
+    PBC -> PS : 3.1.1.3. setRepeatMode(REPEAT_ALL)
+    note right of PS : Repeat toàn bộ\nplaylist
+else currentMode == REPEAT_ALL
+    PBC -> PS : 3.1.1.3. setRepeatMode(REPEAT_ONE)
+    note right of PS : Repeat bài\nhiện tại
+else currentMode == REPEAT_ONE
+    PBC -> PS : 3.1.1.3. setRepeatMode(OFF)
+end
+
+activate PS
+PS --> PBC : 3.1.1.4. return
+deactivate PS
+
+PBC --> AC : 3.1.2. return
+deactivate PBC
+AC --> View : 3.2. notifyRepeatChanged()
+deactivate AC
+View --> User : 4. updateRepeatIcon()
+deactivate View
+
+@enduml
