@@ -104,7 +104,7 @@ void RightSidebar::render() {
     ImGui::SetCursorPos(ImVec2(10, 185 + listHeight + 10));
     renderStoragePanel();
     ImGui::Dummy(ImVec2(0, 10)); // Gap
-    // renderConnectionPanel(); // Removed as per user request
+    renderConnectionPanel(); // Restored but modified
     
     ImGui::End();
     ImGui::PopStyleColor();
@@ -176,11 +176,15 @@ void RightSidebar::renderConnectionPanel() {
     }
     
     ImGui::Dummy(ImVec2(0, 5));
+    ImGui::Dummy(ImVec2(0, 5));
+    // Status text hidden as per user request
+    /*
     if (isConnected) {
         ImGui::TextColored(Colors::GreenV, "Status: Connected");
     } else {
         ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1), "Status: Disconnected");
     }
+    */
 }
 
 void RightSidebar::renderTabs() {
@@ -359,7 +363,7 @@ void RightSidebar::renderStoragePanel() {
         ImGui::PopStyleColor();
         
         ImGui::SameLine();
-        ImGui::TextColored(Colors::GreenV, "%zu songs done", current);
+        ImGui::TextColored(Colors::GreenV, "Scanned %zu / %zu", current, total);
     } else {
         if (ImGui::Button("Load")) {
             if (mSelectedStorageIndex >= 0 && mSelectedStorageIndex < (int)mStorageDevices.size()) {
