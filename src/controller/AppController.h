@@ -31,6 +31,8 @@
 #include <mutex>
 #include <vector>
 #include <thread>
+#include <set>
+#include <string>
 
 namespace Controller {
 
@@ -196,6 +198,8 @@ private:
     std::atomic<bool> mLoadingInProgress{false};
     std::atomic<size_t> mLoadedCount{0};
     std::atomic<size_t> mTotalToLoad{0};
+    std::set<std::string> mLoadedPaths; // Track already loaded USB paths
+    std::mutex mLoadedPathsMutex;
 
     // ========================================================================
     // Storage Management (IAppController)

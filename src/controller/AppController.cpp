@@ -511,6 +511,17 @@ size_t AppController::loadFromStorage(const std::string& path) {
         return 0;
     }
 
+    // Check if this path was already loaded
+    {
+        std::lock_guard<std::mutex> lock(mLoadedPathsMutex);
+        if (mLoadedPaths.find(path) != mLoadedPaths.end()) {
+            std::cerr << "USB path '" << path << "' has already been loaded. Skipping." << std::endl;
+            return 0; // Already loaded
+        }
+        // Mark as loaded
+        mLoadedPaths.insert(path);
+    }
+
     // Detach any previous thread
     if (mLoadingThread.joinable()) {
         mLoadingThread.join();
