@@ -1,0 +1,73 @@
+@startuml "seq_volume_control"
+title CONTROLLER LAYER - Volume Control Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "View\n(PlayerBar)" as View #LightGreen
+participant "AppController" as AC
+participant "VolumeControllerImpl" as VC
+participant "AudioPlayer" as AP
+participant "AudioVolumeImpl" as AVImpl
+participant "PlayerState" as PS #LightYellow
+participant "S32K Board" as Board #LightCoral
+
+== 1. UI Volume Change ==
+User -> View : 1. dragVolumeSlider(50)
+activate View
+View -> AC : 1.1. setVolume(50)
+activate AC
+AC -> VC : 1.1.1. setVolume(50)
+activate VC
+VC -> AP : 1.1.1.1. setVolume(50)
+activate AP
+AP -> AVImpl : 1.1.1.1.1. setVolume(50)
+activate AVImpl
+note right of AVImpl : 50% = 64/128\n(SDL range)
+AVImpl -> AVImpl : 1.1.1.1.1.1. volumeMusic(64)
+AVImpl --> AP : 1.1.1.1.2. return
+deactivate AVImpl
+AP --> VC : 1.1.1.2. return
+deactivate AP
+VC -> PS : 1.1.1.3. setVolume(50)
+activate PS
+PS --> VC : 1.1.1.4. return
+deactivate PS
+VC --> AC : 1.1.2. return
+deactivate VC
+AC --> View : 1.2. notifyVolumeChanged()
+deactivate AC
+View --> User : 2. updateVolumeUI()
+deactivate View
+
+== 3. Board ADC Volume Change ==
+Board -> AC : 3. sendData("VR: 2048")
+activate AC
+note right of AC : Callback from\nBoardCommunicator
+AC -> AC : 3.1. parseVolumeValue(2048)
+
+alt validADCValue (0-4095)
+    AC -> VC : 3.1.1. setVolume(50)
+    activate VC
+    VC -> AP : 3.1.1.1. setVolume(50)
+    activate AP
+    AP -> AVImpl : 3.1.1.1.1. setVolume(50)
+    activate AVImpl
+    AVImpl --> AP : 3.1.1.1.2. return
+    deactivate AVImpl
+    AP --> VC : 3.1.1.2. return
+    deactivate AP
+    VC -> PS : 3.1.1.3. setVolume(50)
+    activate PS
+    PS --> VC : 3.1.1.4. return
+    deactivate PS
+    VC --> AC : 3.1.2. return
+    deactivate VC
+else invalidADCValue
+    AC -> AC : 3.1.1. logError()
+end
+
+AC --> View : 3.2. notifyVolumeChanged()
+deactivate AC
+
+@enduml

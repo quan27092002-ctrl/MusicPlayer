@@ -1,0 +1,70 @@
+@startuml "seq_playlist_ui"
+title VIEW LAYER - Playlist UI Operations
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "ImGuiView" as IV #LightGreen
+participant "MainContent" as MC #LightGreen
+participant "PlaylistManager\n(View)" as PMV #LightGreen
+participant "PlaylistData" as PD #LightGreen
+participant "AppController" as AC
+
+== 1. Create New Playlist ==
+User -> MC : 1. clickCreatePlaylist()
+activate MC
+MC -> MC : 1.1. showDialog(name, desc)
+User -> MC : 1.2. inputData(name, desc, colorIdx)
+MC -> PMV : 1.2.1. createPlaylist(name, desc, colorIdx)
+activate PMV
+PMV -> PD : 1.2.1.1. addPlaylistData()
+activate PD
+PD --> PMV : 1.2.1.2. return
+deactivate PD
+PMV --> MC : 1.2.2. return
+deactivate PMV
+MC --> User : 1.3. showNewPlaylist()
+deactivate MC
+
+== 2. Add Track to Playlist ==
+User -> MC : 2. clickAddButton(trackIdx)
+activate MC
+MC -> MC : 2.1. showPlaylistMenu()
+User -> MC : 2.2. selectPlaylist(playlistIdx)
+
+alt playlistIdx valid
+    MC -> PMV : 2.2.1. addTrackToPlaylist(playlistIdx, trackPath)
+    activate PMV
+    PMV -> PD : 2.2.1.1. pushTrackPath(path)
+    activate PD
+    PD --> PMV : 2.2.1.2. return
+    deactivate PD
+    PMV --> MC : 2.2.2. return success
+    deactivate PMV
+    MC --> User : 2.3. showConfirmation()
+else playlistIdx invalid
+    MC --> User : 2.3. showError()
+end
+deactivate MC
+
+== 3. Play Entire Playlist ==
+User -> MC : 3. clickPlayPlaylist(idx)
+activate MC
+MC -> PMV : 3.1. getPlaylist(idx)
+activate PMV
+PMV --> MC : 3.1.1. return PlaylistData
+deactivate PMV
+
+alt playlist has tracks
+    MC -> AC : 3.2. playPlaylist(trackPaths)
+    activate AC
+    note right of AC : Replaces queue\nand starts playback
+    AC --> MC : 3.2.1. return
+    deactivate AC
+    MC --> User : 3.3. updateNowPlaying()
+else playlist empty
+    MC --> User : 3.3. showEmptyMessage()
+end
+deactivate MC
+
+@enduml

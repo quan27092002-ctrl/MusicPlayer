@@ -1,0 +1,112 @@
+@startuml "seq_serial_connection"
+title CROSS-LAYER - Serial Port Connection Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "RightSidebar" as RS #LightGreen
+participant "ConnectionPanelHelper" as CPH #LightGreen
+participant "AppController" as AC
+participant "SerialManager" as SM
+participant "SerialConnectionImpl" as SCI
+participant "SerialIOImpl" as SIO
+participant "BoardCommunicator" as BC
+participant "Serial Port\n/dev/ttyUSB0" as SP #LightGray
+
+== 1. Scan Available Ports ==
+User -> RS : 1. clickRefreshPorts()
+activate RS
+RS -> CPH : 1.1. refresh(controller)
+activate CPH
+CPH -> AC : 1.1.1. getAvailablePorts()
+activate AC
+AC -> SM : 1.1.1.1. getAvailablePorts()
+activate SM
+SM -> SCI : 1.1.1.1.1. scanPorts()
+activate SCI
+SCI -> SCI : 1.1.1.1.1.1. glob("/dev/ttyUSB*")
+SCI -> SCI : 1.1.1.1.1.2. glob("/dev/ttyACM*")
+SCI --> SM : 1.1.1.1.2. return ports[]
+deactivate SCI
+SM --> AC : 1.1.1.2. return ports
+deactivate SM
+AC --> CPH : 1.1.2. return ports
+deactivate AC
+CPH --> RS : 1.1.3. updatePortDropdown()
+deactivate CPH
+RS --> User : 1.2. showPortList()
+deactivate RS
+
+== 2. Connect to Port ==
+User -> RS : 2. selectPort(name), clickConnect()
+activate RS
+RS -> AC : 2.1. connectToPort(portName)
+activate AC
+
+AC -> SM : 2.1.1. connect(portName, baudRate)
+activate SM
+SM -> SCI : 2.1.1.1. connect(portName, 115200)
+activate SCI
+SCI -> SP : 2.1.1.1.1. open(O_RDWR | O_NOCTTY)
+activate SP
+
+alt portOpened successfully
+    SP --> SCI : 2.1.1.1.2. return fd
+    deactivate SP
+    SCI -> SCI : 2.1.1.1.3. configureTermios(115200, 8N1)
+    SCI --> SM : 2.1.1.2. return success
+else portOpenFailed
+    SP --> SCI : 2.1.1.1.2. return error
+    SCI --> SM : 2.1.1.2. return failure
+end
+deactivate SCI
+
+alt connectionSuccessful
+    SM -> SIO : 2.1.2. startReading()
+    activate SIO
+    SIO -> SIO : 2.1.2.1. spawnReadThread()
+    note right of SIO : Background thread\nreads serial data
+    SIO --> SM : 2.1.2.2. return
+    deactivate SIO
+    
+    SM -> BC : 2.1.3. setCallback(onData)
+    activate BC
+    BC --> SM : 2.1.3.1. return
+    deactivate BC
+    
+    SM --> AC : 2.1.4. return connected
+else connectionFailed
+    SM --> AC : 2.1.4. return error
+end
+deactivate SM
+
+AC --> RS : 2.2. notifyConnectionStatus()
+deactivate AC
+RS --> User : 2.3. showStatus("Connected")
+deactivate RS
+
+== 3. Disconnect ==
+User -> RS : 3. clickDisconnect()
+activate RS
+RS -> AC : 3.1. disconnect()
+activate AC
+AC -> SM : 3.1.1. disconnect()
+activate SM
+SM -> SIO : 3.1.1.1. stopReading()
+activate SIO
+SIO -> SIO : 3.1.1.1.1. joinThread()
+SIO --> SM : 3.1.1.1.2. return
+deactivate SIO
+SM -> SCI : 3.1.1.2. disconnect()
+activate SCI
+SCI -> SP : 3.1.1.2.1. close(fd)
+SCI --> SM : 3.1.1.2.2. return
+deactivate SCI
+SM --> AC : 3.1.2. return disconnected
+deactivate SM
+AC --> RS : 3.2. notifyDisconnected()
+deactivate AC
+RS --> User : 3.3. showStatus("Disconnected")
+deactivate RS
+
+@enduml

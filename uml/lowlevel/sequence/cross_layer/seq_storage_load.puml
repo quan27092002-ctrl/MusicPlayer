@@ -1,0 +1,79 @@
+@startuml "seq_storage_load"
+title CROSS-LAYER - USB Storage Load Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "RightSidebar" as RS #LightGreen
+participant "StoragePanelHelper" as SPH #LightGreen
+participant "AppController" as AC
+participant "StorageManager" as SM
+participant "PlaylistManagerImpl" as PM
+participant "MediaFile" as MF #LightYellow
+participant "MediaMetadata" as MM #LightYellow
+participant "USB Storage" as USB #LightGray
+
+== 1. Detect Available Devices ==
+User -> RS : 1. clickRefreshDevices()
+activate RS
+RS -> SPH : 1.1. refresh(controller)
+activate SPH
+SPH -> AC : 1.1.1. getStorageDevices()
+activate AC
+AC -> SM : 1.1.1.1. getStorageDevices()
+activate SM
+SM -> USB : 1.1.1.1.1. scanMountedDrives()
+activate USB
+USB --> SM : 1.1.1.1.2. return paths[]
+deactivate USB
+SM --> AC : 1.1.1.2. return StorageDevice[]
+deactivate SM
+AC --> SPH : 1.1.2. return devices
+deactivate AC
+SPH --> RS : 1.1.3. updateDeviceList()
+deactivate SPH
+RS --> User : 1.2. showDeviceDropdown()
+deactivate RS
+
+== 2. Load Music from USB ==
+User -> RS : 2. selectDevice(idx), clickLoad()
+activate RS
+RS -> AC : 2.1. loadFromStorage(path)
+activate AC
+
+AC -> PM : 2.1.1. loadDirectoryAsync(path)
+activate PM
+note right of PM : Async in\nbackground thread
+
+PM -> USB : 2.1.1.1. scanDirectory(path)
+activate USB
+USB --> PM : 2.1.1.2. return audioFiles[]
+deactivate USB
+
+loop for each audioFile in audioFiles
+    PM -> MF : 2.1.1.3. create(filePath)
+    activate MF
+    MF -> MM : 2.1.1.3.1. extractMetadata()
+    activate MM
+    
+    alt validMetadata
+        MM --> MF : 2.1.1.3.2. return metadata
+    else corruptedFile
+        MM --> MF : 2.1.1.3.2. return default
+    end
+    deactivate MM
+    
+    MF --> PM : 2.1.1.4. return MediaFilePtr
+    deactivate MF
+    PM -> PM : 2.1.1.5. addTrack(MediaFile)
+end
+
+PM --> AC : 2.1.2. notifyLoadComplete(count)
+deactivate PM
+
+AC -> RS : 2.2. notifyPlaylistUpdated()
+RS --> User : 2.3. showMessage("Loaded X tracks")
+deactivate AC
+deactivate RS
+
+@enduml

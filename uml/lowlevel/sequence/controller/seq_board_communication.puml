@@ -1,0 +1,84 @@
+@startuml "seq_board_communication"
+title CONTROLLER LAYER - Board Communication Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "S32K144 Board" as Board #LightCoral
+participant "SerialManager" as SM
+participant "SerialIOImpl" as SIO
+participant "BoardCommunicator" as BC
+participant "AppController" as AC
+participant "PlaybackControllerImpl" as PBC
+participant "View" as View #LightGreen
+
+== 1. Button Press: PLAY ==
+User -> Board : 1. pressButton(PLAY)
+activate Board
+Board -> SM : 1.1. sendData("cmd:play\\n")
+deactivate Board
+activate SM
+SM -> SIO : 1.1.1. readLine()
+activate SIO
+SIO -> SIO : 1.1.1.1. accumulateBuffer()
+SIO -> SIO : 1.1.1.2. detectNewline()
+SIO --> SM : 1.1.1.3. return "cmd:play"
+deactivate SIO
+
+SM -> BC : 1.1.2. onDataReceived("cmd:play")
+activate BC
+BC -> BC : 1.1.2.1. parseCommand("cmd:play")
+
+alt commandType == "play"
+    BC -> AC : 1.1.2.2. play()
+    activate AC
+    AC -> PBC : 1.1.2.2.1. play()
+    activate PBC
+    PBC --> AC : 1.1.2.2.2. return
+    deactivate PBC
+    AC --> BC : 1.1.2.3. return
+    deactivate AC
+else commandType == "pause"
+    BC -> AC : 1.1.2.2. pause()
+else commandType == "next"
+    BC -> AC : 1.1.2.2. next()
+else commandType == "prev"
+    BC -> AC : 1.1.2.2. previous()
+end
+
+BC --> SM : 1.1.3. return
+deactivate BC
+deactivate SM
+
+== 2. ADC Volume Reading ==
+Board -> SM : 2. sendData("VR: 2048\\n")
+activate SM
+SM -> SIO : 2.1. readLine()
+activate SIO
+SIO --> SM : 2.1.1. return "VR: 2048"
+deactivate SIO
+
+SM -> BC : 2.2. onDataReceived("VR: 2048")
+activate BC
+BC -> BC : 2.2.1. parseVolumeReading(2048)
+note right of BC : Convert ADC\n0-4095 → 0-100%
+BC -> AC : 2.2.2. setVolume(50)
+activate AC
+AC --> BC : 2.2.3. return
+deactivate AC
+BC --> SM : 2.3. return
+deactivate BC
+deactivate SM
+
+== 3. Status Feedback to Board ==
+AC -> SM : 3. sendStatus("STATUS:PLAYING")
+activate SM
+SM -> SIO : 3.1. write("STATUS:PLAYING\\n")
+activate SIO
+SIO -> Board : 3.1.1. transmitUART()
+SIO --> SM : 3.1.2. return
+deactivate SIO
+SM --> AC : 3.2. return
+deactivate SM
+
+@enduml

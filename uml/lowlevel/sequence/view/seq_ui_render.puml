@@ -1,0 +1,78 @@
+@startuml "seq_ui_render"
+title VIEW LAYER - UI Render Loop
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+actor User
+participant "ImGuiView" as IV #LightGreen
+participant "LifecycleManager" as LM #LightGreen
+participant "MainContent" as MC #LightGreen
+participant "RightSidebar" as RS #LightGreen
+participant "PlayerBar" as PB #LightGreen
+participant "AssetManager" as AM #LightGreen
+participant "SDL2/ImGui" as SDL #LightGray
+participant "PlayerState" as PS #LightYellow
+
+== Main Render Loop ==
+loop every frame (~16ms for 60fps)
+    IV -> LM : 1. processEvents()
+    activate LM
+    LM -> SDL : 1.1. pollEvent()
+    activate SDL
+    SDL --> LM : 1.1.1. return events
+    deactivate SDL
+    
+    alt quitEvent received
+        LM --> IV : 1.2. return shouldQuit=true
+    else noQuitEvent
+        LM --> IV : 1.2. return shouldQuit=false
+    end
+    deactivate LM
+    
+    IV -> LM : 2. beginFrame()
+    activate LM
+    LM -> SDL : 2.1. newFrame()
+    LM --> IV : 2.2. return
+    deactivate LM
+    
+    ' Render components
+    IV -> MC : 3. render(width, height)
+    activate MC
+    MC -> PS : 3.1. getCurrentTrackIndex()
+    activate PS
+    PS --> MC : 3.1.1. return index
+    deactivate PS
+    MC -> AM : 3.2. drawAlbumCover(path)
+    activate AM
+    AM --> MC : 3.2.1. return
+    deactivate AM
+    MC --> IV : 3.3. return
+    deactivate MC
+    
+    IV -> RS : 4. render(width, height)
+    activate RS
+    RS --> IV : 4.1. return
+    deactivate RS
+    
+    IV -> PB : 5. render(width, height)
+    activate PB
+    PB -> PS : 5.1. getPosition()
+    activate PS
+    PS --> PB : 5.1.1. return position
+    deactivate PS
+    PB -> PS : 5.2. getDuration()
+    activate PS
+    PS --> PB : 5.2.1. return duration
+    deactivate PS
+    PB --> IV : 5.3. return
+    deactivate PB
+    
+    IV -> LM : 6. endFrame()
+    activate LM
+    LM -> SDL : 6.1. render()
+    LM -> SDL : 6.2. present()
+    LM --> IV : 6.3. return
+    deactivate LM
+end
+
+@enduml
