@@ -7,175 +7,167 @@ title VIEW LAYER - Class Diagram
 
 package "View" {
     
-    interface IView {
-        +initialize() : bool
-        +shutdown() : void
-        +isRunning() : bool
-        +processEvents() : void
-        +render() : void
+    package "Interfaces" {
+        interface IView {
+            +initialize() : bool
+            +shutdown() : void
+            +isRunning() : bool
+            +processEvents() : void
+            +render() : void
+        }
+        
+        interface IWindowComponent {
+            +render() : void
+        }
     }
     
-    interface IWindowComponent {
-        +render() : void
+    package "Managers" {
+        class LifecycleManager {
+            -mWindow : SDL_Window
+            -mRenderer : SDL_Renderer
+            -mInitialized : bool
+            +LifecycleManager()
+            +initialize(width, height, title) : bool
+            +shutdown() : void
+            +processEvents(running) : void
+            +getWindow() : SDL_Window
+            +getRenderer() : SDL_Renderer
+            +getWindowWidth() : int
+            +getWindowHeight() : int
+            +beginFrame() : void
+            +endFrame() : void
+            -setupStyle() : void
+        }
+        
+        class AssetManager {
+            -mRenderer : SDL_Renderer
+            -mCoverCache : map
+            +AssetManager(renderer)
+            +clearCache() : void
+            +drawAlbumCover(dl, pos, size, cacheKey, data) : void
+            -createTextureFromMemory(data) : SDL_Texture
+        }
     }
     
-    class PlaylistData <<struct>> {
-        +name : string
-        +desc : string
-        +colorIdx : int
-        +trackPaths : vector_string
+    package "UI Components" {
+        class ImGuiView <<facade>> {
+            -mController : IAppController
+            -mPlayerState : IPlayerState
+            -mLifecycle : LifecycleManager
+            -mAssetManager : AssetManager
+            -mMainContent : MainContent
+            -mRightSidebar : RightSidebar
+            -mPlayerBar : PlayerBar
+            -mRunning : bool
+            -mPlaylistDirty : atomic_bool
+            +ImGuiView(controller, playerState)
+            +initialize() : bool
+            +shutdown() : void
+            +isRunning() : bool
+            +processEvents() : void
+            +render() : void
+            -updatePlaylistData() : void
+        }
+        
+        class MainContent {
+            -mController : IAppController
+            -mPlayerState : IPlayerState
+            -mAssetManager : AssetManager
+            -mPlaylistDisplay : vector_string
+            -mSearchQuery : char_array
+            -mMainTabIndex : int
+            -mShowPlaylistDetail : bool
+            -mSelectedPlaylistIndex : int
+            -mViewMode : ViewMode
+            -mPlaylistManager : PlaylistManager
+            +MainContent(controller, playerState, assetManager)
+            +render() : void
+            +setPlaylist(playlist) : void
+            -renderSearch() : void
+            -renderTabs() : void
+            -renderMusicTab(mainW, contentH) : void
+            -renderPlaylistTab() : void
+            -renderPlaylistDetailView() : void
+            -renderCreatePlaylistModal() : void
+            -renderEditPlaylistModal() : void
+            -renderDeleteConfirmModal() : void
+            -renderAddToPlaylistMenu() : void
+        }
+        
+        class RightSidebar {
+            -mController : IAppController
+            -mPlayerState : IPlayerState
+            -mAssetManager : AssetManager
+            -mPlaylistDisplay : vector_string
+            -mRightTabIndex : int
+            -mPortBuffer : char_array
+            -mAvailablePorts : vector_string
+            -mSelectedPortIndex : int
+            -mStorageDevices : vector
+            -mSelectedStorageIndex : int
+            +RightSidebar(controller, playerState, assetManager)
+            +render() : void
+            +setPlaylist(playlist) : void
+            -renderNowPlaying(dl) : void
+            -renderTabs() : void
+            -renderQueue(dl, width, currentTrack) : void
+            -renderRecent(dl, width) : void
+            -renderConnectionPanel() : void
+            -refreshPorts() : void
+            -renderStoragePanel() : void
+            -refreshStorage() : void
+        }
+        
+        class PlayerBar {
+            -mController : IAppController
+            -mPlayerState : IPlayerState
+            -mAssetManager : AssetManager
+            -mWasPlaying : bool
+            -mPlayStartTime : time_point
+            -mPlayStartPos : uint32
+            -mLastTrackPath : string
+            -mLastTrack : int
+            -mIsDraggingSlider : bool
+            -mLastPlaybackVersion : uint32
+            +PlayerBar(controller, playerState, assetManager)
+            +render() : void
+            +update(windowWidth, windowHeight) : void
+            -stripExtension(name) : string
+        }
     }
     
-    enum ViewMode {
-        NORMAL
-        CREATE_PLAYLIST
-        EDIT_PLAYLIST
+    package "Playlist" {
+        class PlaylistData <<struct>> {
+            +name : string
+            +desc : string
+            +colorIdx : int
+            +trackPaths : vector_string
+        }
+        
+        enum ViewMode {
+            NORMAL
+            CREATE_PLAYLIST
+            EDIT_PLAYLIST
+        }
+        
+        class PlaylistManager {
+            -mPlaylists : vector_PlaylistData
+            -mDefaultPlaylistsPopulated : bool
+            +PlaylistManager()
+            +createPlaylist(name, desc, colorIdx) : void
+            +updatePlaylist(idx, name, desc, colorIdx) : void
+            +deletePlaylist(idx) : void
+            +addTrackToPlaylist(playlistIdx, trackPath) : void
+            +removeTrackFromPlaylist(playlistIdx, trackIdx) : void
+            +getPlaylistCount() : size_t
+            +getPlaylist(idx) : PlaylistData
+            +getPlaylistMutable(idx) : PlaylistData
+            +getAllPlaylists() : vector
+            +populateDefaultPlaylists(controller) : void
+            +isDefaultPopulated() : bool
+        }
     }
-    
-    class ImGuiView <<facade>> {
-        -mController : IAppController
-        -mPlayerState : IPlayerState
-        -mLifecycle : LifecycleManager
-        -mAssetManager : AssetManager
-        -mMainContent : MainContent
-        -mRightSidebar : RightSidebar
-        -mPlayerBar : PlayerBar
-        -mRunning : bool
-        -mPlaylistDirty : atomic_bool
-        +ImGuiView(controller, playerState)
-        +initialize() : bool
-        +shutdown() : void
-        +isRunning() : bool
-        +processEvents() : void
-        +render() : void
-        -updatePlaylistData() : void
-    }
-    
-    class LifecycleManager {
-        -mWindow : SDL_Window
-        -mRenderer : SDL_Renderer
-        -mInitialized : bool
-        +LifecycleManager()
-        +initialize(width, height, title) : bool
-        +shutdown() : void
-        +processEvents(running) : void
-        +getWindow() : SDL_Window
-        +getRenderer() : SDL_Renderer
-        +getWindowWidth() : int
-        +getWindowHeight() : int
-        +beginFrame() : void
-        +endFrame() : void
-        -setupStyle() : void
-    }
-    
-    class AssetManager {
-        -mRenderer : SDL_Renderer
-        -mCoverCache : map
-        +AssetManager(renderer)
-        +clearCache() : void
-        +drawAlbumCover(dl, pos, size, cacheKey, data) : void
-        -createTextureFromMemory(data) : SDL_Texture
-    }
-    
-    class PlaylistManager {
-        -mPlaylists : vector_PlaylistData
-        -mDefaultPlaylistsPopulated : bool
-        +PlaylistManager()
-        +createPlaylist(name, desc, colorIdx) : void
-        +updatePlaylist(idx, name, desc, colorIdx) : void
-        +deletePlaylist(idx) : void
-        +addTrackToPlaylist(playlistIdx, trackPath) : void
-        +removeTrackFromPlaylist(playlistIdx, trackIdx) : void
-        +getPlaylistCount() : size_t
-        +getPlaylist(idx) : PlaylistData
-        +getPlaylistMutable(idx) : PlaylistData
-        +getAllPlaylists() : vector
-        +populateDefaultPlaylists(controller) : void
-        +isDefaultPopulated() : bool
-    }
-    
-    class MainContent {
-        -mController : IAppController
-        -mPlayerState : IPlayerState
-        -mAssetManager : AssetManager
-        -mPlaylistDisplay : vector_string
-        -mSearchQuery : char_array
-        -mMainTabIndex : int
-        -mShowPlaylistDetail : bool
-        -mSelectedPlaylistIndex : int
-        -mViewMode : ViewMode
-        -mPlaylistManager : PlaylistManager
-        +MainContent(controller, playerState, assetManager)
-        +render() : void
-        +setPlaylist(playlist) : void
-        -renderSearch() : void
-        -renderTabs() : void
-        -renderMusicTab(mainW, contentH) : void
-        -renderPlaylistTab() : void
-        -renderPlaylistDetailView() : void
-        -renderCreatePlaylistModal() : void
-        -renderEditPlaylistModal() : void
-        -renderDeleteConfirmModal() : void
-        -renderAddToPlaylistMenu() : void
-    }
-    
-    class RightSidebar {
-        -mController : IAppController
-        -mPlayerState : IPlayerState
-        -mAssetManager : AssetManager
-        -mPlaylistDisplay : vector_string
-        -mRightTabIndex : int
-        -mPortBuffer : char_array
-        -mAvailablePorts : vector_string
-        -mSelectedPortIndex : int
-        -mStorageDevices : vector
-        -mSelectedStorageIndex : int
-        +RightSidebar(controller, playerState, assetManager)
-        +render() : void
-        +setPlaylist(playlist) : void
-        -renderNowPlaying(dl) : void
-        -renderTabs() : void
-        -renderQueue(dl, width, currentTrack) : void
-        -renderRecent(dl, width) : void
-        -renderConnectionPanel() : void
-        -refreshPorts() : void
-        -renderStoragePanel() : void
-        -refreshStorage() : void
-    }
-    
-    class PlayerBar {
-        -mController : IAppController
-        -mPlayerState : IPlayerState
-        -mAssetManager : AssetManager
-        -mWasPlaying : bool
-        -mPlayStartTime : time_point
-        -mPlayStartPos : uint32
-        -mLastTrackPath : string
-        -mLastTrack : int
-        -mIsDraggingSlider : bool
-        -mLastPlaybackVersion : uint32
-        +PlayerBar(controller, playerState, assetManager)
-        +render() : void
-        +update(windowWidth, windowHeight) : void
-        -stripExtension(name) : string
-    }
-    
-    class StoragePanelHelper {
-        -mSelectedDeviceIndex : int
-        +StoragePanelHelper()
-        +refresh(controller, devices) : void
-        +getSelectedIndex() : int
-        +setSelectedIndex(index) : void
-    }
-    
-    class ConnectionPanelHelper {
-        -mSelectedPortIndex : int
-        +ConnectionPanelHelper()
-        +refresh(controller, ports) : void
-        +getSelectedIndex() : int
-        +setSelectedIndex(index) : void
-    }
-    
+
     ImGuiView ..|> IView
     MainContent ..|> IWindowComponent
     RightSidebar ..|> IWindowComponent
