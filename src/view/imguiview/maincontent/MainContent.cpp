@@ -176,90 +176,106 @@ void MainContent::renderMusicTab(float mainW, float contentH) {
     ImGui::Spacing();
     
     int currentTrack = mPlayerState ? mPlayerState->getCurrentTrackIndex() : -1;
-    ImDrawList* cdl = ImGui::GetWindowDrawList();
+    std::string currentPath = "";
+    if (currentTrack >= 0 && mController) {
+        currentPath = mController->getTrackPath(currentTrack);
+    }
     
     size_t libSize = mController ? mController->getLibrarySize() : 0;
     
-    for (size_t i = 0; i < libSize; i++) {
-        std::string trackName = mController ? mController->getLibraryTrackName(i) : "";
-        
-        std::string sArtist = mController ? mController->getLibraryTrackArtist(i) : "";
-        std::string sAlbum = mController ? mController->getLibraryTrackAlbum(i) : "";
-        
-        bool match = matchesSearch(trackName, mSearchQuery) || 
-                     matchesSearch(sArtist.c_str(), mSearchQuery) || 
-                     matchesSearch(sAlbum.c_str(), mSearchQuery);
-                     
-        if (!match) continue;
-        
-        // Is this track currently playing?
-        // Logic: Check if current playing path matches this library path
-        bool isCurrent = false;
-        if (currentTrack >= 0 && mController) {
-            std::string currPath = mController->getTrackPath(currentTrack); // from queue
-            std::string thisPath = mController->getLibraryTrackPath(i); // from library
-            if (!currPath.empty() && currPath == thisPath) {
-                 isCurrent = true;
+    // Build filtered index list for search (only when search is active)
+    std::vector<int> filteredIndices;
+    bool hasSearch = (mSearchQuery[0] != '\0');
+    
+    if (hasSearch) {
+        filteredIndices.reserve(libSize);
+        for (size_t i = 0; i < libSize; i++) {
+            std::string trackName = mController->getLibraryTrackName(i);
+            std::string sArtist = mController->getLibraryTrackArtist(i);
+            std::string sAlbum = mController->getLibraryTrackAlbum(i);
+            
+            if (matchesSearch(trackName, mSearchQuery) || 
+                matchesSearch(sArtist.c_str(), mSearchQuery) || 
+                matchesSearch(sAlbum.c_str(), mSearchQuery)) {
+                filteredIndices.push_back((int)i);
             }
         }
-        
-        ImGui::PushID((int)i);
-        ImVec2 rowPos = ImGui::GetCursorScreenPos();
-        
-        // Track number
-        ImGui::PushStyleColor(ImGuiCol_Text, isCurrent ? Colors::GreenV : Colors::TextMutedV);
-        ImGui::Text("%s", isCurrent ? " *" : "");
-        ImGui::SameLine();
-        if (!isCurrent) ImGui::Text("%2zu", i + 1);
-        ImGui::PopStyleColor();
-        
-        ImGui::SameLine();
-        
-        // Album cover
-        std::vector<uint8_t> artData;
-        if (mController) artData = mController->getLibraryTrackCoverArt(i);
-        
-        std::string libPath = mController ? mController->getLibraryTrackPath((int)i) : "";
-        mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, libPath, artData);
-        
-        // Track info
-        std::string dispName = stripExtension(trackName);
-        if (dispName.length() > 45) dispName = dispName.substr(0, 42) + "...";
-        
-        ImGui::SetCursorPosX(95);
-        ImGui::PushStyleColor(ImGuiCol_Text, isCurrent ? Colors::GreenV : Colors::WhiteV);
-        ImGui::Text("%s", dispName.c_str());
-        ImGui::PopStyleColor();
-        
-        ImGui::SetCursorPosX(95);
-        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
-        ImGui::Text("%s | %s", sArtist.c_str(), sAlbum.c_str());
-        ImGui::PopStyleColor();
-        
-        // Add to playlist button
-        // Add to playlist button
-        ImGui::SetCursorScreenPos(ImVec2(mainW - 60, rowPos.y + 10)); // Center vertically (45 - 25) / 2
-        ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
-        ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
-        if (ImGui::Button("+##add", ImVec2(25, 25))) {
-             mShowAddToPlaylistMenu = true;
-             mAddToPlaylistTrackIdx = (int)i; // Use library index
-        }
-        ImGui::PopStyleColor(2);
-        
-        // Full row clickable -> Play Library Track
-        ImGui::SetCursorScreenPos(rowPos);
-        if (ImGui::InvisibleButton("##track", ImVec2(mainW - 80, 45)) && mController) {
-             std::string p = mController->getLibraryTrackPath(i);
-             if (!p.empty()) {
-                  // User requested: Keep playlist, insert NEXT, do NOT play immediately (wait for Next button)
-                  // Also allows duplicates.
-                  mController->queueNext(p);
-             }
-        }
-        
-        ImGui::PopID();
     }
+    
+    int displayCount = hasSearch ? (int)filteredIndices.size() : (int)libSize;
+    
+    // Use ImGuiListClipper for virtualization - only render visible items
+    const float ROW_HEIGHT = 50.0f;
+    ImGuiListClipper clipper;
+    clipper.Begin(displayCount, ROW_HEIGHT);
+    
+    ImDrawList* cdl = ImGui::GetWindowDrawList();
+    
+    while (clipper.Step()) {
+        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+            // Get actual library index
+            int i = hasSearch ? filteredIndices[row] : row;
+            
+            std::string trackName = mController ? mController->getLibraryTrackName(i) : "";
+            std::string sArtist = mController ? mController->getLibraryTrackArtist(i) : "";
+            std::string sAlbum = mController ? mController->getLibraryTrackAlbum(i) : "";
+            std::string thisPath = mController ? mController->getLibraryTrackPath(i) : "";
+            
+            bool isCurrent = (!currentPath.empty() && currentPath == thisPath);
+            
+            ImGui::PushID(i);
+            ImVec2 rowPos = ImGui::GetCursorScreenPos();
+            
+            // Track number
+            ImGui::PushStyleColor(ImGuiCol_Text, isCurrent ? Colors::GreenV : Colors::TextMutedV);
+            ImGui::Text("%s", isCurrent ? " *" : "");
+            ImGui::SameLine();
+            if (!isCurrent) ImGui::Text("%3d", i + 1);
+            ImGui::PopStyleColor();
+            
+            ImGui::SameLine();
+            
+            // Album cover - only fetch for visible items
+            std::vector<uint8_t> artData;
+            if (mController) artData = mController->getLibraryTrackCoverArt(i);
+            mAssetManager->drawAlbumCover(cdl, ImVec2(rowPos.x + 40, rowPos.y), 40, thisPath, artData);
+            
+            // Track info
+            std::string dispName = stripExtension(trackName);
+            if (dispName.length() > 45) dispName = dispName.substr(0, 42) + "...";
+            
+            ImGui::SetCursorPosX(95);
+            ImGui::PushStyleColor(ImGuiCol_Text, isCurrent ? Colors::GreenV : Colors::WhiteV);
+            ImGui::Text("%s", dispName.c_str());
+            ImGui::PopStyleColor();
+            
+            ImGui::SetCursorPosX(95);
+            ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
+            ImGui::Text("%s | %s", sArtist.c_str(), sAlbum.c_str());
+            ImGui::PopStyleColor();
+            
+            // Add to playlist button
+            ImGui::SetCursorScreenPos(ImVec2(mainW - 60, rowPos.y + 10));
+            ImGui::PushStyleColor(ImGuiCol_Button, Colors::TransparentV);
+            ImGui::PushStyleColor(ImGuiCol_Text, Colors::TextSecV);
+            if (ImGui::Button("+##add", ImVec2(25, 25))) {
+                 mShowAddToPlaylistMenu = true;
+                 mAddToPlaylistTrackIdx = i;
+            }
+            ImGui::PopStyleColor(2);
+            
+            // Full row clickable -> Queue Track
+            ImGui::SetCursorScreenPos(rowPos);
+            if (ImGui::InvisibleButton("##track", ImVec2(mainW - 80, ROW_HEIGHT - 5)) && mController) {
+                 if (!thisPath.empty()) {
+                      mController->queueNext(thisPath);
+                 }
+            }
+            
+            ImGui::PopID();
+        }
+    }
+    
     ImGui::Unindent(10);
 }
 
