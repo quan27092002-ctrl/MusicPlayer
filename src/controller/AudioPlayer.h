@@ -70,6 +70,8 @@ public:
     int getVolume() const override;
 
 private:
+    friend class AudioPlayerCoverageTest;
+    
     std::unique_ptr<AudioLifecycleImpl> mLifecycle;
     std::unique_ptr<AudioLoaderImpl> mLoader;
     std::unique_ptr<AudioPlaybackImpl> mPlayback;

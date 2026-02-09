@@ -31,27 +31,27 @@
             <td class="headerValue">coverage_filtered.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">57</td>
             <td class="headerCovTableEntry">60</td>
-            <td class="headerCovTableEntryHi">95.0 %</td>
+            <td class="headerCovTableEntry">60</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-02-09 10:48:29</td>
+            <td class="headerValue">2026-02-09 11:03:49</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">18</td>
+            <td class="headerCovTableEntry">19</td>
             <td class="headerCovTableEntry">20</td>
-            <td class="headerCovTableEntryHi">90.0 %</td>
+            <td class="headerCovTableEntryHi">95.0 %</td>
           </tr>
           <tr>
             <td></td>
             <td></td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntry">14</td>
             <td class="headerCovTableEntry">20</td>
-            <td class="headerCovTableEntryLo">45.0 %</td>
+            <td class="headerCovTableEntryLo">70.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
         </table>
@@ -85,16 +85,16 @@
 <a name="14"><span class="lineNum">      14 </span>                :            : // Constructor / Destructor</a>
 <a name="15"><span class="lineNum">      15 </span>                :            : // ============================================================================</a>
 <a name="16"><span class="lineNum">      16 </span>                :            : </a>
-<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">         15 : AudioPlayer::AudioPlayer() {</span></a>
-<a name="18"><span class="lineNum">      18 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         15 :     mLifecycle = std::make_unique&lt;AudioLifecycleImpl&gt;();</span></a>
-<a name="19"><span class="lineNum">      19 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         15 :     mLoader = std::make_unique&lt;AudioLoaderImpl&gt;(mLifecycle.get());</span></a>
-<a name="20"><span class="lineNum">      20 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         15 :     mPlayback = std::make_unique&lt;AudioPlaybackImpl&gt;(mLifecycle.get(), mLoader.get());</span></a>
-<a name="21"><span class="lineNum">      21 </span>        [<span class="branchCov" title="Branch 0 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         15 :     mVolume = std::make_unique&lt;AudioVolumeImpl&gt;();</span></a>
-<a name="22"><span class="lineNum">      22 </span>                :<span class="lineCov">         15 : }</span></a>
+<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">         19 : AudioPlayer::AudioPlayer() {</span></a>
+<a name="18"><span class="lineNum">      18 </span>        [<span class="branchCov" title="Branch 0 was taken 19 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         19 :     mLifecycle = std::make_unique&lt;AudioLifecycleImpl&gt;();</span></a>
+<a name="19"><span class="lineNum">      19 </span>        [<span class="branchCov" title="Branch 0 was taken 19 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         19 :     mLoader = std::make_unique&lt;AudioLoaderImpl&gt;(mLifecycle.get());</span></a>
+<a name="20"><span class="lineNum">      20 </span>        [<span class="branchCov" title="Branch 0 was taken 19 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         19 :     mPlayback = std::make_unique&lt;AudioPlaybackImpl&gt;(mLifecycle.get(), mLoader.get());</span></a>
+<a name="21"><span class="lineNum">      21 </span>        [<span class="branchCov" title="Branch 0 was taken 19 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         19 :     mVolume = std::make_unique&lt;AudioVolumeImpl&gt;();</span></a>
+<a name="22"><span class="lineNum">      22 </span>                :<span class="lineCov">         19 : }</span></a>
 <a name="23"><span class="lineNum">      23 </span>                :            : </a>
-<a name="24"><span class="lineNum">      24 </span>                :<span class="lineCov">         15 : AudioPlayer::~AudioPlayer() {</span></a>
-<a name="25"><span class="lineNum">      25 </span>                :<span class="lineCov">         15 :     shutdown();</span></a>
-<a name="26"><span class="lineNum">      26 </span>                :<span class="lineCov">         15 : }</span></a>
+<a name="24"><span class="lineNum">      24 </span>                :<span class="lineCov">         19 : AudioPlayer::~AudioPlayer() {</span></a>
+<a name="25"><span class="lineNum">      25 </span>                :<span class="lineCov">         19 :     shutdown();</span></a>
+<a name="26"><span class="lineNum">      26 </span>                :<span class="lineCov">         19 : }</span></a>
 <a name="27"><span class="lineNum">      27 </span>                :            : </a>
 <a name="28"><span class="lineNum">      28 </span>                :            : // ============================================================================</a>
 <a name="29"><span class="lineNum">      29 </span>                :            : // IAudioLifecycle Delegation</a>
@@ -104,43 +104,43 @@
 <a name="33"><span class="lineNum">      33 </span>                :<span class="lineCov">          9 :     return mLifecycle-&gt;initialize();</span></a>
 <a name="34"><span class="lineNum">      34 </span>                :            : }</a>
 <a name="35"><span class="lineNum">      35 </span>                :            : </a>
-<a name="36"><span class="lineNum">      36 </span>                :<span class="lineCov">         24 : void AudioPlayer::shutdown() {</span></a>
+<a name="36"><span class="lineNum">      36 </span>                :<span class="lineCov">         29 : void AudioPlayer::shutdown() {</span></a>
 <a name="37"><span class="lineNum">      37 </span>                :            :     // Clear playback first</a>
-<a name="38"><span class="lineNum">      38 </span>        [<span class="branchCov" title="Branch 0 was taken 24 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         24 :     if (mPlayback) {</span></a>
-<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">         24 :         mPlayback-&gt;stop();</span></a>
+<a name="38"><span class="lineNum">      38 </span>        [<span class="branchCov" title="Branch 0 was taken 26 times"> + </span><span class="branchCov" title="Branch 1 was taken 3 times"> + </span>]:<span class="lineCov">         29 :     if (mPlayback) {</span></a>
+<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">         26 :         mPlayback-&gt;stop();</span></a>
 <a name="40"><span class="lineNum">      40 </span>                :            :     }</a>
 <a name="41"><span class="lineNum">      41 </span>                :            :     </a>
 <a name="42"><span class="lineNum">      42 </span>                :            :     // Unload music</a>
-<a name="43"><span class="lineNum">      43 </span>        [<span class="branchCov" title="Branch 0 was taken 24 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         24 :     if (mLoader) {</span></a>
-<a name="44"><span class="lineNum">      44 </span>                :<span class="lineCov">         24 :         mLoader-&gt;unload();</span></a>
+<a name="43"><span class="lineNum">      43 </span>        [<span class="branchCov" title="Branch 0 was taken 27 times"> + </span><span class="branchCov" title="Branch 1 was taken 2 times"> + </span>]:<span class="lineCov">         29 :     if (mLoader) {</span></a>
+<a name="44"><span class="lineNum">      44 </span>                :<span class="lineCov">         27 :         mLoader-&gt;unload();</span></a>
 <a name="45"><span class="lineNum">      45 </span>                :            :     }</a>
 <a name="46"><span class="lineNum">      46 </span>                :            :     </a>
 <a name="47"><span class="lineNum">      47 </span>                :            :     // Shutdown lifecycle</a>
-<a name="48"><span class="lineNum">      48 </span>        [<span class="branchCov" title="Branch 0 was taken 24 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         24 :     if (mLifecycle) {</span></a>
-<a name="49"><span class="lineNum">      49 </span>                :<span class="lineCov">         24 :         mLifecycle-&gt;shutdown();</span></a>
+<a name="48"><span class="lineNum">      48 </span>        [<span class="branchCov" title="Branch 0 was taken 27 times"> + </span><span class="branchCov" title="Branch 1 was taken 2 times"> + </span>]:<span class="lineCov">         29 :     if (mLifecycle) {</span></a>
+<a name="49"><span class="lineNum">      49 </span>                :<span class="lineCov">         27 :         mLifecycle-&gt;shutdown();</span></a>
 <a name="50"><span class="lineNum">      50 </span>                :            :     }</a>
-<a name="51"><span class="lineNum">      51 </span>                :<span class="lineCov">         24 : }</span></a>
+<a name="51"><span class="lineNum">      51 </span>                :<span class="lineCov">         29 : }</span></a>
 <a name="52"><span class="lineNum">      52 </span>                :            : </a>
 <a name="53"><span class="lineNum">      53 </span>                :<span class="lineCov">          7 : AudioState AudioPlayer::getState() const {</span></a>
 <a name="54"><span class="lineNum">      54 </span>                :<span class="lineCov">          7 :     return mLifecycle-&gt;getState();</span></a>
 <a name="55"><span class="lineNum">      55 </span>                :            : }</a>
 <a name="56"><span class="lineNum">      56 </span>                :            : </a>
-<a name="57"><span class="lineNum">      57 </span>                :<span class="lineCov">          1 : void AudioPlayer::setCallback(AudioCallback callback) {</span></a>
-<a name="58"><span class="lineNum">      58 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          1 :     mLifecycle-&gt;setCallback(callback);</span></a>
-<a name="59"><span class="lineNum">      59 </span>                :<span class="lineCov">          1 : }</span></a>
+<a name="57"><span class="lineNum">      57 </span>                :<span class="lineCov">          2 : void AudioPlayer::setCallback(AudioCallback callback) {</span></a>
+<a name="58"><span class="lineNum">      58 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          2 :     mLifecycle-&gt;setCallback(callback);</span></a>
+<a name="59"><span class="lineNum">      59 </span>                :<span class="lineCov">          2 : }</span></a>
 <a name="60"><span class="lineNum">      60 </span>                :            : </a>
 <a name="61"><span class="lineNum">      61 </span>                :            : // ============================================================================</a>
 <a name="62"><span class="lineNum">      62 </span>                :            : // IAudioLoader Delegation</a>
 <a name="63"><span class="lineNum">      63 </span>                :            : // ============================================================================</a>
 <a name="64"><span class="lineNum">      64 </span>                :            : </a>
-<a name="65"><span class="lineNum">      65 </span>                :<span class="lineCov">          6 : bool AudioPlayer::load(const std::string&amp; filePath) {</span></a>
+<a name="65"><span class="lineNum">      65 </span>                :<span class="lineCov">          7 : bool AudioPlayer::load(const std::string&amp; filePath) {</span></a>
 <a name="66"><span class="lineNum">      66 </span>                :            :     // Stop playback first so that the manual stop flag is set (in AudioPlaybackImpl).</a>
 <a name="67"><span class="lineNum">      67 </span>                :            :     // This prevents the 'Finished' callback from firing when the loader unloads the previous track,</a>
 <a name="68"><span class="lineNum">      68 </span>                :            :     // which effectively fixes the &quot;double skip&quot; bug.</a>
-<a name="69"><span class="lineNum">      69 </span>        [<span class="branchCov" title="Branch 0 was taken 6 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          6 :     if (mPlayback) {</span></a>
+<a name="69"><span class="lineNum">      69 </span>        [<span class="branchCov" title="Branch 0 was taken 6 times"> + </span><span class="branchCov" title="Branch 1 was taken 1 time"> + </span>]:<span class="lineCov">          7 :     if (mPlayback) {</span></a>
 <a name="70"><span class="lineNum">      70 </span>                :<span class="lineCov">          6 :         mPlayback-&gt;stop();</span></a>
 <a name="71"><span class="lineNum">      71 </span>                :            :     }</a>
-<a name="72"><span class="lineNum">      72 </span>                :<span class="lineCov">          6 :     return mLoader-&gt;load(filePath);</span></a>
+<a name="72"><span class="lineNum">      72 </span>                :<span class="lineCov">          7 :     return mLoader-&gt;load(filePath);</span></a>
 <a name="73"><span class="lineNum">      73 </span>                :            : }</a>
 <a name="74"><span class="lineNum">      74 </span>                :            : </a>
 <a name="75"><span class="lineNum">      75 </span>                :<span class="lineCov">          1 : void AudioPlayer::unload() {</span></a>
@@ -184,9 +184,9 @@
 <a name="113"><span class="lineNum">     113 </span>                :<span class="lineCov">          1 :     return mPlayback-&gt;getDuration();</span></a>
 <a name="114"><span class="lineNum">     114 </span>                :            : }</a>
 <a name="115"><span class="lineNum">     115 </span>                :            : </a>
-<a name="116"><span class="lineNum">     116 </span>                :<span class="lineNoCov">          0 : void AudioPlayer::setFinishedCallback(std::function&lt;void()&gt; callback) {</span></a>
-<a name="117"><span class="lineNum">     117 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchNoExec" title="Branch 1 was not executed"> # </span>]:<span class="lineNoCov">          0 :     mPlayback-&gt;setFinishedCallback(callback);</span></a>
-<a name="118"><span class="lineNum">     118 </span>                :<span class="lineNoCov">          0 : }</span></a>
+<a name="116"><span class="lineNum">     116 </span>                :<span class="lineCov">          1 : void AudioPlayer::setFinishedCallback(std::function&lt;void()&gt; callback) {</span></a>
+<a name="117"><span class="lineNum">     117 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          1 :     mPlayback-&gt;setFinishedCallback(callback);</span></a>
+<a name="118"><span class="lineNum">     118 </span>                :<span class="lineCov">          1 : }</span></a>
 <a name="119"><span class="lineNum">     119 </span>                :            : </a>
 <a name="120"><span class="lineNum">     120 </span>                :            : // ============================================================================</a>
 <a name="121"><span class="lineNum">     121 </span>                :            : // IAudioVolume Delegation</a>
