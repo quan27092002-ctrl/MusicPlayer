@@ -11,6 +11,8 @@
 
 #include "IStorageManager.h"
 #include <mutex>
+#include <sys/types.h>
+#include <pwd.h>
 
 namespace Controller {
 
@@ -37,6 +39,10 @@ private:
     
     std::string getUsername();
     bool hasMusicFiles(const std::string& path);
+
+protected:
+    virtual ::uid_t getSystemUid() const;
+    virtual struct ::passwd* getPasswordEntry(::uid_t uid) const;
 };
 
 } // namespace Controller

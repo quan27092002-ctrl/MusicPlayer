@@ -31,13 +31,13 @@
             <td class="headerValue">coverage_filtered.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">335</td>
+            <td class="headerCovTableEntry">336</td>
             <td class="headerCovTableEntry">339</td>
-            <td class="headerCovTableEntryHi">98.8 %</td>
+            <td class="headerCovTableEntryHi">99.1 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-02-09 11:59:47</td>
+            <td class="headerValue">2026-02-09 15:25:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">73</td>
@@ -49,9 +49,9 @@
             <td></td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntry">155</td>
+            <td class="headerCovTableEntry">156</td>
             <td class="headerCovTableEntry">262</td>
-            <td class="headerCovTableEntryLo">59.2 %</td>
+            <td class="headerCovTableEntryLo">59.5 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
         </table>
@@ -481,8 +481,8 @@
 <a name="406"><span class="lineNum">     406 </span>                :<span class="lineCov">          1 :     return mPlaylistManager-&gt;getTrackCoverArt(index);</span></a>
 <a name="407"><span class="lineNum">     407 </span>                :            : }</a>
 <a name="408"><span class="lineNum">     408 </span>                :            : </a>
-<a name="409"><span class="lineNum">     409 </span>                :<span class="lineCov">        204 : std::shared_ptr&lt;Model::MediaFile&gt; AppController::acquireMediaFile(const std::string&amp; filePath) {</span></a>
-<a name="410"><span class="lineNum">     410 </span>                :<span class="lineCov">        204 :     return mPlaylistManager-&gt;acquireMediaFile(filePath);</span></a>
+<a name="409"><span class="lineNum">     409 </span>                :<span class="lineCov">        169 : std::shared_ptr&lt;Model::MediaFile&gt; AppController::acquireMediaFile(const std::string&amp; filePath) {</span></a>
+<a name="410"><span class="lineNum">     410 </span>                :<span class="lineCov">        169 :     return mPlaylistManager-&gt;acquireMediaFile(filePath);</span></a>
 <a name="411"><span class="lineNum">     411 </span>                :            : }</a>
 <a name="412"><span class="lineNum">     412 </span>                :            : </a>
 <a name="413"><span class="lineNum">     413 </span>                :            : // Library Accessors Implementation</a>
@@ -652,24 +652,24 @@
 <span class="lineNum">         </span>   <span class="branchCov" title="Branch 4 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 5 was not taken"> - </span><span class="branchCov" title="Branch 6 was taken 15 times"> + </span><span class="branchNoCov" title="Branch 7 was not taken"> - </span>]
 <a name="561"><span class="lineNum">     561 </span>                :            :         </a>
 <a name="562"><span class="lineNum">     562 </span>                :            :         // Second pass: load in batches</a>
-<a name="563"><span class="lineNum">     563 </span>        [<span class="branchCov" title="Branch 0 was taken 197 times"> + </span><span class="branchCov" title="Branch 1 was taken 15 times"> + </span>]:<span class="lineCov">        212 :         for (const auto&amp; filePath : filesToLoad) {</span></a>
+<a name="563"><span class="lineNum">     563 </span>        [<span class="branchCov" title="Branch 0 was taken 163 times"> + </span><span class="branchCov" title="Branch 1 was taken 14 times"> + </span>]:<span class="lineCov">        177 :         for (const auto&amp; filePath : filesToLoad) {</span></a>
 <a name="564"><span class="lineNum">     564 </span>                :            :             // Check if we should stop (e.g., app shutting down)</a>
-<a name="565"><span class="lineNum">     565 </span>        [<span class="branchNoCov" title="Branch 0 was not taken"> - </span><span class="branchCov" title="Branch 1 was taken 197 times"> + </span>]:<span class="lineCov">        197 :             if (!mLoadingInProgress.load()) {</span></a>
-<a name="566"><span class="lineNum">     566 </span>                :<span class="lineNoCov">          0 :                 break;</span></a>
+<a name="565"><span class="lineNum">     565 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 162 times"> + </span>]:<span class="lineCov">        163 :             if (!mLoadingInProgress.load()) {</span></a>
+<a name="566"><span class="lineNum">     566 </span>                :<span class="lineCov">          1 :                 break;</span></a>
 <a name="567"><span class="lineNum">     567 </span>                :            :             }</a>
 <a name="568"><span class="lineNum">     568 </span>                :            :             </a>
 <a name="569"><span class="lineNum">     569 </span>                :            :             // Add to library (thread-safe via PlaylistManager mutex)</a>
-<a name="570"><span class="lineNum">     570 </span>        [<span class="branchCov" title="Branch 0 was taken 197 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        197 :             acquireMediaFile(filePath);</span></a>
-<a name="571"><span class="lineNum">     571 </span>                :<span class="lineCov">        197 :             count++;</span></a>
-<a name="572"><span class="lineNum">     572 </span>                :<span class="lineCov">        197 :             batchCount++;</span></a>
-<a name="573"><span class="lineNum">     573 </span>                :<span class="lineCov">        197 :             mLoadedCount.store(count); // Update progress</span></a>
+<a name="570"><span class="lineNum">     570 </span>        [<span class="branchCov" title="Branch 0 was taken 162 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        162 :             acquireMediaFile(filePath);</span></a>
+<a name="571"><span class="lineNum">     571 </span>                :<span class="lineCov">        162 :             count++;</span></a>
+<a name="572"><span class="lineNum">     572 </span>                :<span class="lineCov">        162 :             batchCount++;</span></a>
+<a name="573"><span class="lineNum">     573 </span>                :<span class="lineCov">        162 :             mLoadedCount.store(count); // Update progress</span></a>
 <a name="574"><span class="lineNum">     574 </span>                :            :             </a>
 <a name="575"><span class="lineNum">     575 </span>                :            :             // Every BATCH_SIZE files, yield to let UI breathe</a>
-<a name="576"><span class="lineNum">     576 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 195 times"> + </span>]:<span class="lineCov">        197 :             if (batchCount &gt;= BATCH_SIZE) {</span></a>
+<a name="576"><span class="lineNum">     576 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 161 times"> + </span>]:<span class="lineCov">        162 :             if (batchCount &gt;= BATCH_SIZE) {</span></a>
 <a name="577"><span class="lineNum">     577 </span>                :            :                 // std::cerr &lt;&lt; &quot;Loaded &quot; &lt;&lt; count &lt;&lt; &quot; / &quot; &lt;&lt; filesToLoad.size() &lt;&lt; &quot; files...&quot; &lt;&lt; std::endl;</a>
-<a name="578"><span class="lineNum">     578 </span>                :<span class="lineCov">          2 :                 batchCount = 0;</span></a>
+<a name="578"><span class="lineNum">     578 </span>                :<span class="lineCov">          1 :                 batchCount = 0;</span></a>
 <a name="579"><span class="lineNum">     579 </span>                :            :                 // Small sleep to let UI thread process</a>
-<a name="580"><span class="lineNum">     580 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          2 :                 std::this_thread::sleep_for(std::chrono::milliseconds(50));</span></a>
+<a name="580"><span class="lineNum">     580 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">          1 :                 std::this_thread::sleep_for(std::chrono::milliseconds(50));</span></a>
 <a name="581"><span class="lineNum">     581 </span>                :            :             }</a>
 <a name="582"><span class="lineNum">     582 </span>                :            :         }</a>
 <a name="583"><span class="lineNum">     583 </span>                :            :         </a>
@@ -684,10 +684,10 @@
 <a name="591"><span class="lineNum">     591 </span>                :            : }</a>
 <a name="592"><span class="lineNum">     592 </span>                :            : </a>
 <a name="593"><span class="lineNum">     593 </span>                :<span class="lineCov">         13 : std::pair&lt;size_t, size_t&gt; AppController::getLoadingProgress() const {</span></a>
-<a name="594"><span class="lineNum">     594 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 12 times"> + </span>]:<span class="lineCov">         13 :     if (mLoadingInProgress.load()) {</span></a>
-<a name="595"><span class="lineNum">     595 </span>                :<span class="lineCov">          3 :         return {mLoadedCount.load(), mTotalToLoad.load()};</span></a>
+<a name="594"><span class="lineNum">     594 </span>        [<span class="branchCov" title="Branch 0 was taken 3 times"> + </span><span class="branchCov" title="Branch 1 was taken 10 times"> + </span>]:<span class="lineCov">         13 :     if (mLoadingInProgress.load()) {</span></a>
+<a name="595"><span class="lineNum">     595 </span>                :<span class="lineCov">          9 :         return {mLoadedCount.load(), mTotalToLoad.load()};</span></a>
 <a name="596"><span class="lineNum">     596 </span>                :            :     }</a>
-<a name="597"><span class="lineNum">     597 </span>                :<span class="lineCov">         12 :     return {0, 0};</span></a>
+<a name="597"><span class="lineNum">     597 </span>                :<span class="lineCov">         10 :     return {0, 0};</span></a>
 <a name="598"><span class="lineNum">     598 </span>                :            : }</a>
 <a name="599"><span class="lineNum">     599 </span>                :            : </a>
 <a name="600"><span class="lineNum">     600 </span>                :            : } // namespace Controller</a>

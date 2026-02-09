@@ -30,12 +30,20 @@ void StorageManager::refreshDevices() {
 }
 
 std::string StorageManager::getUsername() {
-    uid_t uid = geteuid();
-    struct passwd *pw = getpwuid(uid);
+    uid_t uid = getSystemUid();
+    struct passwd *pw = getPasswordEntry(uid);
     if (pw) {
         return std::string(pw->pw_name);
     }
     return "";
+}
+
+::uid_t StorageManager::getSystemUid() const {
+    return geteuid();
+}
+
+struct ::passwd* StorageManager::getPasswordEntry(::uid_t uid) const {
+    return getpwuid(uid);
 }
 
 std::vector<StorageDevice> StorageManager::getAvailableStorage() {

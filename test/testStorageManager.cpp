@@ -5,6 +5,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "controller/StorageManager.h"
 #include <filesystem>
 #include <fstream>
@@ -186,6 +187,20 @@ protected:
     void addSearchRoot(const std::string& path) {
         manager.mSearchRoots.push_back(path);
     }
+    
+    void clearSearchRoots() {
+        manager.mSearchRoots.clear();
+    }
+    
+    std::string callGetUsername(StorageManager& mgr) {
+        return mgr.getUsername();
+    }
+};
+
+class TestableStorageManager : public StorageManager {
+public:
+    MOCK_METHOD(::uid_t, getSystemUid, (), (const, override));
+    MOCK_METHOD(struct ::passwd*, getPasswordEntry, (::uid_t), (const, override));
 };
 
 TEST_F(StorageManagerCoverageTest, FindsMusicInSearchRoot) {
@@ -238,6 +253,92 @@ TEST_F(StorageManagerCoverageTest, VerifyMultipleRoots) {
     ASSERT_EQ(devices.size(), 2u);
     
     fs::remove_all(root2);
+}
+
+TEST_F(StorageManagerCoverageTest, GetUsernameFailure) {
+    using ::testing::Return;
+    TestableStorageManager mockManager;
+    
+    // Mock failure to find user
+    EXPECT_CALL(mockManager, getSystemUid()).WillOnce(Return(1000));
+    EXPECT_CALL(mockManager, getPasswordEntry(1000)).WillOnce(Return(nullptr));
+    
+    // Call getUsername via helper
+    std::string username = callGetUsername(mockManager);
+    EXPECT_EQ(username, "");
+}
+
+TEST_F(StorageManagerCoverageTest, RootPathInvalid) {
+    // Add invalid paths
+    addSearchRoot("/non/existent/path");
+    addSearchRoot(testDir + "/song.mp3"); // Exists but not directory
+    
+    // Should skip and not crash
+    auto devices = manager.getAvailableStorage();
+    // Assuming setUp adds testDir, devices size depends on testDir content
+    // But we didn't add any files to testDir in this test
+    // So size 0
+    EXPECT_EQ(devices.size(), 0u);
+}
+
+TEST_F(StorageManagerCoverageTest, RootPathMedia) {
+    // Create actual directory structure
+    // We need a path that STARTS with /media/ as a string, but resolves to a valid directory.
+    // Try using a really long relative path, assuming /media exists.
+    // If /media doesn't exist, this might fail.
+    // Robustness: only run if /media exists?
+    // Or iterate until we find a match?
+    
+    // Backup plan: if /media doesn't exist, create it? No permission.
+    // We can try "/media/../tmp/..."
+    // If host has /media directory, this works.
+    
+    if (fs::exists("/media")) {
+        std::string mediaRoot = "/media/../" + testDir.substr(1) + "/MediaRoot";
+        fs::create_directories(testDir + "/MediaRoot/UsbDrive");
+        createTestFile(testDir + "/MediaRoot/UsbDrive/song.mp3");
+        
+        clearSearchRoots();
+        addSearchRoot(mediaRoot);
+        
+        auto devices = manager.getAvailableStorage();
+        ASSERT_EQ(devices.size(), 1u);
+        // Label should be "USB: UsbDrive"
+        EXPECT_EQ(devices[0].name, "USB: UsbDrive");
+    }
+}
+
+TEST_F(StorageManagerCoverageTest, RootPathMnt) {
+    // Same for /mnt
+    if (fs::exists("/mnt")) {
+        std::string mntRoot = "/mnt/../" + testDir.substr(1) + "/MntRoot";
+        fs::create_directories(testDir + "/MntRoot/ExtDrive");
+        createTestFile(testDir + "/MntRoot/ExtDrive/song.mp3");
+        
+        clearSearchRoots();
+        addSearchRoot(mntRoot);
+        
+        auto devices = manager.getAvailableStorage();
+        ASSERT_EQ(devices.size(), 1u);
+        // Label should be "External: ExtDrive"
+        EXPECT_EQ(devices[0].name, "External: ExtDrive");
+    }
+}
+
+TEST_F(StorageManagerCoverageTest, RootPathUnreadable) {
+    std::string noPermDir = testDir + "/UnreadableRoot";
+    fs::create_directories(noPermDir);
+    // Remove permissions
+    fs::permissions(noPermDir, fs::perms::none);
+    
+    clearSearchRoots();
+    addSearchRoot(noPermDir);
+    
+    // This triggers exception in getAvailableStorage loop
+    auto devices = manager.getAvailableStorage();
+    EXPECT_EQ(devices.size(), 0u);
+    
+    fs::permissions(noPermDir, fs::perms::all);
 }
 
 } // namespace Controller
