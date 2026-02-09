@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-02-09 11:21:32</td>
+            <td class="headerValue">2026-02-09 11:59:47</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">7</td>
@@ -82,14 +82,14 @@
 <a name="11"><span class="lineNum">      11 </span>                :            : </a>
 <a name="12"><span class="lineNum">      12 </span>                :            : // Ghi dữ liệu vào Buffer</a>
 <a name="13"><span class="lineNum">      13 </span>                :            : // Trả về số byte thực tế đã ghi được</a>
-<a name="14"><span class="lineNum">      14 </span>                :<span class="lineCov">        410 : size_t Buffer::write(const uint8_t* data, size_t len) {</span></a>
-<a name="15"><span class="lineNum">      15 </span>        [<span class="branchCov" title="Branch 0 was taken 410 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        410 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
+<a name="14"><span class="lineNum">      14 </span>                :<span class="lineCov">        173 : size_t Buffer::write(const uint8_t* data, size_t len) {</span></a>
+<a name="15"><span class="lineNum">      15 </span>        [<span class="branchCov" title="Branch 0 was taken 173 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        173 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
 <a name="16"><span class="lineNum">      16 </span>                :            : </a>
-<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">        410 :     size_t freeSpace = mCapacity - getAvailableInternal();</span></a>
-<a name="18"><span class="lineNum">      18 </span>                :<span class="lineCov">        410 :     size_t toWrite = std::min(len, freeSpace);</span></a>
+<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">        173 :     size_t freeSpace = mCapacity - getAvailableInternal();</span></a>
+<a name="18"><span class="lineNum">      18 </span>                :<span class="lineCov">        173 :     size_t toWrite = std::min(len, freeSpace);</span></a>
 <a name="19"><span class="lineNum">      19 </span>                :            : </a>
-<a name="20"><span class="lineNum">      20 </span>        [<span class="branchCov" title="Branch 0 was taken 298 times"> + </span><span class="branchCov" title="Branch 1 was taken 112 times"> + </span>]:<span class="lineCov">        410 :     if (toWrite == 0) {</span></a>
-<a name="21"><span class="lineNum">      21 </span>                :<span class="lineCov">        298 :         return 0;</span></a>
+<a name="20"><span class="lineNum">      20 </span>        [<span class="branchCov" title="Branch 0 was taken 61 times"> + </span><span class="branchCov" title="Branch 1 was taken 112 times"> + </span>]:<span class="lineCov">        173 :     if (toWrite == 0) {</span></a>
+<a name="21"><span class="lineNum">      21 </span>                :<span class="lineCov">         61 :         return 0;</span></a>
 <a name="22"><span class="lineNum">      22 </span>                :            :     }</a>
 <a name="23"><span class="lineNum">      23 </span>                :            : </a>
 <a name="24"><span class="lineNum">      24 </span>        [<span class="branchCov" title="Branch 0 was taken 75588 times"> + </span><span class="branchCov" title="Branch 1 was taken 112 times"> + </span>]:<span class="lineCov">      75700 :     for (size_t i = 0; i &lt; toWrite; ++i) {</span></a>
@@ -103,18 +103,18 @@
 <a name="32"><span class="lineNum">      32 </span>                :            :     }</a>
 <a name="33"><span class="lineNum">      33 </span>                :            : </a>
 <a name="34"><span class="lineNum">      34 </span>                :<span class="lineCov">        112 :     return toWrite;</span></a>
-<a name="35"><span class="lineNum">      35 </span>                :<span class="lineCov">        410 : }</span></a>
+<a name="35"><span class="lineNum">      35 </span>                :<span class="lineCov">        173 : }</span></a>
 <a name="36"><span class="lineNum">      36 </span>                :            : </a>
 <a name="37"><span class="lineNum">      37 </span>                :            : // Đọc dữ liệu từ Buffer</a>
 <a name="38"><span class="lineNum">      38 </span>                :            : // Trả về số byte thực tế đọc được</a>
-<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">        148 : size_t Buffer::read(uint8_t* dest, size_t len) {</span></a>
-<a name="40"><span class="lineNum">      40 </span>        [<span class="branchCov" title="Branch 0 was taken 148 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        148 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
+<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">        234 : size_t Buffer::read(uint8_t* dest, size_t len) {</span></a>
+<a name="40"><span class="lineNum">      40 </span>        [<span class="branchCov" title="Branch 0 was taken 234 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">        234 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
 <a name="41"><span class="lineNum">      41 </span>                :            : </a>
-<a name="42"><span class="lineNum">      42 </span>                :<span class="lineCov">        148 :     size_t avail = getAvailableInternal();</span></a>
-<a name="43"><span class="lineNum">      43 </span>                :<span class="lineCov">        148 :     size_t toRead = std::min(len, avail);</span></a>
+<a name="42"><span class="lineNum">      42 </span>                :<span class="lineCov">        234 :     size_t avail = getAvailableInternal();</span></a>
+<a name="43"><span class="lineNum">      43 </span>                :<span class="lineCov">        234 :     size_t toRead = std::min(len, avail);</span></a>
 <a name="44"><span class="lineNum">      44 </span>                :            : </a>
-<a name="45"><span class="lineNum">      45 </span>        [<span class="branchCov" title="Branch 0 was taken 40 times"> + </span><span class="branchCov" title="Branch 1 was taken 108 times"> + </span>]:<span class="lineCov">        148 :     if (toRead == 0) {</span></a>
-<a name="46"><span class="lineNum">      46 </span>                :<span class="lineCov">         40 :         return 0;</span></a>
+<a name="45"><span class="lineNum">      45 </span>        [<span class="branchCov" title="Branch 0 was taken 126 times"> + </span><span class="branchCov" title="Branch 1 was taken 108 times"> + </span>]:<span class="lineCov">        234 :     if (toRead == 0) {</span></a>
+<a name="46"><span class="lineNum">      46 </span>                :<span class="lineCov">        126 :         return 0;</span></a>
 <a name="47"><span class="lineNum">      47 </span>                :            :     }</a>
 <a name="48"><span class="lineNum">      48 </span>                :            : </a>
 <a name="49"><span class="lineNum">      49 </span>        [<span class="branchCov" title="Branch 0 was taken 75568 times"> + </span><span class="branchCov" title="Branch 1 was taken 108 times"> + </span>]:<span class="lineCov">      75676 :     for (size_t i = 0; i &lt; toRead; ++i) {</span></a>
@@ -125,13 +125,13 @@
 <a name="54"><span class="lineNum">      54 </span>                :<span class="lineCov">        108 :     mIsFull = false;</span></a>
 <a name="55"><span class="lineNum">      55 </span>                :            : </a>
 <a name="56"><span class="lineNum">      56 </span>                :<span class="lineCov">        108 :     return toRead;</span></a>
-<a name="57"><span class="lineNum">      57 </span>                :<span class="lineCov">        148 : }</span></a>
+<a name="57"><span class="lineNum">      57 </span>                :<span class="lineCov">        234 : }</span></a>
 <a name="58"><span class="lineNum">      58 </span>                :            : </a>
 <a name="59"><span class="lineNum">      59 </span>                :            : // Kiểm tra số byte dữ liệu hiện có thể đọc</a>
-<a name="60"><span class="lineNum">      60 </span>                :<span class="lineCov">         34 : size_t Buffer::available() const {</span></a>
-<a name="61"><span class="lineNum">      61 </span>        [<span class="branchCov" title="Branch 0 was taken 34 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         34 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
-<a name="62"><span class="lineNum">      62 </span>                :<span class="lineCov">         68 :     return getAvailableInternal();</span></a>
-<a name="63"><span class="lineNum">      63 </span>                :<span class="lineCov">         34 : }</span></a>
+<a name="60"><span class="lineNum">      60 </span>                :<span class="lineCov">         18 : size_t Buffer::available() const {</span></a>
+<a name="61"><span class="lineNum">      61 </span>        [<span class="branchCov" title="Branch 0 was taken 18 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         18 :     std::lock_guard&lt;std::mutex&gt; lock(mMutex);</span></a>
+<a name="62"><span class="lineNum">      62 </span>                :<span class="lineCov">         36 :     return getAvailableInternal();</span></a>
+<a name="63"><span class="lineNum">      63 </span>                :<span class="lineCov">         18 : }</span></a>
 <a name="64"><span class="lineNum">      64 </span>                :            : </a>
 <a name="65"><span class="lineNum">      65 </span>                :            : // Trả về capacity của buffer</a>
 <a name="66"><span class="lineNum">      66 </span>                :<span class="lineCov">          1 : size_t Buffer::capacity() const {</span></a>
@@ -148,14 +148,14 @@
 <a name="77"><span class="lineNum">      77 </span>                :<span class="lineCov">          1 : }</span></a>
 <a name="78"><span class="lineNum">      78 </span>                :            : </a>
 <a name="79"><span class="lineNum">      79 </span>                :            : // Internal helper: tính số byte available (không lock)</a>
-<a name="80"><span class="lineNum">      80 </span>                :<span class="lineCov">        592 : size_t Buffer::getAvailableInternal() const {</span></a>
-<a name="81"><span class="lineNum">      81 </span>        [<span class="branchCov" title="Branch 0 was taken 303 times"> + </span><span class="branchCov" title="Branch 1 was taken 289 times"> + </span>]:<span class="lineCov">        592 :     if (mIsFull) {</span></a>
-<a name="82"><span class="lineNum">      82 </span>                :<span class="lineCov">        303 :         return mCapacity;</span></a>
+<a name="80"><span class="lineNum">      80 </span>                :<span class="lineCov">        425 : size_t Buffer::getAvailableInternal() const {</span></a>
+<a name="81"><span class="lineNum">      81 </span>        [<span class="branchCov" title="Branch 0 was taken 66 times"> + </span><span class="branchCov" title="Branch 1 was taken 359 times"> + </span>]:<span class="lineCov">        425 :     if (mIsFull) {</span></a>
+<a name="82"><span class="lineNum">      82 </span>                :<span class="lineCov">         66 :         return mCapacity;</span></a>
 <a name="83"><span class="lineNum">      83 </span>                :            :     }</a>
-<a name="84"><span class="lineNum">      84 </span>        [<span class="branchCov" title="Branch 0 was taken 207 times"> + </span><span class="branchCov" title="Branch 1 was taken 82 times"> + </span>]:<span class="lineCov">        289 :     if (mHead &gt;= mTail) {</span></a>
-<a name="85"><span class="lineNum">      85 </span>                :<span class="lineCov">        207 :         return mHead - mTail;</span></a>
+<a name="84"><span class="lineNum">      84 </span>        [<span class="branchCov" title="Branch 0 was taken 261 times"> + </span><span class="branchCov" title="Branch 1 was taken 98 times"> + </span>]:<span class="lineCov">        359 :     if (mHead &gt;= mTail) {</span></a>
+<a name="85"><span class="lineNum">      85 </span>                :<span class="lineCov">        261 :         return mHead - mTail;</span></a>
 <a name="86"><span class="lineNum">      86 </span>                :            :     }</a>
-<a name="87"><span class="lineNum">      87 </span>                :<span class="lineCov">         82 :     return mCapacity - mTail + mHead;</span></a>
+<a name="87"><span class="lineNum">      87 </span>                :<span class="lineCov">         98 :     return mCapacity - mTail + mHead;</span></a>
 <a name="88"><span class="lineNum">      88 </span>                :            : }</a>
 <a name="89"><span class="lineNum">      89 </span>                :            : </a>
 <a name="90"><span class="lineNum">      90 </span>                :<span class="lineNoCov">          0 : bool Buffer::isFullInternal() const {</span></a>
