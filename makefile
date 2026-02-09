@@ -101,7 +101,8 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testHistoryManager.cpp \
             $(TEST_DIR)/testBoardCommunicator.cpp \
             $(TEST_DIR)/testPlaybackControllerCoverage.cpp \
-            $(TEST_DIR)/testPlaylistManagerCoverage.cpp
+            $(TEST_DIR)/testPlaylistManagerCoverage.cpp \
+            $(TEST_DIR)/testSerialIOCoverage.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
