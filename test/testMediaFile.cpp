@@ -207,3 +207,45 @@ TEST(MediaFileTest, LongStrings) {
     EXPECT_EQ(file.getFilename().length(), 1004);  // 1000 + ".mp3"
     EXPECT_TRUE(file.isValid());
 }
+
+/**
+ * @brief Test Case: Cover Art Accessors
+ * Scenario: Verify setCoverArt, getCoverArt, and hasCoverArt.
+ */
+TEST(MediaFileTest, CoverArtAccessors) {
+    MediaFile file;
+    EXPECT_FALSE(file.hasCoverArt());
+    EXPECT_TRUE(file.getCoverArt().empty());
+
+    std::vector<uint8_t> art = {0x01, 0x02, 0x03, 0x04};
+    file.setCoverArt(art);
+
+    EXPECT_TRUE(file.hasCoverArt());
+    EXPECT_EQ(file.getCoverArt().size(), 4u);
+    EXPECT_EQ(file.getCoverArt()[0], 0x01);
+    EXPECT_EQ(file.getCoverArt()[3], 0x04);
+    
+    // Test constructor with cover art
+    MediaFile file2("a.mp3", "/a.mp3", 0, "", "", art);
+    EXPECT_TRUE(file2.hasCoverArt());
+    EXPECT_EQ(file2.getCoverArt(), art);
+}
+
+/**
+ * @brief Test Case: Operator Branches
+ * Scenario: Explicitly cover all branches of == and !=
+ */
+TEST(MediaFileTest, OperatorBranches) {
+    MediaFile f1("a", "/path/same");
+    MediaFile f2("b", "/path/same");
+    MediaFile f3("c", "/path/diff");
+    
+    // operator==
+    EXPECT_TRUE(f1 == f2);  // Returns true
+    EXPECT_FALSE(f1 == f3); // Returns false
+    
+    // operator!=
+    EXPECT_FALSE(f1 != f2); // Returns false
+    EXPECT_TRUE(f1 != f3);  // Returns true
+}
+
