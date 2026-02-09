@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-02-09 09:27:05</td>
+            <td class="headerValue">2026-02-09 10:30:22</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">3</td>
@@ -109,7 +109,7 @@
 <a name="38"><span class="lineNum">      38 </span>                :            :                      public ITrackPosition,</a>
 <a name="39"><span class="lineNum">      39 </span>                :            :                      public IPlaylistNavigation {</a>
 <a name="40"><span class="lineNum">      40 </span>                :            : public:</a>
-<a name="41"><span class="lineNum">      41 </span>                :<span class="lineCov">         45 :     virtual ~IPlayerState() = default;</span></a>
+<a name="41"><span class="lineNum">      41 </span>                :<span class="lineCov">        100 :     virtual ~IPlayerState() = default;</span></a>
 <a name="42"><span class="lineNum">      42 </span>                :            : </a>
 <a name="43"><span class="lineNum">      43 </span>                :            :     // ========================================================================</a>
 <a name="44"><span class="lineNum">      44 </span>                :            :     // Backward Compatibility Methods</a>
@@ -120,8 +120,8 @@
 <a name="49"><span class="lineNum">      49 </span>                :            :      * @return Current PlaybackStatus (STOPPED, PLAYING, PAUSED)</a>
 <a name="50"><span class="lineNum">      50 </span>                :            :      * @deprecated Use getPlaybackStatus() instead</a>
 <a name="51"><span class="lineNum">      51 </span>                :            :      */</a>
-<a name="52"><span class="lineNum">      52 </span>                :<span class="lineCov">         28 :     virtual PlaybackStatus getPlaybackState() const {</span></a>
-<a name="53"><span class="lineNum">      53 </span>                :<span class="lineCov">         28 :         return getPlaybackStatus();</span></a>
+<a name="52"><span class="lineNum">      52 </span>                :<span class="lineCov">         50 :     virtual PlaybackStatus getPlaybackState() const {</span></a>
+<a name="53"><span class="lineNum">      53 </span>                :<span class="lineCov">         50 :         return getPlaybackStatus();</span></a>
 <a name="54"><span class="lineNum">      54 </span>                :            :     }</a>
 <a name="55"><span class="lineNum">      55 </span>                :            : </a>
 <a name="56"><span class="lineNum">      56 </span>                :            :     /**</a>
@@ -129,9 +129,9 @@
 <a name="58"><span class="lineNum">      58 </span>                :            :      * @param state New playback state</a>
 <a name="59"><span class="lineNum">      59 </span>                :            :      * @deprecated Use setPlaybackStatus() instead</a>
 <a name="60"><span class="lineNum">      60 </span>                :            :      */</a>
-<a name="61"><span class="lineNum">      61 </span>                :<span class="lineCov">         33 :     virtual void setPlaybackState(PlaybackStatus state) {</span></a>
-<a name="62"><span class="lineNum">      62 </span>                :<span class="lineCov">         33 :         setPlaybackStatus(state);</span></a>
-<a name="63"><span class="lineNum">      63 </span>                :<span class="lineCov">         33 :     }</span></a>
+<a name="61"><span class="lineNum">      61 </span>                :<span class="lineCov">         69 :     virtual void setPlaybackState(PlaybackStatus state) {</span></a>
+<a name="62"><span class="lineNum">      62 </span>                :<span class="lineCov">         69 :         setPlaybackStatus(state);</span></a>
+<a name="63"><span class="lineNum">      63 </span>                :<span class="lineCov">         69 :     }</span></a>
 <a name="64"><span class="lineNum">      64 </span>                :            : };</a>
 <a name="65"><span class="lineNum">      65 </span>                :            : </a>
 <a name="66"><span class="lineNum">      66 </span>                :            : } // namespace Model</a>

@@ -90,6 +90,7 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testAudioPlayer.cpp \
             $(TEST_DIR)/testSerialManager.cpp \
             $(TEST_DIR)/testAppController.cpp \
+            $(TEST_DIR)/testAppControllerExtended.cpp \
             $(TEST_DIR)/testPlaybackFix.cpp \
             $(TEST_DIR)/testStorageManager.cpp \
             $(TEST_DIR)/testCoverArt.cpp \
@@ -157,24 +158,36 @@ clean:
 # COVERAGE TARGETS
 # ==========================================
 
-# Build with coverage instrumentation and run tests
-coverage:
+# Build with coverage instrumentation
+coverage-build:
 	@echo "Cleaning for coverage build..."
 	rm -rf $(BUILD_DIR)
 	@echo "Building with coverage instrumentation..."
 	$(MAKE) CXXFLAGS="$(CXXFLAGS) $(COVERAGE_FLAGS)" LDFLAGS="$(LDFLAGS) $(COVERAGE_FLAGS)" $(TEST_TARGET)
-	@echo "Running tests with coverage..."
-	./$(TEST_TARGET)
 
-# Generate HTML coverage report (requires lcov and genhtml)
-coverage-report: coverage
-	@echo "Generating coverage report..."
+# Generate HTML coverage report (includes files with 0% coverage)
+coverage-report: coverage-build
+	@echo "Preparing coverage data..."
 	@mkdir -p $(BUILD_DIR)/coverage
-	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info --rc lcov_branch_coverage=1
-	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --rc lcov_branch_coverage=1
+	
+	@echo "[1/5] Capturing baseline coverage (initial state)..."
+	lcov --capture --initial --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage_base.info --rc lcov_branch_coverage=1
+	
+	@echo "[2/5] Running tests (failures will be ignored)..."
+	-./$(TEST_TARGET)
+	
+	@echo "[3/5] Capturing test execution coverage..."
+	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage_test.info --rc lcov_branch_coverage=1
+	
+	@echo "[4/5] Combining coverage data..."
+	lcov --add-tracefile $(BUILD_DIR)/coverage_base.info --add-tracefile $(BUILD_DIR)/coverage_test.info --output-file $(BUILD_DIR)/coverage_total.info --rc lcov_branch_coverage=1
+	
+	@echo "[5/5] Filtering and generating HTML report..."
+	lcov --remove $(BUILD_DIR)/coverage_total.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --rc lcov_branch_coverage=1
 	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage --branch-coverage
+	
 	@echo "========================================="
-	@echo "Coverage report: $(BUILD_DIR)/coverage/index.html"
+	@echo "Coverage report generated: $(BUILD_DIR)/coverage/index.html"
 	@echo "========================================="
 
 # Clean coverage data
@@ -182,6 +195,17 @@ clean-coverage:
 	@echo "Cleaning coverage data..."
 	find $(BUILD_DIR) -name "*.gcda" -delete 2>/dev/null || true
 	find $(BUILD_DIR) -name "*.gcno" -delete 2>/dev/null || true
-	rm -rf $(BUILD_DIR)/coverage $(BUILD_DIR)/coverage.info $(BUILD_DIR)/coverage_filtered.info
+	rm -rf $(BUILD_DIR)/coverage $(BUILD_DIR)/*.info
 
-.PHONY: all app clean run run_app coverage coverage-report clean-coverage
+# Generate HTML report with ALL source files (no tests required)
+coverage-all-files: coverage-build
+	@echo "Generating coverage report for all files (without running tests)..."
+	@mkdir -p $(BUILD_DIR)/coverage
+	lcov --capture --initial --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage_base.info --rc lcov_branch_coverage=1
+	lcov --remove $(BUILD_DIR)/coverage_base.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --rc lcov_branch_coverage=1
+	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage --branch-coverage
+	@echo "========================================="
+	@echo "Coverage report (all files): $(BUILD_DIR)/coverage/index.html"
+	@echo "========================================="
+
+.PHONY: all app clean run run_app coverage-build coverage-report coverage-all-files clean-coverage
