@@ -358,3 +358,104 @@ TEST_F(AudioLoaderCoverageTest, GetDuration) {
 }
 
 } // namespace Controller
+
+// ============================================================================
+// AudioPlaybackImpl Direct Coverage Tests
+// ============================================================================
+
+#include "controller/audioplayer/AudioPlaybackImpl.h"
+
+namespace Controller {
+
+class AudioPlaybackCoverageTest : public ::testing::Test {
+protected:
+    AudioLifecycleImpl lifecycle;
+    AudioLoaderImpl loader{&lifecycle};
+    
+    void SetUp() override {
+        AudioPlaybackImpl::sInstance = nullptr;
+    }
+    
+    void TearDown() override {
+        AudioPlaybackImpl::sInstance = nullptr;
+    }
+};
+
+TEST_F(AudioPlaybackCoverageTest, HandleMusicFinishedWithCallback) {
+    // Cover lines 102-118 (handleMusicFinished with callback)
+    AudioPlaybackImpl playback(&lifecycle, &loader);
+    
+    bool callbackCalled = false;
+    playback.setFinishedCallback([&]() {
+        callbackCalled = true;
+    });
+    
+    playback.handleMusicFinished();
+    
+    EXPECT_TRUE(callbackCalled);
+    EXPECT_EQ(lifecycle.getState(), AudioState::FINISHED);
+}
+
+TEST_F(AudioPlaybackCoverageTest, HandleMusicFinishedWithoutCallback) {
+    // Cover branch 115 (cb is null)
+    AudioPlaybackImpl playback(&lifecycle, &loader);
+    
+    playback.handleMusicFinished();
+    
+    EXPECT_EQ(lifecycle.getState(), AudioState::FINISHED);
+}
+
+TEST_F(AudioPlaybackCoverageTest, HandleMusicFinishedNullLifecycle) {
+    // Cover branch 105 (mLifecycle is null)
+    AudioPlaybackImpl playback(nullptr, &loader);
+    
+    playback.handleMusicFinished();
+    SUCCEED();
+}
+
+TEST_F(AudioPlaybackCoverageTest, PlayNullDependencies) {
+    AudioPlaybackImpl playback(nullptr, nullptr);
+    playback.play();
+    SUCCEED();
+}
+
+TEST_F(AudioPlaybackCoverageTest, PauseNullDependencies) {
+    AudioPlaybackImpl playback(nullptr, nullptr);
+    playback.pause();
+    SUCCEED();
+}
+
+TEST_F(AudioPlaybackCoverageTest, StopNullDependencies) {
+    AudioPlaybackImpl playback(nullptr, nullptr);
+    playback.stop();
+    SUCCEED();
+}
+
+TEST_F(AudioPlaybackCoverageTest, SeekNullLoader) {
+    AudioPlaybackImpl playback(&lifecycle, nullptr);
+    playback.seek(1000);
+    SUCCEED();
+}
+
+TEST_F(AudioPlaybackCoverageTest, IsPlayingNullLifecycle) {
+    AudioPlaybackImpl playback(nullptr, &loader);
+    EXPECT_FALSE(playback.isPlaying());
+}
+
+TEST_F(AudioPlaybackCoverageTest, GetDurationNullLoader) {
+    AudioPlaybackImpl playback(&lifecycle, nullptr);
+    EXPECT_EQ(playback.getDuration(), 0u);
+}
+
+TEST_F(AudioPlaybackCoverageTest, StaticInstanceSet) {
+    EXPECT_EQ(AudioPlaybackImpl::sInstance, nullptr);
+    
+    {
+        AudioPlaybackImpl playback(&lifecycle, &loader);
+        EXPECT_EQ(AudioPlaybackImpl::sInstance, &playback);
+    }
+    
+    EXPECT_EQ(AudioPlaybackImpl::sInstance, nullptr);
+}
+
+} // namespace Controller
