@@ -15,7 +15,14 @@ namespace fs = std::filesystem;
 
 namespace Controller {
 
-StorageManager::StorageManager() : mNeedsRefresh(true) {}
+StorageManager::StorageManager() : mNeedsRefresh(true) {
+    // Initialize default search roots
+    std::string username = getUsername();
+    if (!username.empty()) {
+        mSearchRoots.push_back("/media/" + username);
+    }
+    mSearchRoots.push_back("/mnt");
+}
 
 void StorageManager::refreshDevices() {
     mNeedsRefresh = true;
@@ -34,42 +41,33 @@ std::string StorageManager::getUsername() {
 std::vector<StorageDevice> StorageManager::getAvailableStorage() {
     std::vector<StorageDevice> devices;
 
-    // 1. Internal Storage (Default) - REMOVED as per user request (it is auto-loaded)
-    // if (fs::exists("./mMusic") && fs::is_directory("./mMusic")) {
-    //     devices.push_back({"Internal Storage (mMusic)", "./mMusic"});
-    // }
+    for (const auto& rootPath : mSearchRoots) {
+        // Skip if root doesn't exist
+        if (!fs::exists(rootPath) || !fs::is_directory(rootPath)) {
+            continue;
+        }
 
-    // 2. Scan /media/[username]/
-    std::string username = getUsername();
-    if (!username.empty()) {
-        std::string mediaPath = "/media/" + username;
-        if (fs::exists(mediaPath) && fs::is_directory(mediaPath)) {
-            for (const auto& entry : fs::directory_iterator(mediaPath)) {
+        try {
+            for (const auto& entry : fs::directory_iterator(rootPath)) {
                 if (entry.is_directory()) {
                     // Only add if it contains music files
                     if (hasMusicFiles(entry.path().string())) {
-                        devices.push_back({
-                            "USB: " + entry.path().filename().string(),
-                            entry.path().string()
-                        });
+                        std::string label;
+                        if (rootPath.find("/media/") == 0) {
+                            label = "USB: " + entry.path().filename().string();
+                        } else if (rootPath.find("/mnt") == 0) {
+                            label = "External: " + entry.path().filename().string();
+                        } else {
+                            // Fallback/Test label
+                            label = "Storage: " + entry.path().filename().string();
+                        }
+                        
+                        devices.push_back({label, entry.path().string()});
                     }
                 }
             }
-        }
-    }
-
-    // 3. Scan /mnt/ (Optional, varies by OS distro)
-    if (fs::exists("/mnt") && fs::is_directory("/mnt")) {
-         for (const auto& entry : fs::directory_iterator("/mnt")) {
-            if (entry.is_directory()) {
-                // Only add if it contains music files
-                if (hasMusicFiles(entry.path().string())) {
-                    devices.push_back({
-                        "External: " + entry.path().filename().string(),
-                        entry.path().string()
-                    });
-                }
-            }
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "Error scanning root " << rootPath << ": " << e.what() << std::endl;
         }
     }
 

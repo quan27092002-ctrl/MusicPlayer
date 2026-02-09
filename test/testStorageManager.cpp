@@ -171,3 +171,74 @@ TEST_F(StorageManagerTest, MusicFilesCaseInsensitive) {
     auto devices = manager.getAvailableStorage();
     EXPECT_GE(devices.size(), 0u);
 }
+
+namespace Controller {
+
+class StorageManagerCoverageTest : public ::StorageManagerTest {
+protected:
+    void SetUp() override {
+        ::StorageManagerTest::SetUp();
+        // Clear default search roots and add test directory
+        manager.mSearchRoots.clear();
+        manager.mSearchRoots.push_back(testDir);
+    }
+
+    void addSearchRoot(const std::string& path) {
+        manager.mSearchRoots.push_back(path);
+    }
+};
+
+TEST_F(StorageManagerCoverageTest, FindsMusicInSearchRoot) {
+    // Create a "USB" folder with music
+    fs::create_directories(testDir + "/USB1");
+    // Create dummy music file
+    createTestFile(testDir + "/USB1/song.mp3");
+    
+    auto devices = manager.getAvailableStorage();
+    
+    // Should find 1 device
+    ASSERT_EQ(devices.size(), 1u);
+    // Path inside /tmp -> falls to "Storage: " label logic
+    EXPECT_EQ(devices[0].name, "Storage: USB1");
+    EXPECT_EQ(devices[0].path, testDir + "/USB1");
+}
+
+TEST_F(StorageManagerCoverageTest, IgnoresEmptyFolders) {
+    fs::create_directories(testDir + "/EmptyDir");
+    auto devices = manager.getAvailableStorage();
+    EXPECT_EQ(devices.size(), 0u);
+}
+
+TEST_F(StorageManagerCoverageTest, HandlesPermissionError) {
+    std::string noPermDir = testDir + "/NoPerm";
+    fs::create_directories(noPermDir);
+    
+    // Remove read permissions
+    fs::permissions(noPermDir, fs::perms::none);
+    
+    // Should catch exception and continue gracefully
+    auto devices = manager.getAvailableStorage();
+    EXPECT_EQ(devices.size(), 0u);
+    
+    // Cleanup
+    fs::permissions(noPermDir, fs::perms::all);
+}
+
+TEST_F(StorageManagerCoverageTest, VerifyMultipleRoots) {
+    std::string root2 = testDir + "_2";
+    fs::create_directories(root2 + "/Ext");
+    createTestFile(root2 + "/Ext/song.wav");
+    
+    fs::create_directories(testDir + "/USB1");
+    createTestFile(testDir + "/USB1/song.mp3");
+    
+    addSearchRoot(root2);
+    
+    auto devices = manager.getAvailableStorage();
+    ASSERT_EQ(devices.size(), 2u);
+    
+    fs::remove_all(root2);
+}
+
+} // namespace Controller
+

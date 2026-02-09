@@ -29,7 +29,10 @@ public:
     void refreshDevices() override;
 
 private:
+    friend class StorageManagerCoverageTest;
+
     std::vector<StorageDevice> mCachedDevices;
+    std::vector<std::string> mSearchRoots;
     bool mNeedsRefresh;
     
     std::string getUsername();
