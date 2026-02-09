@@ -28,6 +28,7 @@ namespace fs = std::filesystem;
 class MockAudioPlayerExt : public IAudioPlayer {
 public:
     bool initializeShouldFail = false;
+    bool loadShouldFail = false;
     bool initializeCalled = false;
     bool shutdownCalled = false;
     std::string loadedFile;
@@ -51,6 +52,7 @@ public:
     }
 
     bool load(const std::string& filePath) override {
+        if (loadShouldFail) return false;
         loadedFile = filePath;
         currentState = AudioState::LOADED;
         if (callback) callback(currentState, 0);
@@ -422,6 +424,7 @@ TEST_F(AppControllerExtendedTest, LoadDirectoryWhenAlreadyHasTracks) {
     size_t count = controller->loadDirectory(testDir);
     EXPECT_GE(count, 0u);
 }
+
 
 // ============================================================================
 // LoadDirectoryAsync

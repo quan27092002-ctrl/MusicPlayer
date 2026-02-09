@@ -91,6 +91,7 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testSerialManager.cpp \
             $(TEST_DIR)/testAppController.cpp \
             $(TEST_DIR)/testAppControllerExtended.cpp \
+            $(TEST_DIR)/testAppControllerStorage.cpp \
             $(TEST_DIR)/testPlaybackFix.cpp \
             $(TEST_DIR)/testStorageManager.cpp \
             $(TEST_DIR)/testCoverArt.cpp \

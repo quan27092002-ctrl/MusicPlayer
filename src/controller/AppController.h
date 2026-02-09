@@ -167,6 +167,8 @@ public:
     std::shared_ptr<Model::MediaFile> getHistoryItem(size_t index) const override;
 
 private:
+    // Allow test class to access private members for testing
+    friend class AppControllerStorageTest;
     // ========================================================================
     // Injected Dependencies
     // ========================================================================
