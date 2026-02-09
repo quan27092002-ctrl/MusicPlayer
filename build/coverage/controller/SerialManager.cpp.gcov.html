@@ -31,18 +31,18 @@
             <td class="headerValue">coverage_filtered.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">43</td>
             <td class="headerCovTableEntry">45</td>
-            <td class="headerCovTableEntryHi">95.6 %</td>
+            <td class="headerCovTableEntry">45</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-02-09 11:03:49</td>
+            <td class="headerValue">2026-02-09 11:10:14</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">17</td>
             <td class="headerCovTableEntry">18</td>
-            <td class="headerCovTableEntryMed">88.9 %</td>
+            <td class="headerCovTableEntryHi">94.4 %</td>
           </tr>
           <tr>
             <td></td>
@@ -85,14 +85,14 @@
 <a name="14"><span class="lineNum">      14 </span>                :            : // Constructor / Destructor</a>
 <a name="15"><span class="lineNum">      15 </span>                :            : // ============================================================================</a>
 <a name="16"><span class="lineNum">      16 </span>                :            : </a>
-<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">         13 : SerialManager::SerialManager() {</span></a>
-<a name="18"><span class="lineNum">      18 </span>        [<span class="branchCov" title="Branch 0 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         13 :     mConnection = std::make_unique&lt;SerialConnectionImpl&gt;();</span></a>
-<a name="19"><span class="lineNum">      19 </span>        [<span class="branchCov" title="Branch 0 was taken 13 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         13 :     mIO = std::make_unique&lt;SerialIOImpl&gt;(mConnection.get());</span></a>
-<a name="20"><span class="lineNum">      20 </span>                :<span class="lineCov">         13 : }</span></a>
+<a name="17"><span class="lineNum">      17 </span>                :<span class="lineCov">         14 : SerialManager::SerialManager() {</span></a>
+<a name="18"><span class="lineNum">      18 </span>        [<span class="branchCov" title="Branch 0 was taken 14 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         14 :     mConnection = std::make_unique&lt;SerialConnectionImpl&gt;();</span></a>
+<a name="19"><span class="lineNum">      19 </span>        [<span class="branchCov" title="Branch 0 was taken 14 times"> + </span><span class="branchNoCov" title="Branch 1 was not taken"> - </span>]:<span class="lineCov">         14 :     mIO = std::make_unique&lt;SerialIOImpl&gt;(mConnection.get());</span></a>
+<a name="20"><span class="lineNum">      20 </span>                :<span class="lineCov">         14 : }</span></a>
 <a name="21"><span class="lineNum">      21 </span>                :            : </a>
-<a name="22"><span class="lineNum">      22 </span>                :<span class="lineCov">         13 : SerialManager::~SerialManager() {</span></a>
-<a name="23"><span class="lineNum">      23 </span>                :<span class="lineCov">         13 :     disconnect();</span></a>
-<a name="24"><span class="lineNum">      24 </span>                :<span class="lineCov">         13 : }</span></a>
+<a name="22"><span class="lineNum">      22 </span>                :<span class="lineCov">         14 : SerialManager::~SerialManager() {</span></a>
+<a name="23"><span class="lineNum">      23 </span>                :<span class="lineCov">         14 :     disconnect();</span></a>
+<a name="24"><span class="lineNum">      24 </span>                :<span class="lineCov">         14 : }</span></a>
 <a name="25"><span class="lineNum">      25 </span>                :            : </a>
 <a name="26"><span class="lineNum">      26 </span>                :            : // ============================================================================</a>
 <a name="27"><span class="lineNum">      27 </span>                :            : // ISerialConnection Delegation</a>
@@ -106,10 +106,10 @@
 <a name="35"><span class="lineNum">      35 </span>                :<span class="lineCov">          6 :     return result;</span></a>
 <a name="36"><span class="lineNum">      36 </span>                :            : }</a>
 <a name="37"><span class="lineNum">      37 </span>                :            : </a>
-<a name="38"><span class="lineNum">      38 </span>                :<span class="lineCov">         18 : void SerialManager::disconnect() {</span></a>
-<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">         18 :     mIO-&gt;stopReadThread();</span></a>
-<a name="40"><span class="lineNum">      40 </span>                :<span class="lineCov">         18 :     mConnection-&gt;disconnect();</span></a>
-<a name="41"><span class="lineNum">      41 </span>                :<span class="lineCov">         18 : }</span></a>
+<a name="38"><span class="lineNum">      38 </span>                :<span class="lineCov">         19 : void SerialManager::disconnect() {</span></a>
+<a name="39"><span class="lineNum">      39 </span>                :<span class="lineCov">         19 :     mIO-&gt;stopReadThread();</span></a>
+<a name="40"><span class="lineNum">      40 </span>                :<span class="lineCov">         19 :     mConnection-&gt;disconnect();</span></a>
+<a name="41"><span class="lineNum">      41 </span>                :<span class="lineCov">         19 : }</span></a>
 <a name="42"><span class="lineNum">      42 </span>                :            : </a>
 <a name="43"><span class="lineNum">      43 </span>                :<span class="lineCov">          4 : bool SerialManager::isConnected() const {</span></a>
 <a name="44"><span class="lineNum">      44 </span>                :<span class="lineCov">          4 :     return mConnection-&gt;isConnected();</span></a>
@@ -131,8 +131,8 @@
 <a name="60"><span class="lineNum">      60 </span>                :<span class="lineCov">          2 :     return mConnection-&gt;getBaudRate();</span></a>
 <a name="61"><span class="lineNum">      61 </span>                :            : }</a>
 <a name="62"><span class="lineNum">      62 </span>                :            : </a>
-<a name="63"><span class="lineNum">      63 </span>                :<span class="lineNoCov">          0 : std::vector&lt;std::string&gt; SerialManager::getAvailablePorts() const {</span></a>
-<a name="64"><span class="lineNum">      64 </span>                :<span class="lineNoCov">          0 :     return mConnection-&gt;getAvailablePorts();</span></a>
+<a name="63"><span class="lineNum">      63 </span>                :<span class="lineCov">          1 : std::vector&lt;std::string&gt; SerialManager::getAvailablePorts() const {</span></a>
+<a name="64"><span class="lineNum">      64 </span>                :<span class="lineCov">          1 :     return mConnection-&gt;getAvailablePorts();</span></a>
 <a name="65"><span class="lineNum">      65 </span>                :            : }</a>
 <a name="66"><span class="lineNum">      66 </span>                :            : </a>
 <a name="67"><span class="lineNum">      67 </span>                :            : // ============================================================================</a>

@@ -39,6 +39,14 @@ TEST(SerialManagerBasicTest, InitialState) {
     EXPECT_EQ(serial.available(), 0u);
 }
 
+TEST(SerialManagerBasicTest, GetAvailablePorts) {
+    SerialManager serial;
+    // Should return a vector (empty or not depending on system)
+    std::vector<std::string> ports = serial.getAvailablePorts();
+    // Just verifying it doesn't crash
+    SUCCEED();
+}
+
 TEST(SerialManagerBasicTest, ConnectInvalidPort) {
     SerialManager serial;
     

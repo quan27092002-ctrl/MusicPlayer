@@ -1,0 +1,10 @@
+build/
+*.o
+*.d
+*.gcov
+*.gcda
+*.gcno
+test_results/
+compile_flags.txt
+.vscode/
+.idea/
