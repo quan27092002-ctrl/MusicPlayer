@@ -233,3 +233,75 @@ TEST_F(AudioPlayerCoverageTest, SetCallbackDelegation) {
 }
 
 } // namespace Controller
+
+// ============================================================================
+// AudioLifecycleImpl Direct Coverage Tests
+// ============================================================================
+
+#include "controller/audioplayer/AudioLifecycleImpl.h"
+
+namespace Controller {
+
+class AudioLifecycleCoverageTest : public ::testing::Test {
+protected:
+    AudioLifecycleImpl lifecycle;
+};
+
+TEST_F(AudioLifecycleCoverageTest, GetMutex) {
+    // Cover lines 88-90
+    auto& mutex = lifecycle.getMutex();
+    
+    // Verify we can lock/unlock
+    mutex.lock();
+    mutex.unlock();
+    SUCCEED();
+}
+
+TEST_F(AudioLifecycleCoverageTest, GetCallbackEmpty) {
+    // Cover lines 92-95 with null callback
+    auto cb = lifecycle.getCallback();
+    EXPECT_FALSE(cb); // Should be null initially
+}
+
+TEST_F(AudioLifecycleCoverageTest, GetCallbackSet) {
+    // Cover lines 92-95 with set callback
+    bool called = false;
+    lifecycle.setCallback([&](AudioState, uint32_t) {
+        called = true;
+    });
+    
+    auto cb = lifecycle.getCallback();
+    EXPECT_TRUE(cb != nullptr);
+    
+    // Invoke to verify
+    cb(AudioState::IDLE, 0);
+    EXPECT_TRUE(called);
+}
+
+TEST_F(AudioLifecycleCoverageTest, NotifyCallbackWithCallback) {
+    // Cover line 80 (cb invocation inside notifyCallback)
+    bool callbackCalled = false;
+    AudioState receivedState = AudioState::IDLE;
+    uint32_t receivedPos = 0;
+    
+    lifecycle.setCallback([&](AudioState state, uint32_t pos) {
+        callbackCalled = true;
+        receivedState = state;
+        receivedPos = pos;
+    });
+    
+    lifecycle.notifyCallback(AudioState::PLAYING, 12345);
+    
+    EXPECT_TRUE(callbackCalled);
+    EXPECT_EQ(receivedState, AudioState::PLAYING);
+    EXPECT_EQ(receivedPos, 12345u);
+}
+
+TEST_F(AudioLifecycleCoverageTest, NotifyCallbackWithoutCallback) {
+    // Cover branch 79 false (cb is null)
+    // Should not crash
+    lifecycle.notifyCallback(AudioState::IDLE, 0);
+    SUCCEED();
+}
+
+} // namespace Controller

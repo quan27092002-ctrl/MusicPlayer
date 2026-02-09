@@ -1,7 +1,7 @@
 # ==========================================
 # PROJECT: S32K_MediaPlayer
 # BUILD SYSTEM: GNU Make
-# AUTHOR: Architecture Team
+# AUTHOR: Quan Team
 # ==========================================
 
 # Enable parallel compilation (auto-detect CPU cores)
@@ -100,7 +100,8 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testVolumeState.cpp \
             $(TEST_DIR)/testHistoryManager.cpp \
             $(TEST_DIR)/testBoardCommunicator.cpp \
-            $(TEST_DIR)/testPlaybackControllerCoverage.cpp
+            $(TEST_DIR)/testPlaybackControllerCoverage.cpp \
+            $(TEST_DIR)/testPlaylistManagerCoverage.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
