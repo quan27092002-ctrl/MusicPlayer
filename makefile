@@ -93,7 +93,10 @@ TEST_SRCS = $(TEST_DIR)/testThreadSafeQueue.cpp \
             $(TEST_DIR)/testPlaybackFix.cpp \
             $(TEST_DIR)/testStorageManager.cpp \
             $(TEST_DIR)/testCoverArt.cpp \
-            $(TEST_DIR)/testPlaylistManager.cpp
+            $(TEST_DIR)/testPlaylistManager.cpp \
+            $(TEST_DIR)/testTrackPosition.cpp \
+            $(TEST_DIR)/testVolumeState.cpp \
+            $(TEST_DIR)/testHistoryManager.cpp
 
 # 4. Object Files
 SRC_OBJS = $(SRC_SRCS:%.cpp=$(BUILD_DIR)/%.o)
@@ -167,9 +170,9 @@ coverage:
 coverage-report: coverage
 	@echo "Generating coverage report..."
 	@mkdir -p $(BUILD_DIR)/coverage
-	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info
-	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info
-	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage
+	lcov --capture --directory $(BUILD_DIR) --output-file $(BUILD_DIR)/coverage.info --rc lcov_branch_coverage=1
+	lcov --remove $(BUILD_DIR)/coverage.info '/usr/*' '*/imgui/*' '*/test/*' -o $(BUILD_DIR)/coverage_filtered.info --rc lcov_branch_coverage=1
+	genhtml $(BUILD_DIR)/coverage_filtered.info --output-directory $(BUILD_DIR)/coverage --branch-coverage
 	@echo "========================================="
 	@echo "Coverage report: $(BUILD_DIR)/coverage/index.html"
 	@echo "========================================="
