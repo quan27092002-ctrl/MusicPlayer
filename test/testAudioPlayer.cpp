@@ -305,3 +305,56 @@ TEST_F(AudioLifecycleCoverageTest, NotifyCallbackWithoutCallback) {
 }
 
 } // namespace Controller
+
+// ============================================================================
+// AudioLoaderImpl Direct Coverage Tests
+// ============================================================================
+
+#include "controller/audioplayer/AudioLoaderImpl.h"
+
+namespace Controller {
+
+class AudioLoaderCoverageTest : public ::testing::Test {
+protected:
+    AudioLifecycleImpl lifecycle;
+};
+
+TEST_F(AudioLoaderCoverageTest, GetCurrentFilePath) {
+    // Cover lines 80-82
+    AudioLoaderImpl loader(&lifecycle);
+    
+    // Initially empty
+    EXPECT_TRUE(loader.getCurrentFilePath().empty());
+}
+
+TEST_F(AudioLoaderCoverageTest, LoadWithNullLifecycle) {
+    // Cover branch 23 (mLifecycle is null)
+    AudioLoaderImpl loader(nullptr);
+    
+    EXPECT_FALSE(loader.load("/any/path.mp3"));
+}
+
+TEST_F(AudioLoaderCoverageTest, UnloadWithNullLifecycle) {
+    // Cover branch 61 (mLifecycle is null in unload)
+    AudioLoaderImpl loader(nullptr);
+    
+    // Should not crash
+    loader.unload();
+    SUCCEED();
+}
+
+TEST_F(AudioLoaderCoverageTest, IsLoadedWithNullLifecycle) {
+    // Cover branch 67 (mLifecycle is null)
+    AudioLoaderImpl loader(nullptr);
+    
+    EXPECT_FALSE(loader.isLoaded());
+}
+
+TEST_F(AudioLoaderCoverageTest, GetDuration) {
+    // Cover getDuration
+    AudioLoaderImpl loader(&lifecycle);
+    
+    EXPECT_EQ(loader.getDuration(), 0u);
+}
+
+} // namespace Controller
