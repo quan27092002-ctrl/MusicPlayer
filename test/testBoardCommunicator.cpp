@@ -174,6 +174,19 @@ TEST_F(BoardCommunicatorTest, SendStatusWithTrackIndex) {
     
     EXPECT_CALL(*mockSerial, send(::testing::HasSubstr(",TRACK:5")));
     
+    
+    boardComm->sendStatusToBoard();
+}
+
+TEST_F(BoardCommunicatorTest, SendStatusUnknown) {
+    EXPECT_CALL(*mockSerial, isConnected()).WillRepeatedly(Return(true));
+    // Force an unknown status to test default switch case
+    EXPECT_CALL(*mockPlayerState, getPlaybackStatus())
+        .WillRepeatedly(Return(static_cast<Model::PlaybackStatus>(99)));
+    
+    // Should still send VOL and MUTE but no PLAYING/PAUSED/STOPPED
+    EXPECT_CALL(*mockSerial, send(::testing::HasSubstr("STATUS:,VOL:")));
+    
     boardComm->sendStatusToBoard();
 }
 
@@ -275,4 +288,12 @@ TEST_F(BoardCommunicatorTest, NullCallback) {
     boardComm->setBoardEventCallback(nullptr);
     // Should return early and safely
     boardComm->processCommand("CMD:PLAY");
+}
+
+TEST_F(BoardCommunicatorTest, ParseInvalidCommand) {
+    // Send a command that matches neither RV nor CMD prefixes
+    boardComm->processCommand("HELLO:WORLD");
+    
+    // Should just return without triggering any event
+    EXPECT_FALSE(eventReceived);
 }
