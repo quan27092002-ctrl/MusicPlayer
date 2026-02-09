@@ -28,6 +28,7 @@ namespace Controller {
  */
 class PlaybackControllerImpl : public IPlaybackController {
 public:
+    friend class PlaybackControllerCoverageTest;
     using MediaFilePtr = std::shared_ptr<Model::MediaFile>;
     
     PlaybackControllerImpl(
