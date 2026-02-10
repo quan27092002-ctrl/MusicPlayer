@@ -160,44 +160,18 @@ void PlaybackControllerImpl::next() {
         
         if (playlist.empty()) return;
 
-    // Consumer Mode:
-        // 1. Push current to history (if valid)
-        // 2. Erase current from queue
-        // 3. Play next
-
-        // Safety: ensure iterator is valid
+        // Consumer Mode:
+        // Use helper to consume current
         if (mCurrentTrackIterator != playlist.end()) {
-            
-            // Store the path before the track is erased
-            std::string consumedPath = (*mCurrentTrackIterator)->getPath();
-            
-            if (mHistoryManager) {
-                mHistoryManager->pushHistory(*mCurrentTrackIterator);
-            }
-            
-            // Also remove from original order if shuffle is enabled
-            // so restore doesn't bring back already-played songs
-            if (mPlayerState && mPlayerState->isShuffleEnabled() && !mOriginalOrder.empty()) {
-                mOriginalOrder.erase(
-                    std::remove_if(mOriginalOrder.begin(), mOriginalOrder.end(),
-                        [&consumedPath](const MediaFilePtr& track) {
-                            return track->getPath() == consumedPath;
-                        }),
-                    mOriginalOrder.end());
-            }
-            
-            // Advance iterator by erasing current
-            // erase returns iterator following the removed element
-            mCurrentTrackIterator = playlist.erase(mCurrentTrackIterator);
-            
+            mCurrentTrackIterator = consumeTrack(mCurrentTrackIterator);
             shouldNotify = true;
+        }
             
-             // If we still have tracks
-            if (mCurrentTrackIterator != playlist.end()) {
-                pathToLoad = (*mCurrentTrackIterator)->getPath();
-            }
+        // If we still have tracks
+        if (mCurrentTrackIterator != playlist.end()) {
+             pathToLoad = (*mCurrentTrackIterator)->getPath();
         } else {
-             // If iterator was already at end
+             // If iterator was already at end or list became empty
              if (!playlist.empty()) {
                   mCurrentTrackIterator = playlist.begin();
                   pathToLoad = (*mCurrentTrackIterator)->getPath();
@@ -240,32 +214,39 @@ void PlaybackControllerImpl::previous() {
         // Check history first
         MediaFilePtr historyTrack = mHistoryManager ? mHistoryManager->popHistory() : nullptr;
         if (historyTrack) {
-            pathToLoad = historyTrack->getPath();
+            // Restore from history
+            // We should push this track to the FRONT of the queue (Current)
+            // or just play it?
+            // If we want to restore strictly, we insert at front.
             
-            mCurrentTrackIterator = playlist.end();
-            for (auto it = playlist.begin(); it != playlist.end(); ++it) {
-                if ((*it)->getPath() == pathToLoad) {
-                    mCurrentTrackIterator = it;
-                    break;
-                }
-            }
+            playlist.push_front(historyTrack);
+            mCurrentTrackIterator = playlist.begin();
+            pathToLoad = (*mCurrentTrackIterator)->getPath();
+            
+            // Note: If we had a current track, do we keep it? 
+            // "Previous" usually implies going back. The old "Current" should arguably remain as "Next Up" 
+            // OR if consumer model, maybe we just stash it?
+            // For now, let's just Insert At Front so it pushes existing down.
+            // But wait, if we Insert At Front, the old Current is now index 1.
+            // Queue shows index 1+. So old Current becomes Next Up. This makes sense.
+            
         } else {
-            if (mCurrentTrackIterator == playlist.begin() || mCurrentTrackIterator == playlist.end()) {
-                mCurrentTrackIterator = playlist.end();
-                --mCurrentTrackIterator;
-            } else {
-                --mCurrentTrackIterator;
-            }
+            // No history, standard behavior (restart or prev in list if keeping old tracks)
+            // But in Consumer Mode, list constantly shrinks. So prev in list might not exist?
+            // actually if we treat list as "queue", previous is empty unless we have history.
             
-            if (mCurrentTrackIterator != playlist.end()) {
-                pathToLoad = (*mCurrentTrackIterator)->getPath();
+            // Fallback: Restart current song
+             if (mAudioPlayer) {
+                mAudioPlayer->seek(0);
             }
+            return; 
         }
     }
     
     if (!pathToLoad.empty()) {
         loadTrack(pathToLoad);
         play();
+        mPlaylistManager->notifyPlaylistUpdated();
     }
 }
 
@@ -273,26 +254,75 @@ void PlaybackControllerImpl::playTrack(int index) {
     if (!mPlaylistManager) return;
     
     std::string pathToLoad;
+    bool shouldNotify = false;
+    
     {
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
-        auto it = getTrackIterator(index);
+        auto targetIt = getTrackIterator(index);
         auto& playlist = mPlaylistManager->getPlaylistRef();
         
-        if (it != playlist.end()) {
-            // Push old track to history
-            if (mCurrentTrackIterator != playlist.end() && mCurrentTrackIterator != it && mHistoryManager) {
-                mHistoryManager->pushHistory(*mCurrentTrackIterator);
+        if (targetIt != playlist.end()) {
+            // 1. Consume current track (push to History, remove)
+            // Only if current is valid and distinct (though if distinct index, iterators distinct)
+            if (mCurrentTrackIterator != playlist.end() && mCurrentTrackIterator != targetIt) {
+                // Determine if target is AFTER current. 
+                // Because erase invalidates iterator but not others.
+                
+                // consumeTrack erases mCurrentTrack.
+                // If mCurrentTrack was BEFORE targetIt, targetIt remains valid.
+                // If mCurrentTrack was AFTER targetIt, targetIt remains valid.
+                consumeTrack(mCurrentTrackIterator);
+                
+                // Note: consumeTrack returns next iterator, but we don't care, we want targetIt.
             }
             
-            mCurrentTrackIterator = it;
-            pathToLoad = (*it)->getPath();
+            // 2. Move Target to Front (Current)
+            // Splice target to begin
+            playlist.splice(playlist.begin(), playlist, targetIt);
+            
+            // 3. Update Current Iterator
+            mCurrentTrackIterator = playlist.begin();
+            pathToLoad = (*mCurrentTrackIterator)->getPath();
+            shouldNotify = true;
         }
     }
     
+    if (shouldNotify) {
+        mPlaylistManager->notifyPlaylistUpdated();
+    }
+
     if (!pathToLoad.empty()) {
         loadTrack(pathToLoad);
         play();
     }
+}
+
+typename std::list<PlaybackControllerImpl::MediaFilePtr>::iterator 
+PlaybackControllerImpl::consumeTrack(typename std::list<MediaFilePtr>::iterator it) {
+    if (!mPlaylistManager) return it;
+    auto& playlist = mPlaylistManager->getPlaylistRef();
+    if (it == playlist.end()) return it;
+    
+    // Store path
+    std::string consumedPath = (*it)->getPath();
+    
+    // Push to History
+    if (mHistoryManager) {
+        mHistoryManager->pushHistory(*it);
+    }
+    
+    // Remove from shuffle original order
+    if (mPlayerState && mPlayerState->isShuffleEnabled() && !mOriginalOrder.empty()) {
+        mOriginalOrder.erase(
+            std::remove_if(mOriginalOrder.begin(), mOriginalOrder.end(),
+                [&consumedPath](const MediaFilePtr& track) {
+                    return track->getPath() == consumedPath;
+                }),
+            mOriginalOrder.end());
+    }
+    
+    // Erase and return next
+    return playlist.erase(it);
 }
 
 void PlaybackControllerImpl::seek(uint32_t positionMs) {

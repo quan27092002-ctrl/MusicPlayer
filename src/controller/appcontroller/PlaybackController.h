@@ -79,6 +79,10 @@ private:
     
     int getCurrentTrackIndexLocked() const;
     typename std::list<MediaFilePtr>::iterator getTrackIterator(int index);
+    
+    // Helper to consume a track (push to history, remove from playlist)
+    // Returns the iterator to the next element
+    typename std::list<MediaFilePtr>::iterator consumeTrack(typename std::list<MediaFilePtr>::iterator it);
 };
 
 } // namespace Controller
