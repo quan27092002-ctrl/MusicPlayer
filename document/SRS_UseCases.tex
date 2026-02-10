@@ -1,0 +1,257 @@
+
+\section{Đặc tả Use Case (Use Case Specification)}
+
+\subsection{UC1: Play/Pause Music}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] 
+    \begin{itemize}
+        \item Track đã được load (UC2).
+        \item Audio system đã được khởi tạo.
+        \item Đối với Pause: Music đang phát (PlayerState = PLAYING).
+    \end{itemize}
+    
+    \item[Trigger] Người dùng nhấn nút Play/Pause trên giao diện hoặc Board gửi tín hiệu điều khiển.
+
+    \item[Main Success Scenario] (Basic Flow - Play)
+    \begin{enumerate}
+        \item Actor thực hiện hành động (Click nút Play hoặc gửi lệnh).
+        \item View gọi \texttt{AppController.play()}.
+        \item \texttt{PlaybackController} gọi \texttt{AudioPlayer.play()}.
+        \item \texttt{AudioPlaybackImpl} gọi \texttt{Mix\_ResumeMusic()}.
+        \item \texttt{PlayerState} cập nhật trạng thái thành PLAYING.
+        \item UI cập nhật icon Play thành Pause.
+    \end{enumerate}
+
+    \item[Alternative Flows] \hfill \\
+    \textbf{A1. Chưa load track}
+    \begin{enumerate}
+        \item Hệ thống hiển thị thông báo lỗi trên UI.
+        \item Không thực hiện hành động phát nhạc.
+    \end{enumerate}
+
+    \item[Post-conditions] 
+    \begin{itemize}
+        \item Trạng thái phát nhạc thay đổi (Playing $\leftrightarrow$ Paused).
+        \item PlayerState được cập nhật.
+        \item UI hiển thị trạng thái tương ứng.
+    \end{itemize}
+\end{description}
+
+\newpage
+\subsection{UC2: Load Track}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] 
+    \begin{itemize}
+        \item Library đã có tracks.
+        \item UI đang hiển thị danh sách nhạc.
+    \end{itemize}
+
+    \item[Trigger] Người dùng click vào một bài hát trong danh sách.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User click vào track trong danh sách nhạc.
+        \item View gọi \texttt{AppController.loadTrack(filePath)}.
+        \item \texttt{PlaybackController} tạo đối tượng \texttt{MediaFile}.
+        \item \texttt{MediaFile} trích xuất Metadata sử dụng \texttt{TagLib}.
+        \item \texttt{AudioLoaderImpl} load file sử dụng \texttt{Mix\_LoadMUS()}.
+        \item \texttt{PlayerState} cập nhật \texttt{currentTrack}.
+        \item UI hiển thị thông tin bài hát tại khu vực Now Playing.
+    \end{enumerate}
+
+    \item[Alternative Flows] \hfill \\
+    \textbf{A1. File không tồn tại}
+    \begin{enumerate}
+        \item \texttt{AudioLoader} trả về lỗi.
+        \item Hiển thị thông báo lỗi cho User.
+    \end{enumerate}
+    \textbf{A2. Định dạng file không hỗ trợ}
+    \begin{enumerate}
+        \item \texttt{Mix\_LoadMUS()} thất bại.
+        \item Log error và thông báo cho User.
+    \end{enumerate}
+
+    \item[Post-conditions] 
+    \begin{itemize}
+        \item Track được load vào \texttt{AudioPlayer}.
+        \item Metadata hiển thị trên UI.
+        \item Hệ thống sẵn sàng để phát.
+    \end{itemize}
+\end{description}
+
+\newpage
+\subsection{UC3: Adjust Volume (UI)}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] 
+    \begin{itemize}
+        \item UI đang hiển thị.
+        \item Audio system đã được khởi tạo.
+    \end{itemize}
+
+    \item[Trigger] Người dùng kéo thanh trượt volume.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User kéo slider volume trên PlayerBar.
+        \item View gọi \texttt{AppController.setVolume(value)}.
+        \item \texttt{VolumeController} gọi \texttt{AudioPlayer.setVolume(value)}.
+        \item \texttt{AudioVolumeImpl} gọi \texttt{Mix\_VolumeMusic(sdlValue)}.
+        \item \texttt{PlayerState.setVolume(value)}.
+        \item UI cập nhật vị trí slider.
+    \end{enumerate}
+
+    \item[Alternative Flows] \hfill \\
+    \textbf{A1. Giá trị Volume ngoài khoảng (0-100)}
+    \begin{enumerate}
+        \item Hệ thống kẹp (clamp) giá trị về 0 hoặc 100.
+        \item Tiếp tục thực hiện Main Flow.
+    \end{enumerate}
+
+    \item[Post-conditions] 
+    \begin{itemize}
+        \item Giá trị Volume thay đổi.
+        \item UI slider hiển thị vị trí mới.
+    \end{itemize}
+\end{description}
+
+\subsection{UC4: Adjust Volume (Board)}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] 
+    \begin{itemize}
+        \item Serial connection đã được thiết lập (UC9).
+        \item Board đang hoạt động.
+    \end{itemize}
+
+    \item[Trigger] Người dùng xoay núm volume trên Board.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User xoay núm volume trên Board.
+        \item Board đọc giá trị ADC (0-4095).
+        \item Board gửi bản tin \texttt{VR: \{value\}\\n} qua Serial.
+        \item \texttt{SerialIOImpl} nhận dữ liệu.
+        \item \texttt{BoardCommunicator} quy đổi: $volume = adc \times 100 / 4095$.
+        \item Gọi \texttt{AppController.setVolume(percent)}.
+        \item UI cập nhật slider tương ứng.
+    \end{enumerate}
+
+    \item[Alternative Flows] \hfill \\
+    \textbf{A1. Serial bị ngắt kết nối}
+    \begin{enumerate}
+        \item Dữ liệu không được nhận, volume không đổi.
+    \end{enumerate}
+
+    \item[Post-conditions] Volume hệ thống thay đổi đồng bộ với phần cứng.
+\end{description}
+
+\newpage
+\subsection{UC5: Control Playback (Board)}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] Serial connection OK, Track loaded.
+    \item[Trigger] Người dùng nhấn nút SW trên Board.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User nhấn nút trên Board.
+        \item Board gửi lệnh \texttt{cmd:\{command\}\\n}.
+        \item \texttt{BoardCommunicator} parse lệnh (play, pause, next).
+        \item Gọi \texttt{AppController} tương ứng.
+        \item UI cập nhật trạng thái mới.
+    \end{enumerate}
+
+    \item[Exception Flows] \hfill \\
+    \textbf{E1. Lệnh không hợp lệ}: Bỏ qua và log warning.
+
+    \item[Post-conditions] Trạng thái Playback thay đổi.
+\end{description}
+
+\subsection{UC6: Shuffle/Repeat}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] Có tracks trong Queue.
+    \item[Trigger] User click nút Shuffle hoặc Repeat.
+
+    \item[Main Success Scenario] (Shuffle Enable)
+    \begin{enumerate}
+        \item User click Shuffle.
+        \item \texttt{AppController.toggleShuffle()}.
+        \item \texttt{PlaylistManager} random hóa Queue.
+        \item UI highlight icon Shuffle.
+    \end{enumerate}
+    
+    \item[Alternative Flows] (Repeat Cycle)
+    \begin{enumerate}
+        \item User click Repeat.
+        \item Cycle: OFF $\to$ ONE $\to$ OFF.
+        \item UI update icon.
+    \end{enumerate}
+
+    \item[Post-conditions] Thứ tự Queue hoặc chế độ Repeat thay đổi.
+\end{description}
+
+\subsection{UC7: Manage Playlist}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] UI ở tab Playlist.
+    \item[Trigger] User click Create, Add Track, hoặc Play Playlist.
+
+    \item[Main Success Scenario] (Create Playlist)
+    \begin{enumerate}
+        \item User click "Create Playlist".
+        \item Nhập tên, mô tả, chọn màu.
+        \item \texttt{PlaylistManager.createPlaylist()}.
+        \item Danh sách hiển thị Playlist mới.
+    \end{enumerate}
+
+    \item[Post-conditions] Playlist database được cập nhật.
+\end{description}
+
+\newpage
+\subsection{UC8: Load from USB}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] USB đã mount.
+    \item[Trigger] User click Refresh/Load trên Storage Panel.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User chọn thiết bị USB, click "Load".
+        \item \texttt{AppController.loadFromStorage(path)}.
+        \item \texttt{PlaylistManager} quét đệ quy thư mục.
+        \item Lọc file .mp3, .wav, .flac.
+        \item Tạo \texttt{MediaFile}, extract metadata.
+        \item Thêm vào Library.
+    \end{enumerate}
+    
+    \item[Exception Flows] \hfill \\
+    \textbf{E1. USB ngắt kết nối}: Dừng quét, báo lỗi.
+
+    \item[Post-conditions] Tracks từ USB được thêm vào Library.
+\end{description}
+
+\subsection{UC9: Connect Serial Port}
+
+\begin{description}[style=multiline, leftmargin=3cm, font=\bfseries]
+    \item[Pre-conditions] Cổng Serial khả dụng.
+    \item[Trigger] User click Connect.
+
+    \item[Main Success Scenario] (Basic Flow)
+    \begin{enumerate}
+        \item User chọn cổng, click "Connect".
+        \item \texttt{AppController.connectToPort()}.
+        \item Mở cổng với cờ \texttt{O\_RDWR}.
+        \item Khởi chạy thread đọc tin nhắn.
+        \item UI hiện "Connected".
+    \end{enumerate}
+
+    \item[Exception Flows] \hfill \\
+    \textbf{E1. Cổng bận/Lỗi quyền}: Báo lỗi UI.
+
+    \item[Post-conditions] Kết nối Serial được thiết lập.
+\end{description}
+

@@ -1,0 +1,150 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\geometry{
+  a4paper,
+  total={170mm,257mm},
+  left=20mm,
+  top=20mm,
+}
+
+\title{\textbf{Software Requirements Specification}\\ \large Project: S32K Media Player}
+\author{Architecture Team}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Giới thiệu (Introduction)}
+
+\subsection{Mục đích (Purpose)}
+Tài liệu này mô tả các yêu cầu phần mềm cho dự án \textbf{S32K Media Player}. Hệ thống là một ứng dụng nghe nhạc chạy trên nền tảng Linux, được thiết kế theo kiến trúc Model-View-Controller (MVC) và tích hợp khả năng điều khiển thông qua phần cứng ngoại vi (S32K144 Board) qua giao thức Serial/UART.
+
+\subsection{Phạm vi (Scope)}
+Sản phẩm phần mềm là một ứng dụng Desktop với các tính năng chính:
+\begin{itemize}
+    \item Phát nhạc (Play, Pause, Next, Previous, Seek).
+    \item Quản lý thư viện nhạc và danh sách phát (Playlist).
+    \item Điều chỉnh âm lượng qua giao diện phần mềm và núm vặn phần cứng.
+    \item Hiển thị thông tin bài hát (Metadata) và ảnh bìa (Cover Art).
+    \item Giao tiếp hai chiều với S32K Board để đồng bộ trạng thái và nhận lệnh điều khiển.
+\end{itemize}
+
+\subsection{Định nghĩa và Viết tắt (Definitions and Abbreviations)}
+\begin{center}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Term} & \textbf{Definition} \\ \hline
+MVC & Model-View-Controller Architecture \\ \hline
+SDL & Simple DirectMedia Layer (Audio \& Windowing backend) \\ \hline
+ImGui & Dear ImGui (GUI Library) \\ \hline
+UART & Universal Asynchronous Receiver-Transmitter \\ \hline
+S32K & NXP S32K144 Microcontroller Board \\ \hline
+Metadata & Thông tin mô tả bài hát (Title, Artist, Album) \\ \hline
+\end{tabular}
+\end{center}
+
+\newpage
+\section{Mô tả tổng quan (Overall Description)}
+
+\subsection{Viễn cảnh sản phẩm (Product Perspective)}
+Hệ thống hoạt động như một ứng dụng độc lập trên Linux, sử dụng:
+\begin{itemize}
+    \item \textbf{View Layer}: ImGui để hiển thị giao diện người dùng.
+    \item \textbf{Controller Layer}: Điều phối logic chính (`AppController`) và các module con (`AudioPlayer`, `SerialManager`).
+    \item \textbf{Model Layer}: Quản lý trạng thái (`PlayerState`) và dữ liệu bài hát (`MediaFile`).
+    \item \textbf{Hardware Interface}: Kết nối qua cổng Serial (/dev/tty*) với S32K Board.
+\end{itemize}
+
+\subsection{Tính năng sản phẩm (Product Functions)}
+Các tính năng chính được chia thành các nhóm:
+\begin{enumerate}
+    \item \textbf{Playback}: Điều khiển phát nhạc cơ bản.
+    \item \textbf{Library Management}: Quét và quản lý tập tin nhạc.
+    \item \textbf{Hardware Integration}: Kết nối và đồng bộ với S32K.
+    \item \textbf{UI Interaction}: Hiển thị trực quan và phản hồi người dùng.
+\end{enumerate}
+
+\subsection{Đặc điểm người dùng (User Characteristics)}
+\begin{itemize}
+    \item Người dùng cuối muốn nghe nhạc trên máy tính Linux.
+    \item Người dùng muốn trải nghiệm điều khiển nhạc bằng phần cứng chuyên dụng (núm vặn volume, nút bấm vật lý).
+\end{itemize}
+
+\newpage
+\section{Các tính năng hệ thống (System Features)}
+
+\subsection{Core Playback Logic}
+\subsubsection{Description}
+Module chịu trách nhiệm xử lý luồng phát nhạc, bao gồm nạp file, giải mã và điều khiển đầu ra âm thanh.
+
+\subsubsection{Functional Requirements}
+\begin{itemize}
+    \item \textbf{REQ-PB-01}: Hệ thống phải hỗ trợ các định dạng file: .mp3, .wav, .flac, .ogg.
+    \item \textbf{REQ-PB-02}: Hệ thống phải duy trì máy trạng thái (STOPPED, PLAYING, PAUSED).
+    \item \textbf{REQ-PB-03}: Hệ thống phải cho phép tua (seek) đến vị trí bất kỳ trong bài hát.
+    \item \textbf{REQ-PB-04}: Hệ thống phải tự động chuyển sang bài tiếp theo khi bài hiện tại kết thúc (nếu có trong Queue).
+    \item \textbf{REQ-PB-05}: Tính năng Shuffle phải xáo trộn ngẫu nhiên danh sách phát mà không làm mất bài.
+    \item \textbf{REQ-PB-06}: Tính năng Repeat phải hỗ trợ: Repeat One, và Off.
+\end{itemize}
+
+\subsection{Hardware Communication (Serial Manager)}
+\subsubsection{Description}
+Module quản lý kết nối Serial/UART với S32K Board để gửi/nhận lệnh.
+
+\subsubsection{Functional Requirements}
+\begin{itemize}
+    \item \textbf{REQ-HW-01}: Hệ thống phải liệt kê được các cổng Serial khả dụng trên máy tính.
+    \item \textbf{REQ-HW-02}: Hệ thống phải thiết lập kết nối với thông số: Baudrate 9600, 8N1.
+    \item \textbf{REQ-HW-03}: Hệ thống phải nhận bản tin điều khiển Volume (`VR: value`) và cập nhật âm lượng ứng dụng.
+    \item \textbf{REQ-HW-04}: Hệ thống phải nhận bản tin điều khiển Playback (`cmd: play/pause/next`) và thực thi lệnh tương ứng.
+\end{itemize}
+
+\subsection{Library \& Storage Management}
+\subsubsection{Description}
+Module quét và quản lý thư viện nhạc từ ổ cứng hoặc USB.
+
+\subsubsection{Functional Requirements}
+\begin{itemize}
+    \item \textbf{REQ-LB-01}: Hệ thống phải quét đệ quy thư mục được chỉ định để tìm file nhạc hợp lệ.
+    \item \textbf{REQ-LB-02}: Hệ thống phải trích xuất Metadata (Title, Artist, Album) sử dụng TagLib.
+    \item \textbf{REQ-LB-03}: Hệ thống phải trích xuất ảnh bìa (Cover Art) nhúng trong file nhạc.
+    \item \textbf{REQ-LB-04}: Hệ thống phải hỗ trợ tải nhạc từ thiết bị lưu trữ ngoài (USB) khi được mount.
+\end{itemize}
+
+\newpage
+\input{SRS_UseCases.tex}
+
+\newpage
+\section{Yêu cầu phi chức năng (Non-functional Requirements)}
+
+\subsection{Performance}
+\begin{itemize}
+    \item Thời gian khởi động ứng dụng dưới 2 giây.
+    \item Độ trễ xử lý lệnh từ Board (Serial) đến khi thực thi dưới 100ms.
+    \item Tải CPU khi phát nhạc không vượt quá 10% (trên phần cứng tham chiếu).
+\end{itemize}
+
+\subsection{Reliability}
+\begin{itemize}
+    \item Hệ thống không được crash khi tải file nhạc bị lỗi (corrupt).
+    \item Tự động ngắt kết nối Serial an toàn khi rút thiết bị mà không treo ứng dụng.
+\end{itemize}
+
+\subsection{Portability}
+\begin{itemize}
+    \item Mã nguồn tuân thủ chuân C++14/17.
+    \item Sử dụng thư viện đa nền tảng (SDL2, ImGui) để dễ dàng build trên các distro Linux khác nhau.
+\end{itemize}
+
+\end{document}
