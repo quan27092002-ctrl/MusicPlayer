@@ -338,6 +338,7 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
     if (!trackPtr) return;
     
     bool shouldNotify = false;
+    std::string pathToLoad;
 
     {
         std::lock_guard<std::mutex> lock(mPlaylistManager->getMutex());
@@ -346,17 +347,7 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
         if (playlist.empty()) {
             playlist.push_back(trackPtr);
             mCurrentTrackIterator = playlist.begin();
-            // Auto-play if queue was empty
-            if (mAudioPlayer) {
-                 if (mAudioPlayer->load(trackPtr->getPath())) {
-                     mAudioPlayer->play();
-                     if (mPlayerState) {
-                         mPlayerState->setPlaybackStatus(Model::PlaybackStatus::PLAYING);
-                         // CRITICAL: Update current track index for UI
-                         mPlayerState->setCurrentTrackIndex(0); 
-                     }
-                 }
-            }
+            pathToLoad = trackPtr->getPath();
         } else {
             // Insert AFTER current track
             auto insertPos = mCurrentTrackIterator;
@@ -377,6 +368,12 @@ void PlaybackControllerImpl::queueNext(const std::string& filePath) {
 
     if (shouldNotify) {
         mPlaylistManager->notifyPlaylistUpdated();
+    }
+    
+    // Auto-play if queue was empty
+    if (!pathToLoad.empty()) {
+        loadTrack(pathToLoad);
+        play();
     }
 }
 

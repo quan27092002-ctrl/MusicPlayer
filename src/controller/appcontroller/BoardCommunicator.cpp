@@ -108,8 +108,41 @@ void BoardCommunicatorImpl::processCommand(const std::string& rawData) {
             LOG_INFO("Parsing RV value: " << valStr);
             int adc = std::stoi(valStr);
             int vol = parseVolumeFromADC(adc);
-            LOG_INFO("Calculated Volume: " << vol);
-            mBoardEventCallback(BoardEvent::SET_VOLUME, vol);
+
+            
+            // Rate Limiting Logic
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - mLastVolumeUpdate).count();
+                
+            // Only update if:
+            // 1. Enough time passed (e.g. 50ms) AND value changed
+            // 2. OR Value changed significantly (e.g. > 2 diff) (immediate update)
+            // 3. OR First update
+            
+            bool shouldUpdate = false;
+            
+            if (mLastVolume == -1) {
+                shouldUpdate = true; // First time
+            } else if (std::abs(vol - mLastVolume) > 2) {
+                shouldUpdate = true; // Significant change (e.g. fast knob turn)
+            } else if (mLastVolume != vol && elapsed > 50) {
+                shouldUpdate = true; // Timer expired and value changed
+            }
+            
+            if (shouldUpdate) {
+                mLastVolume = vol;
+                // Only notify if the SENT volume is different (avoid spamming same value)
+                if (mLastVolumeSent != vol) {
+                    LOG_INFO("Calculated Volume: " << vol);
+                    mBoardEventCallback(BoardEvent::SET_VOLUME, vol);
+                    mLastVolumeSent = vol;
+                    mLastVolumeUpdate = now;
+                }
+            } else {
+                 // LOG_INFO("Skipping volume update - Rate Limited");
+            }
+
         } catch (const std::exception& e) {
             LOG_ERROR("Failed to parse RV: " << e.what());
         } catch (...) {

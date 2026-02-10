@@ -192,6 +192,7 @@ private:
     std::atomic<AppState> mAppState;
     AppStateCallback mStateCallback;
     mutable std::mutex mCallbackMutex;
+    mutable std::mutex mAppMutex; // Mutex for synchronizing public API calls
 
     // ========================================================================
     // Async Loading

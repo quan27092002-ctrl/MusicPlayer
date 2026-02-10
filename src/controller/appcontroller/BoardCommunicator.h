@@ -14,6 +14,7 @@
 #include "../../model/IPlayerState.h"
 #include <memory>
 #include <functional>
+#include <chrono>
 
 namespace Controller {
 
@@ -82,6 +83,11 @@ private:
     
     // Helper to parse ADC value
     int parseVolumeFromADC(int adcValue);
+
+    // Debouncing for Volume
+    int mLastVolume = -1;
+    int mLastVolumeSent = -2;
+    std::chrono::steady_clock::time_point mLastVolumeUpdate;
 };
 
 } // namespace Controller

@@ -121,24 +121,32 @@ void AppController::onAudioStateChanged(AudioState state, uint32_t position) {
 // ============================================================================
 
 void AppController::onBoardEventReceived(BoardEvent event, int value) {
+    // Lock mutex to prevent race condition with main thread actions
+    std::lock_guard<std::mutex> lock(mAppMutex);
+    
     switch (event) {
         case BoardEvent::PLAY:
-            play();
+            mPlaybackController->play();
             break;
         case BoardEvent::PAUSE:
-            pause();
+            mPlaybackController->pause();
             break;
         case BoardEvent::STOP:
-            stop();
+            mPlaybackController->stop();
             break;
         case BoardEvent::NEXT:
-            next();
+            mPlaybackController->next();
             break;
         case BoardEvent::PREV:
-            previous();
+            mPlaybackController->previous();
             break;
         case BoardEvent::SET_VOLUME:
-            setVolume(value);
+            // Volume changes are thread-safe or atomic enough usually, 
+            // but for consistency we lock.
+            // Note: setVolume calls sendStatusToBoard which uses SerialManager.
+            // If SerialManager is thread-safe it's fine.
+            mVolumeController->setVolume(value);
+             mBoardCommunicator->sendStatusToBoard();
             break;
         default:
             break;
@@ -251,54 +259,67 @@ std::vector<std::string> AppController::getAvailablePorts() const {
 // ============================================================================
 
 bool AppController::loadTrack(const std::string& filePath) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     return mPlaybackController->loadTrack(filePath);
 }
 
 void AppController::play() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->play();
 }
 
 void AppController::pause() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->pause();
 }
 
 void AppController::stop() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->stop();
 }
 
 void AppController::next() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->next();
 }
 
 void AppController::previous() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->previous();
 }
 
 void AppController::playTrack(int index) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->playTrack(index);
 }
 
 void AppController::playPlaylist(const std::vector<std::string>& filePaths) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->replaceQueue(filePaths);
 }
 
 void AppController::playLibrary(int startIndex) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->playLibrary(startIndex);
 }
 
 void AppController::replaceQueue(const std::vector<std::string>& filePaths) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->replaceQueue(filePaths);
 }
 
 void AppController::queuePlaylist(const std::vector<std::string>& filePaths) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->queuePlaylist(filePaths);
 }
 
 void AppController::queueNext(const std::string& filePath) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->queueNext(filePath);
 }
 
 void AppController::seek(uint32_t positionMs) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->seek(positionMs);
 }
 
@@ -307,6 +328,7 @@ void AppController::seek(uint32_t positionMs) {
 // ============================================================================
 
 void AppController::setVolume(int volume) {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mVolumeController->setVolume(volume);
     mBoardCommunicator->sendStatusToBoard();
 }
@@ -316,15 +338,18 @@ int AppController::getVolume() const {
 }
 
 void AppController::toggleMute() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mVolumeController->toggleMute();
     mBoardCommunicator->sendStatusToBoard();
 }
 
 void AppController::toggleShuffle() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->toggleShuffle();
 }
 
 void AppController::toggleRepeat() {
+    std::lock_guard<std::mutex> lock(mAppMutex);
     mPlaybackController->toggleRepeat();
 }
 
