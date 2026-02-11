@@ -1,3 +1,4 @@
+# Build artifacts
 build/
 *.o
 *.d
@@ -5,6 +6,32 @@ build/
 *.gcda
 *.gcno
 test_results/
+
+# IDE / Editor
 compile_flags.txt
 .vscode/
 .idea/
+.gemini/
+
+# Music files (users provide their own)
+mMusic/
+test_music_sel/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Application runtime files
+imgui.ini
+
+# Submission folder (generated artifact)
+QuanNTA1/
+
+# OS files
+.DS_Store
+Thumbs.db

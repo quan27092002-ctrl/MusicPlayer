@@ -6,19 +6,7 @@ skinparam packageStyle rectangle
 title CONTROLLER LAYER - Class Diagram
 
 package "Controller" {
-
-    package "App Controller" {
-        enum AppState {
-            UNINITIALIZED
-            READY
-            RUNNING
-            ERROR
-        }
         
-        class StorageDevice <<struct>> {
-            +name : string
-            +path : string
-        }
         
         interface IAppLifecycle {
             +initialize() : bool
