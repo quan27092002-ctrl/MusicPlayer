@@ -33,26 +33,26 @@ The application follows a strict **Model-View-Controller (MVC)** pattern with **
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  VIEW LAYER (ImGui + SDL2)                              │
-│  ┌──────────┐ ┌────────────┐ ┌──────────────┐          │
-│  │PlayerBar │ │MainContent │ │RightSidebar  │          │
-│  └──────────┘ └────────────┘ └──────────────┘          │
+│  ┌──────────┐ ┌────────────┐ ┌──────────────┐           │
+│  │PlayerBar │ │MainContent │ │RightSidebar  │           │
+│  └──────────┘ └────────────┘ └──────────────┘           │
 ├─────────────────────────────────────────────────────────┤
 │  CONTROLLER LAYER                                       │
-│  ┌──────────────┐ ┌─────────────┐ ┌──────────────────┐ │
-│  │AppController │ │AudioPlayer  │ │SerialManager     │ │
-│  │  ├Playback   │ │  ├Lifecycle │ │  ├Connection     │ │
-│  │  ├Playlist   │ │  ├Loader    │ │  └IO             │ │
-│  │  ├Volume     │ │  ├Playback  │ ├──────────────────┤ │
-│  │  ├History    │ │  └Volume    │ │StorageManager    │ │
-│  │  └Board      │ └─────────────┘ └──────────────────┘ │
+│  ┌──────────────┐ ┌─────────────┐ ┌──────────────────┐  │
+│  │AppController │ │AudioPlayer  │ │SerialManager     │  │
+│  │  ├Playback   │ │  ├Lifecycle │ │  ├Connection     │  │
+│  │  ├Playlist   │ │  ├Loader    │ │  └IO             │  │
+│  │  ├Volume     │ │  ├Playback  │ ├──────────────────┤  │
+│  │  ├History    │ │  └Volume    │ │StorageManager    │  │
+│  │  └Board      │ └─────────────┘ └──────────────────┘  │
 ├─────────────────────────────────────────────────────────┤
 │  MODEL LAYER (Thread-safe with std::atomic)             │
-│  ┌──────────────────┐ ┌──────────────────┐             │
-│  │ PlayerState       │ │ MediaFile         │             │
-│  │  ├PlaybackState   │ │  ├MediaFileInfo   │             │
-│  │  ├VolumeState     │ │  ├MediaMetadata   │             │
-│  │  ├TrackPosition   │ │  └CoverArt       │             │
-│  │  └PlaylistNav     │ └──────────────────┘             │
+│  ┌──────────────────┐ ┌─────────────────┐               │
+│  │ PlayerState      │ │ MediaFile       │               │
+│  │  ├PlaybackState  │ │  ├MediaFileInfo │               │
+│  │  ├VolumeState    │ │  ├MediaMetadata │               │
+│  │  ├TrackPosition  │ │  └CoverArt      │               │
+│  │  └PlaylistNav    │ └─────────────────┘               │
 │  └──────────────────┘                                   │
 └─────────────────────────────────────────────────────────┘
 ```
